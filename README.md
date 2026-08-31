@@ -1,49 +1,69 @@
-# Astro Starter Kit: Minimal
+# J. Rotbart & Co. — website
+
+Rebuild of [jrotbart.com](https://jrotbart.com), moving off WordPress +
+Elementor. **Phase 1 is the homepage.**
+
+J. Rotbart & Co. is a physical precious-metals dealer with offices in Hong Kong,
+Singapore, Manila and Tel Aviv.
+
+## Running it
+
+> **The default `node` on the original dev machine is v12, which will not run
+> Astro.** If `npm run dev` fails immediately, check `node -v` first. Node 20+ is
+> required; the project is developed on 24.
 
 ```sh
-npm create astro@latest -- --template minimal
+npm install
+npm run dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Dev server at http://localhost:4321 |
+| `npm run build` | Static build into `dist/` |
+| `npm run preview` | Serve the built output |
+| `npm run typecheck` | `astro check` — must pass before merging |
+| `npm run build:preview` | The GitHub Pages team preview — see below |
 
-## 🚀 Project Structure
+## Stack
 
-Inside of your Astro project, you'll see the following folders and files:
+- **Astro**, static output. Every page is a real HTML file at the edge; the
+  build ships **zero JavaScript bundles**.
+- **Tailwind 4**, CSS-first config. Design tokens live in `src/styles/global.css`
+  under `@theme` and map 1:1 to Figma Variables.
+- **TypeScript strict**, with path aliases in `tsconfig.json`.
+- **Cloudflare Workers** for the only server-side behaviour: spot prices, and
+  later, redirects.
+- **Sanity** for blog posts, and nothing else.
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+There is no client-side framework and no jQuery. Interactivity is small inline
+scripts on the components that need it.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## How content works
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+**A page is an ordered list of typed blocks**, from the fixed union in
+`src/content/types.ts`. There is no free-form page builder and no raw-HTML
+field.
 
-Any static assets, like images, can be placed in the `public/` directory.
+Everything except blog posts is a typed module in `src/content/`, edited by a
+developer and reviewed in a pull request. Components take typed props and
+contain **no copy** — if you find yourself typing a sentence into a `.astro`
+file, it belongs in a content module.
 
-## 🧞 Commands
+`CLAUDE.md` has the full architecture notes, the rules that keep this
+maintainable, and the design-source caveats (Figma layer names are stale; trust
+the rendered pixels).
 
-All commands are run from the root of the project, from a terminal:
+## Known gaps
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run build:preview`   | Build the GitHub Pages team preview (see below)  |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+Search the codebase for these markers — neither should survive launch:
 
-## 👀 Want to learn more?
+- `TODO(client)` — content or a decision needed from the client
+- `TODO(assets)` — an image still pointing at the old WordPress site
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
-
----
+Also outstanding: the metals.dev API key serving production **must be rotated
+before launch**, and there is no consent layer in front of the third-party
+scripts, which is a launch blocker for an EU/UK/Israel audience.
 
 ## Sharing a preview (GitHub Pages)
 
