@@ -61,12 +61,14 @@ const inlineLink =
         }
 
         {/* Figma: 200 × 46 fixed. Below `sm` it goes full-width — a 200px
-            button stranded on a 375px screen reads as an afterthought. */}
+            button stranded on a 375px screen reads as an afterthought. Centred
+            from sm to lg for the same reason in the other direction: a 200px
+            button pinned left in a ~900px stacked column reads as a mistake. */}
         <Button
           href={cta.href}
           variant={buttonVariant}
           external={cta.external}
-          class="mt-md w-full sm:w-[200px]"
+          class="mt-md mx-auto w-full sm:w-[200px] lg:mx-0"
         >
           {cta.label}
         </Button>

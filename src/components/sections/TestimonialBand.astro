@@ -105,7 +105,14 @@ const attribution = `${testimonial.name} - ${testimonial.organisation}`;
       <!--
         Square media. Held at 320px at every breakpoint: stacked at tablet
         widths a full-width square would be ~670px tall, which swamps the
-        quote. Left-aligned when stacked, matching the text column.
+        quote.
+
+        CENTRED when stacked (below lg), left-aligned again once it sits beside
+        the quote. It was previously left-aligned throughout, to match the text
+        column — but a 320px square pinned left in a container up to 3x its
+        width reads as a layout error rather than as alignment, and the empty
+        band to its right is the widest thing on the section. `lg:mx-0` returns
+        it to the flex row, so the desktop layout is untouched.
 
         REVIEW: Figma draws the play button as a 64x64 black circle at 50%
         opacity with a WHITE triangle. The shared VideoFacade primitive draws a
@@ -114,7 +121,7 @@ const attribution = `${testimonial.name} - ${testimonial.organisation}`;
         not patched locally here — it needs one decision applied in
         VideoFacade.astro. Figma also draws no hover overlay on the thumbnail.
       -->
-      <div class="w-full max-w-80 shrink-0 lg:w-80">
+      <div class="mx-auto w-full max-w-80 shrink-0 lg:mx-0 lg:w-80">
         {
           testimonial.video ? (
             <VideoFacade video={testimonial.video} ratio="1/1" />

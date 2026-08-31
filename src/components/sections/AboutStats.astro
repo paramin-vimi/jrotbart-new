@@ -106,13 +106,18 @@ const STAT_ICONS: Record<StatIconName, string> = {
         </div>
 
         <!-- Figma button: 240 × 46 fixed. Mobile: full width, capped so it does
-             not stretch edge-to-edge on tablets. -->
+             not stretch edge-to-edge on tablets.
+
+             CENTRED while the section is one stacked column, left-aligned again
+             from lg where the Figma layout resumes. Between 768 and 1023 the
+             button is 240px in a container up to 927px wide, so left-aligning
+             it stranded it against ~690px of empty space. -->
         {header.cta && (
           <Button
             href={header.cta.href}
             variant="solid"
             external={header.cta.external}
-            class="w-full max-w-[20rem] sm:w-60 sm:max-w-none"
+            class="mx-auto w-full max-w-[20rem] sm:w-60 sm:max-w-none lg:mx-0"
           >
             {header.cta.label}
           </Button>
