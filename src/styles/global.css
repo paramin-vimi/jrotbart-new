@@ -10,6 +10,24 @@
 @import "@fontsource/source-sans-3/latin-600.css";
 @import "@fontsource/source-sans-3/latin-400-italic.css";
 
+/* Tailwind 4 auto-detects source files across the whole project, so ANY file
+   added to the repo can inject a utility into the PRODUCTION stylesheet just by
+   containing a word that looks like a class name. This is not theoretical: the
+   line `permissions:` / `contents: read` in .github/workflows/preview.yml emits
+   `.contents{display:contents}`, which changes this stylesheet's content hash
+   and therefore the filename of every asset that references it — i.e. all 125
+   built files. These paths hold build plumbing and documentation, never markup,
+   so they are excluded from detection. All three are no-ops for the current
+   tree: removing them does not change the emitted CSS today.
+   README.md is excluded for the same reason, and it is not hypothetical there
+   either: a probe build proved a bare `isolate` in the README emits
+   `.isolate{isolation:isolate}`. The prose that survives today does so by luck,
+   not by rule, so the exclusion makes the guarantee hold for whoever edits it
+   next. Longer-form preview documentation lives in .github/PREVIEW.md. */
+@source not "../../.github";
+@source not "../../scripts";
+@source not "../../README.md";
+
 /*
   Design tokens — mapped 1:1 from Figma Variables (file MkPRW1BKlldItk3pnHgcW3).
   Names match the Figma variable names so the design and the code stay diffable.

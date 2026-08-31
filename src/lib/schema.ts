@@ -1,7 +1,14 @@
 import { offices, primaryEmail } from "@content/offices";
 import type { Faq, Seo, VideoRef } from "@content/types";
 
-const SITE = "https://jrotbart.com";
+// Derived from `site` + `base` in astro.config.mjs rather than duplicating the
+// origin here, so a preview build cannot assert production @ids from a host
+// that does not own them. An @id is an entity identifier: a preview emitting
+// "https://jrotbart.com/#organization" is claiming to BE the production entity.
+// In production `import.meta.env.SITE` is exactly "https://jrotbart.com" and
+// BASE_URL is "/", so this evaluates to the identical string it always did.
+const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
+export const SITE = import.meta.env.SITE.replace(/\/+$/, "") + BASE;
 const ORG_ID = `${SITE}/#organization`;
 
 /**

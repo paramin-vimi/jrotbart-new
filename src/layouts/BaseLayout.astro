@@ -11,10 +11,31 @@ interface Props {
 }
 
 const { seo, schema } = Astro.props;
+
+// Preview builds (GitHub Pages) are never indexable, whatever an individual
+// page asked for. PREVIEW_BUILD is a compile-time boolean injected by
+// astro.config.mjs; in production Vite substitutes the literal `false`, so
+// `noindex` collapses to exactly `seo.noindex` and the emitted HTML is
+// unchanged. BaseLayout is a complete chokepoint — all seven files in
+// src/pages/ import it — so this one line reaches every page, present and
+// future, which is why it lives here rather than in each page module.
+const previewBuild = import.meta.env.PREVIEW_BUILD === true;
+const noindex = previewBuild || seo.noindex;
+
 const canonical = seo.canonical ?? new URL(Astro.url.pathname, Astro.site).href;
-const ogImage = seo.ogImage?.src
-  ? new URL(seo.ogImage.src, Astro.site).href
-  : new URL("/og-default.jpg", Astro.site).href;
+
+/*
+  `new URL(src, Astro.site)` resolves against the ORIGIN only — `Astro.site` is
+  "https://jrotbart.com", it carries no base path — so under a subpath preview
+  every share card pointed at /og-default.jpg on the bare github.io host rather
+  than at /<repo>/og-default.jpg, and 404'd. BASE_URL is the one thing that
+  carries the base, so the join goes through it. At the production base of "/"
+  the trim makes this byte-identical to what it replaced.
+*/
+const withBase = (p: string) =>
+  new URL(import.meta.env.BASE_URL.replace(/\/$/, "") + p, Astro.site).href;
+
+const ogImage = withBase(seo.ogImage?.src ?? "/og-default.jpg");
 ---
 
 <!doctype html>
@@ -26,8 +47,17 @@ const ogImage = seo.ogImage?.src
     <title>{seo.title}</title>
     <meta name="description" content={seo.description} />
     <link rel="canonical" href={canonical} />
-    {seo.noindex && <meta name="robots" content="noindex, follow" />}
-    {!seo.noindex && <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />}
+    {/* "noindex, follow" is deliberate, and deliberately NOT "nofollow".
+        `follow` lets a crawler walk from whatever entry URL it found to every
+        other page, so each one is fetched and each one gets its own explicit
+        noindex. `nofollow` would leave the rest un-crawled, and un-crawled URLs
+        are precisely the ones that later get URL-only-indexed from a stray
+        inbound link — it makes the failure mode more likely, not less. Link
+        equity is moot on a page that is not in the index. This line is also
+        shared with the production per-post Sanity noindex flag, so changing the
+        string would change production output. */}
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    {!noindex && <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />}
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -54,7 +84,9 @@ const ogImage = seo.ogImage?.src
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <link rel="sitemap" href="/sitemap-index.xml" />
+    {/* Preview builds publish no sitemap, so they must not advertise one —
+        see the integrations line in astro.config.mjs. */}
+    {!previewBuild && <link rel="sitemap" href="/sitemap-index.xml" />}
 
     {schema && (
       <script

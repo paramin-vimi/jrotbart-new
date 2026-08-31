@@ -1,0 +1,81 @@
+# Team preview on GitHub Pages. THIS IS NOT THE PRODUCTION DEPLOY.
+#
+# Production is Cloudflare Workers Static Assets at the root of jrotbart.com
+# (see wrangler.toml). This workflow deliberately builds a DIFFERENT artifact:
+# every page carries <meta name="robots" content="noindex, follow">, canonical /
+# og:url / JSON-LD point at the preview origin, no sitemap is published, and
+# robots.txt is replaced with the preview one that explains why crawling is
+# allowed rather than disallowed.
+#
+# Everything preview-specific is driven by the two env vars on the build step.
+# Without them, `npm run build` produces the production-correct output — see
+# the merge gate in .github/PREVIEW.md.
+name: Preview (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; never cancel one that is already publishing.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Asks GitHub, at run time, where this site will actually be served.
+      #   base_path -> "/my-repo" for a project site
+      #                ""         for a USER.github.io site or a custom domain
+      #   origin    -> "https://user.github.io" or "https://preview.example.com"
+      # This is what makes one implementation correct at a root URL AND at a
+      # subpath without hardcoding the repository name. Rename the repo, or
+      # attach a custom domain later, and the next build self-corrects.
+      #
+      # Requires Pages to already be enabled with Source = "GitHub Actions"
+      # (Settings -> Pages). Enabling it from here would need a token other than
+      # GITHUB_TOKEN, so the first run fails confusingly if that step is skipped.
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # `build:preview` = `astro build` followed by scripts/rebase-preview.mjs.
+      # The script rebases dist/ when base_path is non-empty, installs the
+      # preview robots.txt, and FAILS THE BUILD if any page is missing noindex,
+      # if a sitemap was emitted, or if any root-relative path survived. A
+      # broken or indexable preview never reaches the deploy job.
+      - name: Build preview
+        run: npm run build:preview
+        env:
+          PREVIEW_ORIGIN: ${{ steps.pages.outputs.origin }}
+          PREVIEW_BASE: ${{ steps.pages.outputs.base_path }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

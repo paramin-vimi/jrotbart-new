@@ -7,7 +7,7 @@ import Overline from "@primitives/Overline.astro";
 import ArrowLink from "@primitives/ArrowLink.astro";
 import PortableText from "@components/PortableText.astro";
 import { getAllPosts, type Post } from "@lib/posts";
-import { buildGraph, organizationNode, webSiteNode } from "@lib/schema";
+import { buildGraph, organizationNode, webSiteNode, SITE } from "@lib/schema";
 
 /**
  * Individual post.
@@ -32,7 +32,10 @@ interface Props {
 
 const { post, all } = Astro.props;
 
-const url = new URL(`/${post.slug}/`, Astro.site).href;
+// SITE carries `base`, which Astro.site alone does not. `url` becomes this
+// post's canonical as well as its Article @id, so using Astro.site here would
+// emit a canonical missing the base path under a subpath deploy.
+const url = `${SITE}/${post.slug}/`;
 
 const seo = {
   title: post.metaTitle || `${post.title} | J. Rotbart & Co.`,
@@ -65,19 +68,19 @@ const schema = buildGraph([
     image: post.featuredImage.src,
     datePublished: post.publishedAt,
     author: { "@type": "Person", name: post.author.name },
-    publisher: { "@id": "https://jrotbart.com/#organization" },
+    publisher: { "@id": `${SITE}/#organization` },
     mainEntityOfPage: url,
     articleSection: post.category.title,
   },
   {
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://jrotbart.com/" },
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
       {
         "@type": "ListItem",
         position: 2,
         name: post.category.title,
-        item: `https://jrotbart.com/${post.category.slug}/`,
+        item: `${SITE}/${post.category.slug}/`,
       },
       { "@type": "ListItem", position: 3, name: post.title, item: url },
     ],

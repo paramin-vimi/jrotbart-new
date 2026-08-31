@@ -38,6 +38,7 @@ import {
   webPageNode,
   faqPageNode,
   videoNodes,
+  SITE,
 } from "@lib/schema";
 
 /**
@@ -69,7 +70,7 @@ const schema = buildGraph([
   organizationNode(),
   ...localBusinessNodes(),
   webSiteNode(),
-  webPageNode(seo, "https://jrotbart.com/"),
+  webPageNode(seo, `${SITE}/`),
   faqPageNode(faqSchemaFaqs),
   ...videoNodes(videoGrid.videos),
 ]);
