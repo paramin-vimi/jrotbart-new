@@ -49,8 +49,10 @@
  *   row becomes a horizontal TRACK — one row that scrolls, not a row that wraps.
  *   Arithmetic again: at a 390 viewport `container-site` yields 342px, while the
  *   press row needs 414.4px of tiles (128 + 81.6 + 102.4 + 102.4) plus 3x40px of
- *   gap = 534.4px. Short by 192px, it wrapped to two rows of two; it did so at
- *   every width from 320 to 582. Shrinking the tiles to fit instead would need
+ *   gap = 534.4px. Short by 192px, it wrapped, at every width from 320 to 582.
+ *   (The row SHAPE it wrapped into varied with the width — do not rely on the
+ *   "two rows of two" this comment used to claim.) Shrinking the tiles instead
+ *   would need
  *   them at 0.43 scale (0.61 even at a cramped 8px gap) against the drawn 0.8 —
  *   and the endorsement row ALREADY fits at 390, so a shrink-to-fit rule would
  *   scale only the row that overflows and render the press logos at roughly half
@@ -217,7 +219,17 @@ const { block, class: className = "" } = Astro.props;
     this file still stands. There are deliberately no arrows and no dots: four
     controls for seven logos is exactly the chrome NewsGrid, ContactSection and
     SocialFeed each refused in writing, and 44px targets would dominate a 24px
-    row. The partially clipped tile at the container gutter IS the affordance.
+    row. The partially clipped tile at the container gutter is the affordance.
+
+    KNOWN LIMIT of that affordance, measured across 320-767: the press row
+    shows 74-92px of the next tile on the common device widths (412/414/428/
+    430), but under 8px of it in two bands — 320-345 and 440-487 — where the
+    clip lands almost exactly on a tile boundary and the row reads as static
+    even though it scrolls. Swipe still works; the cue is what is missing. The
+    <360 gap rule at the end of this block widens the first band. The second
+    is unfixed: the only lever is the gap, and moving it drags the peek on the
+    412-430 widths that matter far more. Worth revisiting if arrows are ever
+    added for another reason.
 
     NO SCROLL-SNAP, deliberately. Each tile is a fixed letterbox with the
     bitmap centred inside via object-contain, so a tile boundary is not a
@@ -226,9 +238,16 @@ const { block, class: className = "" } = Astro.props;
     fight the browser's own focus-scroll once the href TODO(client) lands.
 
     Gated on 768, the same seam the .logo-tile scale-down above uses, so this
-    component has one mobile breakpoint. It is a deliberate no-op from 583 up,
-    where the row already fits (verified pixel-identical at 583/640/767); it
-    only bites below 583, where group 1 actually wrapped to two rows.
+    component has one mobile breakpoint.
+
+    From 583 up it is a no-op FOR GROUP 1 ONLY — that row already fits, so
+    nothing about it moves. It is NOT a no-op for group 2 in the 583-767 band:
+    group 2 loses `justify-between` and becomes a left-aligned 40px row like
+    the one above it. That is a deliberate, visible change, not a side effect.
+    `justify-between` was stranding three logos across up to 719px there,
+    nothing like the ~62px the design draws at the width it was drawn for.
+    An earlier version of this comment claimed the whole block was
+    pixel-identical from 583 up; it is not, and that claim was wrong.
   */
   @media (width < 768px) {
     .logo-track {
@@ -257,7 +276,12 @@ const { block, class: className = "" } = Astro.props;
          last tile to the content-box edges and leaves its 8px gap doing
          nothing. Below 768 both rows therefore use group 1's 40px gap and
          start alignment. 40px is matched to group 1's existing `gap-x-10` —
-         if that changes, change this with it. It is deliberately NOT reduced
+         if that changes, change this with it. Matched AT THE DEFAULT ROOT FONT
+         SIZE only: `gap-x-10` resolves to 2.5rem, so a visitor who has raised
+         their browser text size gets a wider gap on group 1 than the fixed
+         40px gives group 2. Both rows still scroll, so nothing breaks; if they
+         ever need to agree exactly, this is the line, and 2.5rem is the value.
+         It is deliberately NOT reduced
          to a token value: 24px and 32px were measured and both destroy the
          peek at the common 412/414/428/430 device widths, where 40px keeps
          74-92px of the next tile visible. */
@@ -289,6 +313,27 @@ const { block, class: className = "" } = Astro.props;
       outline-offset: -2px;
     }
   }
+
+  /*
+    The one band where the uniform 40px gap costs something. The endorsement
+    row is 220.8px of tiles; at a 320 viewport `container-site` yields 272px,
+    which leaves only ~25px between three logos. At 40px the third one clips —
+    and it did NOT clip before this change, because `justify-between` with an
+    8px floor fitted all three. A trust bar that stops showing an endorsement
+    it used to show is a regression, however narrow the band.
+
+    24px is the largest gap that still fits (220.8 + 2x24 = 268.8 <= 272). It
+    is scoped below 360 precisely so it cannot touch the 40px value above,
+    which is what preserves the 74-92px peek on the common 412/414/428/430
+    device widths — the measurement that rejected a global 24px in the first
+    place. It also widens the press row's peek in the 320-345 band, where the
+    next tile is otherwise clipped to under 8px and the row reads as static.
+  */
+  @media (width < 360px) {
+    .logo-track {
+      column-gap: 24px;
+    }
+  }
 </style>
 
 <script>
@@ -302,7 +347,14 @@ const { block, class: className = "" } = Astro.props;
     become dead tab stops, and neither does the 583-767 band), or the track
     already contains something focusable (once the logos get their hrefs the
     <a>s carry keyboard access and the container should stop being a tab stop
-    of its own). This is what keeps the >=768 accessibility tree unchanged.
+    of its own).
+
+    NOTE the limit of that: it is true only WITH JavaScript. With JS off the
+    tabindex stays in the served markup, so a desktop page keeps two focusable
+    non-interactive lists. That is the deliberate trade — a spare tab stop is a
+    far smaller failure than logos 3 and 4 being unreachable — but it is a
+    trade, not a guarantee, and an earlier version of this comment claimed
+    "no dead tab stop ever reaches the >=768 page", which overstated it.
   */
   const tracks = document.querySelectorAll<HTMLElement>("[data-logo-track]");
 
@@ -315,7 +367,24 @@ const { block, class: className = "" } = Astro.props;
         "a[href], button, [tabindex]:not([tabindex='-1'])",
       );
       if (scrollable && !focusable) el.setAttribute("tabindex", "0");
-      else el.removeAttribute("tabindex");
+      else drop(el);
+    };
+
+    /* Removing `tabindex` from the element that currently HAS focus blurs it
+       and drops the caret to <body> — the user loses their place mid-page with
+       no warning. Measured: focus the "Featured on:" track at 390, widen past
+       768, and document.activeElement became BODY. So when the track being
+       retired is the focused one, wait for it to lose focus on its own. It
+       keeps a tab stop it no longer needs until then, which is the harmless
+       direction of the two. */
+    const drop = (el: HTMLElement) => {
+      if (document.activeElement !== el) {
+        el.removeAttribute("tabindex");
+        return;
+      }
+      el.addEventListener("blur", () => el.removeAttribute("tabindex"), {
+        once: true,
+      });
     };
 
     /* ResizeObserver rather than a resize listener: it fires on the element's

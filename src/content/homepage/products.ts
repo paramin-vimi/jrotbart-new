@@ -106,7 +106,11 @@ export interface ProductGridSection extends ProductGridBlock {
  * finews). The current live site carries EIGHT — it also has Forbes, CNBC,
  * Financial Times and MONEY FM 89.3. We have shipped the four the design draws.
  * Confirm whether the other four should be dropped or whether the row should
- * carry all eight (the component wraps, so eight will render correctly).
+ * carry all eight. NOTE this is no longer free: below 768 the row is a
+ * horizontal track, so eight logos lengthen the scroll rather than wrapping,
+ * and at >=1280 group 1 is `xl:shrink-0` sized to hug four tiles — eight would
+ * overrun the drawn 742px column and push the divider off its x=838. Adding
+ * four more is a layout change at both ends, not just more data.
  *
  * TODO(client): the live site auto-scrolls these logos in a carousel. The new
  * design draws a static row and shows no carousel affordance, so this is built
