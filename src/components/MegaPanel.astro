@@ -1,0 +1,146 @@
+---
+import NavIcon from "./NavIcon.astro";
+import type { NavItem } from "@content/types";
+
+/**
+ * A mega-menu panel.
+ *
+ * Not in the Figma — the only mega menu in the file is on the "Old" page and is
+ * the current live site (a dark three-column panel). This is rebuilt in the new
+ * design's language: warm light surface, hairline borders, square corners,
+ * Playfair titles over Source Sans descriptions, and the same circled-outline
+ * icon treatment used by the stats and office blocks.
+ *
+ * Layout: item grid on the left, a feature rail on the right. The rail is what
+ * stops the panel reading as a plain list — it gives each menu somewhere to
+ * send an undecided visitor.
+ */
+
+interface Props {
+  item: NavItem;
+  id: string;
+}
+
+const { item, id } = Astro.props;
+const cols = item.columns ?? 2;
+const feature = item.feature;
+---
+
+{/* Transition OPACITY only. Transitioning `visibility` keeps its computed value
+    `hidden` for the whole duration, which makes every link inside unfocusable —
+    ArrowDown opened the panel but stranded focus on the trigger. */}
+<div
+  id={id}
+  data-mega-panel
+  class="invisible absolute inset-x-0 top-full z-40 opacity-0 transition-opacity duration-150 motion-reduce:transition-none"
+>
+  <div class="border-y border-border-primary bg-bg-secondary shadow-[0_18px_40px_-24px_rgba(26,26,26,0.35)]">
+    <div class="container-site grid gap-xl py-lg lg:grid-cols-[minmax(0,1fr)_320px] lg:py-xl">
+      <!-- ── Item grid ─────────────────────────────────────────── -->
+      <div class="flex flex-col gap-sm">
+        {item.panelLabel && (
+          <p class="eyebrow text-text-tertiary">{item.panelLabel}</p>
+        )}
+
+        <ul
+          class:list={[
+            "grid gap-x-lg gap-y-2xs",
+            cols === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2",
+          ]}
+        >
+          {item.children?.map((child) => (
+            <li>
+              <a
+                href={child.href}
+                class="group flex items-start gap-sm border border-transparent p-2xs transition-colors duration-150 hover:border-border-primary hover:bg-bg-primary motion-reduce:transition-none"
+              >
+                {child.icon && (
+                  <span
+                    class="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border-primary text-brand-red transition-colors duration-150 group-hover:border-brand-red motion-reduce:transition-none"
+                    aria-hidden="true"
+                  >
+                    <NavIcon name={child.icon} class="h-5 w-5" />
+                  </span>
+                )}
+
+                <span class="flex flex-col gap-0.5">
+                  <span class="font-display text-base leading-6 font-medium text-text-primary transition-colors duration-150 group-hover:text-brand-red motion-reduce:transition-none">
+                    {child.label}
+                  </span>
+                  {child.description && (
+                    <span class="text-sm leading-5 text-text-secondary">
+                      {child.description}
+                    </span>
+                  )}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <a
+          href={item.href}
+          class="button-text mt-2xs inline-flex w-fit items-center gap-2xs text-brand-red hover:text-brand-950"
+        >
+          View all {item.label}
+          <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" aria-hidden="true">
+            <path d="M1 6h9M6.5 2l4 4-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="square" />
+          </svg>
+        </a>
+      </div>
+
+      <!-- ── Feature rail ──────────────────────────────────────── -->
+      {feature && (
+        <aside
+          class:list={[
+            // Centred, not space-between: the rail is as tall as the item grid
+            // beside it, and pinning the CTA to the bottom left a large dead gap.
+            "hidden flex-col justify-center gap-md p-md lg:flex",
+            feature.theme === "red"
+              ? "bg-brand-red text-always-white on-dark"
+              : "bg-bg-primary text-text-primary",
+          ]}
+        >
+          <div class="flex flex-col gap-2xs">
+            {feature.eyebrow && (
+              <p
+                class:list={[
+                  "eyebrow",
+                  feature.theme === "red" ? "text-always-white/70" : "text-text-tertiary",
+                ]}
+              >
+                {feature.eyebrow}
+              </p>
+            )}
+            <p class="font-display text-xl leading-7 font-medium">{feature.heading}</p>
+            {feature.body && (
+              <p
+                class:list={[
+                  "text-sm leading-5",
+                  feature.theme === "red" ? "text-always-white/80" : "text-text-secondary",
+                ]}
+              >
+                {feature.body}
+              </p>
+            )}
+          </div>
+
+          <a
+            href={feature.cta.href}
+            class:list={[
+              "button-text inline-flex w-fit items-center gap-2xs transition-colors duration-150 motion-reduce:transition-none",
+              feature.theme === "red"
+                ? "text-always-white hover:text-always-white/75"
+                : "text-brand-red hover:text-brand-950",
+            ]}
+          >
+            {feature.cta.label}
+            <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" aria-hidden="true">
+              <path d="M1 6h9M6.5 2l4 4-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="square" />
+            </svg>
+          </a>
+        </aside>
+      )}
+    </div>
+  </div>
+</div>

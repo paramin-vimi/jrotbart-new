@@ -1,0 +1,116 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import TopNavigation from "@components/TopNavigation.astro";
+import SiteFooter from "@components/SiteFooter.astro";
+
+import Hero from "@sections/Hero.astro";
+import LogoStrip from "@sections/LogoStrip.astro";
+import ProductGrid from "@sections/ProductGrid.astro";
+import TestimonialBand from "@sections/TestimonialBand.astro";
+import SocialFeed from "@sections/SocialFeed.astro";
+import AboutStats from "@sections/AboutStats.astro";
+import OfficeGrid from "@sections/OfficeGrid.astro";
+import MediaWithText from "@sections/MediaWithText.astro";
+import ServicesRows from "@sections/ServicesRows.astro";
+import ServiceCardGrid from "@sections/ServiceCardGrid.astro";
+import CtaBand from "@sections/CtaBand.astro";
+import NewsGrid from "@sections/NewsGrid.astro";
+import VideoGrid from "@sections/VideoGrid.astro";
+import FaqAccordion from "@sections/FaqAccordion.astro";
+import ContactSection from "@sections/ContactSection.astro";
+
+import { hero } from "@content/homepage/hero";
+import { logoStrip, productGrid } from "@content/homepage/products";
+import { testimonialOne, testimonialTwo, socialFeed } from "@content/homepage/testimonials";
+import { aboutStats, officeGrid } from "@content/homepage/about";
+import { expertise, servicesRows, serviceCards } from "@content/homepage/services";
+import { ctaBand, newsGrid, newsCardCtaLabel, videoGrid } from "@content/homepage/news";
+import { faqAccordion, faqSchemaFaqs, faqFooterBody } from "@content/homepage/faq";
+import { mintStrip, contact } from "@content/homepage/contact";
+
+import { getHomepagePosts, toArticle } from "@lib/posts";
+
+import {
+  buildGraph,
+  organizationNode,
+  localBusinessNodes,
+  webSiteNode,
+  webPageNode,
+  faqPageNode,
+  videoNodes,
+} from "@lib/schema";
+
+/**
+ * Homepage.
+ *
+ * Section order follows the Figma frame `Home` (9813:5482) top to bottom. Each
+ * section is a block from the fixed union in src/content/types.ts — this page
+ * composes, it does not contain content or layout of its own.
+ */
+
+// The news grid is the homepage's only CMS-backed section. Editors control it
+// from Sanity: the three most recent posts, unless one is pinned with the
+// "Feature on the homepage" flag. Everything else on this page is developer-managed.
+const homepagePosts = await getHomepagePosts(newsGrid.limit ?? 3);
+const newsGridWithPosts = { ...newsGrid, articles: homepagePosts.map(toArticle) };
+
+const seo = {
+  // NOTE(seo): the live homepage title is "Buy Gold in Hong Kong | Bullion,
+  // Coins, Bar", which competes head-on with /buy-gold-hong-kong/ for the same
+  // query. This brand-led title hands that phrase back to the location page.
+  // Flagged in the readiness report as needing explicit client sign-off,
+  // because it will move rankings on a primary commercial term.
+  title: "J. Rotbart & Co. | Buy, Store & Ship Physical Precious Metals",
+  description:
+    "A boutique family-owned bullion house. Buy, sell, store, ship and finance physical gold, silver, platinum and palladium, with offices in Hong Kong, Singapore, Manila and Tel Aviv.",
+};
+
+const schema = buildGraph([
+  organizationNode(),
+  ...localBusinessNodes(),
+  webSiteNode(),
+  webPageNode(seo, "https://jrotbart.com/"),
+  faqPageNode(faqSchemaFaqs),
+  ...videoNodes(videoGrid.videos),
+]);
+---
+
+<BaseLayout seo={seo} schema={schema}>
+  <TopNavigation slot="header" />
+
+  <Hero block={hero} />
+
+  <LogoStrip block={logoStrip} />
+
+  <ProductGrid block={productGrid} />
+
+  <TestimonialBand block={testimonialOne} />
+
+  <SocialFeed block={socialFeed} />
+
+  <AboutStats block={aboutStats} />
+
+  {/* Figma frame 10229:7543 orders these three blocks About -> Expertise ->
+      Offices. Expertise sits between them, not after. */}
+  <MediaWithText block={expertise} />
+
+  <OfficeGrid block={officeGrid} />
+
+  <ServicesRows block={servicesRows} />
+
+  <ServiceCardGrid block={serviceCards} />
+
+  <CtaBand block={ctaBand} />
+
+  <NewsGrid block={newsGridWithPosts} cardCtaLabel={newsCardCtaLabel} />
+
+  <VideoGrid block={videoGrid} />
+
+  <TestimonialBand block={testimonialTwo} />
+
+  <FaqAccordion block={faqAccordion} footerBody={faqFooterBody} />
+
+  <ContactSection block={contact} mintStrip={mintStrip} />
+
+  <SiteFooter slot="footer" />
+</BaseLayout>

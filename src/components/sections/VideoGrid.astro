@@ -1,0 +1,146 @@
+---
+/**
+ * "More in Video" — Figma 9813:6137, block 2.
+ *
+ * Four portrait video cards, each a solid brand-red title band above a
+ * click-to-load YouTube facade. Never an autoloaded iframe.
+ *
+ * SPACING: in the comp this block shares one section shell with NewsGrid on the
+ * same #fdfcfc ground, separated by a 96px gap. It therefore carries bottom
+ * padding only, and inherits its top gap from NewsGrid's bottom padding. Used
+ * on its own, pass `class="pt-lg md:pt-xl lg:pt-3xl"`.
+ *
+ * THE TITLE BAND. The comp fixes the band at 116px / three lines, but the real
+ * titles run to 79 characters against a 47-character placeholder and would
+ * overflow that even at 1366px. The rule implemented here is: THE BAND GROWS,
+ * THE TITLE NEVER CLAMPS.
+ *   - The band is the video's only label, so truncating it costs information
+ *     that has no other source on the page (unlike the article excerpt).
+ *   - `min-h` holds the designed 116px floor whenever the title is short
+ *     enough, so the comp's proportions survive.
+ *   - The band is the flex-growing child of a stretched grid item, so every
+ *     band in a row resolves to the same height and all thumbnails stay on a
+ *     shared baseline however ragged the titles are. No subgrid needed.
+ * The type steps down one notch on the narrowest breakpoint as part of the
+ * responsive scale — not as an overflow escape hatch.
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import VideoFacade from "@primitives/VideoFacade.astro";
+import type { VideoGridBlock } from "@content/types";
+
+interface Props {
+  block: VideoGridBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { videos } = block;
+
+/* The comp sets EXPLORE inline-right of the heading; SectionHeader stacks its
+   cta underneath, so it is rendered separately. */
+const { cta, ...headingOnly } = block.header;
+
+/* 269.5 × 382 in the comp. */
+const posterRatio = "269.5 / 382";
+
+/** See the note in NewsGrid.astro — this frame's H2 is 32/44, not the token's 40/52. */
+const H2_32_44 =
+  "[&>h2]:text-[length:clamp(1.5rem,0.86rem_+_1.34vw,2rem)] [&>h2]:leading-[1.375]";
+
+/**
+ * Play-overlay correction, Figma 9813:6191.
+ *
+ * The comp draws a 64px circle filled #1a1a1a (`text-primary`) with a white
+ * glyph; VideoFacade ships the inverse (white circle, red glyph) and no rest
+ * scrim exists in the comp at all. The primitive is shared and out of scope for
+ * this pass, so the three properties are corrected from here — the descendant
+ * selectors outrank the primitive's own single-class utilities. The hover scrim
+ * survives (`:hover` still wins), as does the 2px optical offset on the glyph.
+ * TODO: move this into VideoFacade and delete the override.
+ */
+const PLAY_OVERLAY =
+  "[&_button]:bg-transparent " +
+  "[&_button>span:last-child]:bg-text-primary " +
+  "[&_svg]:fill-always-white [&_svg]:h-10 [&_svg]:w-10";
+---
+
+<section
+  id={block.anchorId}
+  class:list={["bg-bg-secondary pb-lg md:pb-xl lg:pb-3xl", className]}
+>
+  <Container>
+    <!-- Below `sm` the EXPLORE link wraps under the heading rather than being
+         squeezed alongside it. -->
+    <div class="flex flex-wrap items-center justify-between gap-sm">
+      <SectionHeader header={headingOnly} as="h2" class={H2_32_44} />
+      {
+        cta && (
+          /*
+            EXPLORE. Written out rather than using the ArrowLink primitive,
+            which renders the label in `text-primary` and a bare 12px chevron.
+            The comp's type map puts this label in `brand-red`, and the icon is
+            the same 28×28 circled arrow as the cards' READ MORE — label + 8px
+            + circle, which is what makes it the 107×28 the comp measures.
+            TODO: fold both back into ArrowLink; primitives are out of scope for
+            this pass.
+          */
+          <a
+            href={cta.href}
+            class="group button-text inline-flex items-center gap-2xs text-brand-red transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none"
+            {...cta.external ? { rel: "noopener noreferrer", target: "_blank" } : {}}
+          >
+            <span>{cta.label}</span>
+            <span
+              class="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border-primary"
+              aria-hidden="true"
+            >
+              <svg
+                class="h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                viewBox="0 0 12 12"
+                fill="none"
+              >
+                <path
+                  d="M1 6h9M6.5 2l4 4-4 4"
+                  stroke="currentColor"
+                  stroke-width="1.25"
+                  stroke-linecap="square"
+                />
+              </svg>
+            </span>
+          </a>
+        )
+      }
+    </div>
+
+    <!--
+      Four columns at `lg`, two below it all the way down to the smallest
+      screen. A one-up column of portrait cards would run past 2,000px of
+      scroll, and a swipe row would hide half the set behind an affordance we
+      would then have to teach; a 2×2 keeps every card reachable and keeps the
+      designed portrait crop intact.
+    -->
+    <ul
+      role="list"
+      class="mt-md grid grid-cols-2 gap-xs sm:gap-md lg:mt-lg lg:grid-cols-4"
+    >
+      {
+        videos.map((video) => (
+          <li class="flex flex-col">
+            <h3 class="flex min-h-[116px] flex-1 items-center justify-center bg-brand-red px-xs py-xs text-center font-body text-base leading-6 font-medium text-always-white sm:px-sm sm:font-display sm:text-[length:var(--step-h3)] sm:leading-7">
+              {video.title}
+            </h3>
+
+            {/* shrink-0 so the facade keeps its aspect ratio when the grid row
+                stretches — the band absorbs the slack, not the thumbnail. */}
+            <VideoFacade
+              video={video}
+              ratio={posterRatio}
+              class={`shrink-0 ${PLAY_OVERLAY}`}
+            />
+          </li>
+        ))
+      }
+    </ul>
+  </Container>
+</section>

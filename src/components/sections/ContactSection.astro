@@ -1,0 +1,777 @@
+---
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import Button from "@primitives/Button.astro";
+import type { MintStripBlock } from "@content/types";
+import type { ContactFormSection, DirectoryLine } from "@content/homepage/contact";
+import { b2blead } from "@content/integrations";
+
+/**
+ * Figma `10369:9011` (mint provenance strip) + `10369:8261` (Contact).
+ *
+ * The two are drawn as separate 1366-wide instances stacked with no gap, on the
+ * same #fdfcfc surface. They ship together because the strip is the visual lead-in
+ * to the contact block and has no meaning on its own; it is still its own
+ * landmark and can be omitted by leaving the `mintStrip` prop unset.
+ *
+ * ===========================================================================
+ * THE FORM IS REAL MARKUP, NOT A DEMO
+ * ===========================================================================
+ * • It is an ordinary <form method="post"> pointing at CONTACT_ENDPOINT. There
+ *   is NO fetch() wrapper and NO simulated success — the backend Worker has not
+ *   been written yet (see the block comment on CONTACT_ENDPOINT in
+ *   src/content/homepage/contact.ts for what it must do). Submitting today will
+ *   404, which is the honest behaviour; it will start working the moment the
+ *   Worker exists, with no change to this component.
+ * • It works with JavaScript disabled: real <label for>, real input types,
+ *   `required`, `pattern`, `autocomplete`, and native browser validation.
+ * • The inline script is progressive enhancement only. It swaps the browser's
+ *   validation bubbles for inline messages tied to each field by
+ *   `aria-describedby`, then lets the native submit proceed untouched.
+ * • Success and failure text is rendered ONLY when the server redirects back
+ *   with its flag in the query string. Nothing is ever announced on the
+ *   strength of a client-side guess.
+ *
+ * ===========================================================================
+ * RESPONSIVE — invented here; the Figma is desktop-only at 1366
+ * ===========================================================================
+ * MINT STRIP
+ *   • 768px and up: the drawn row — five 120px tiles, `space-between` across 1174.
+ *   • under 768px:  five tiles across is illegible, so the row becomes a CENTRED WRAP
+ *     (3+2, then 2+2+1 at the narrowest widths). Wrapping beats a fixed 2- or
+ *     3-column grid because five items always orphan one cell, and it beats a
+ *     carousel because a carousel hides trust marks behind an interaction.
+ *     Tiles drop from 120 to 88 wide. Padding-block from 64 to 48.
+ *
+ * CONTACT
+ *   • 1024px and up: the drawn 563 / 48 / 563 split, columns top-aligned.
+ *   • under 1024px:  single column, FORM FIRST, directory second. Form-first is the
+ *     conversion order and matches the desktop left-to-right reading order.
+ *   • 640px and up:  Email and Phone stay side by side (they are short fields);
+ *     below that they stack with a 24px gap.
+ *   • Message is a <textarea rows=3>, not the 51px single-line box the Figma
+ *     draws. The Figma types it as a Text Area but sizes it like an input; a
+ *     one-line message box invites one-word messages and hides what was typed.
+ *   • Consent + Submit: side by side from 640, stacked below it with the button
+ *     going FULL WIDTH (the drawn 200px fixed button is a poor thumb target on
+ *     a 375px screen).
+ *   • Section padding-block steps 96, 64, 48 going down.
+ *
+ * MAP — the Figma construction is replaced, deliberately
+ *   The design clips a 1667x1060 world SVG at a hand-picked (-567, -414) offset
+ *   inside a 1174x560 frame, and parks four pins at absolute pixel coordinates
+ *   inside that frame. Any width other than 1174 puts every pin in the sea.
+ *   Here the artwork is one pre-cropped image and the pins are PERCENTAGES of
+ *   the frame, so the frame and its pins scale as a single unit at every width.
+ *   Each pin is also a real <a> to the office on Google Maps, so the map carries
+ *   nothing that is only obtainable by looking at it.
+ *   • 768px and up: pins absolutely placed on a 1174:560 band, as drawn.
+ *   • under 768px:  a 2.1:1 crop cannot hold Israel through to the Philippines legibly at 375px, and
+ *     the Hong Kong / Philippines / Singapore labels collide, so the pins reflow
+ *     into a plain centred wrap of the same four links on the same tinted field.
+ */
+
+interface Props {
+  /** The contact block. */
+  block: ContactFormSection;
+  /** Optional provenance strip rendered directly above it. */
+  mintStrip?: MintStripBlock;
+  class?: string;
+}
+
+const { block, mintStrip, class: className = "" } = Astro.props;
+const {
+  header,
+  fieldRows,
+  attribution,
+  consent,
+  consentLink,
+  submitLabel,
+  captcha,
+  feedback,
+  directory,
+  map,
+} = block;
+
+/** `<section>` is only a landmark when it is named. */
+const sectionLabel = [header.heading, header.headingAccent].filter(Boolean).join(" ");
+
+/** Every id in the form is namespaced, so two forms could coexist on a page. */
+const fid = (name: string) => `${block._key}-${name}`;
+
+/**
+ * FIGMA TYPE OVERRIDE — the Contact H2 is drawn Playfair 32/44, while the global
+ * `--step-h2` token clamps 28 -> 40 and renders 40/52 at the 1366 design width,
+ * eight pixels too large. SectionHeader is a shared primitive and not ours to
+ * change, so the drawn size is applied from the wrapper it accepts. Same string
+ * NewsGrid and VideoGrid use for the same reason, so every 32/44 heading on the
+ * page scales identically.
+ */
+const H2_32_44 =
+  "[&>h2]:text-[length:clamp(1.5rem,0.86rem_+_1.34vw,2rem)] [&>h2]:leading-[1.375]";
+
+/**
+ * FIGMA MEASURE OVERRIDE — desktop only, and only for this header.
+ *
+ * • `text-wrap: balance` is the global default on every heading (global.css) and
+ *   it is right nearly everywhere. Here it is wrong: balancing splits the title
+ *   into two near-equal lines ("Schedule Your Private / Consultation Today"),
+ *   which reads as a squat block. The frame is drawn with a long first line and
+ *   "Today" alone underneath — the italic accent is meant to run away from the
+ *   roman opening and land hard on one word. Normal wrapping reproduces that
+ *   break exactly at the drawn 563px column. Kept at `lg:` only: below the
+ *   two-column split the heading runs to three or four lines and balancing is
+ *   the better invention there.
+ * • SectionHeader clamps its body copy to 65ch (~517px), 46px narrower than the
+ *   drawn 563px column, which pulls "reply" down onto the second line and makes
+ *   the intro look inset from the form beneath it. At `lg:` the column IS the
+ *   measure (563px is ~71ch, still a comfortable line), so the clamp is released
+ *   there and left in force at every width where the column is wider than the
+ *   design's.
+ */
+const HEADER_MEASURE = "lg:[&>h2]:text-wrap lg:[&>p]:max-w-none";
+
+const fieldClass =
+  "w-full min-w-0 appearance-none rounded-none border-0 border-b border-border-primary " +
+  "bg-transparent px-0 pb-2xs pt-xs font-body text-base leading-6 text-text-primary " +
+  "transition-colors duration-150 placeholder:text-text-inactive focus:border-brand-red " +
+  "aria-invalid:border-brand-red motion-reduce:transition-none";
+---
+
+{/* ---------------------------------------------------------------- */}
+{/* Mint provenance strip — Figma 10369:9011                          */}
+{/* ---------------------------------------------------------------- */}
+{
+  mintStrip && (
+    <section
+      id={mintStrip.anchorId}
+      aria-labelledby={`${mintStrip._key}-label`}
+      class="bg-bg-secondary"
+    >
+      <Container class="py-lg md:py-xl">
+        <div class="flex flex-col items-center gap-sm">
+          <div id={`${mintStrip._key}-label`}>
+            <Overline tone="tertiary" class="text-center">
+              {mintStrip.label}
+            </Overline>
+          </div>
+
+          <ul
+            role="list"
+            class="flex w-full flex-wrap items-center justify-center gap-x-lg gap-y-md md:flex-nowrap md:justify-between md:gap-x-0"
+          >
+            {mintStrip.logos.map((logo) => {
+              const decorative = logo.image.decorative === true;
+              const img = (
+                /*
+                  TODO(assets): live-site WordPress uploads standing in for the
+                  Figma export. Four are JPEGs with baked-in white backgrounds
+                  that read as lighter tiles on #fdfcfc, and the US Mint file is
+                  washed out. Re-export all five as transparent PNG/SVG.
+                */
+                <img
+                  src={logo.image.src}
+                  alt={decorative ? "" : logo.image.alt}
+                  aria-hidden={decorative ? "true" : undefined}
+                  width={logo.image.width}
+                  height={logo.image.height}
+                  loading="lazy"
+                  decoding="async"
+                  class="max-h-full w-auto max-w-full object-contain"
+                />
+              );
+              return (
+                <li class="flex h-[54px] w-[88px] shrink-0 items-center justify-center md:w-[120px]">
+                  {logo.href ? (
+                    <a
+                      href={logo.href}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                      class="flex h-full items-center opacity-100 transition-opacity duration-150 hover:opacity-70 motion-reduce:transition-none"
+                    >
+                      {img}
+                    </a>
+                  ) : (
+                    img
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Container>
+    </section>
+  )
+}
+
+{/* ---------------------------------------------------------------- */}
+{/* Contact — Figma 10369:8261                                        */}
+{/* ---------------------------------------------------------------- */}
+<section
+  id={block.anchorId}
+  aria-label={sectionLabel}
+  class:list={["bg-bg-secondary pb-lg pt-lg md:pb-xl md:pt-xl lg:pb-3xl lg:pt-3xl", className]}
+>
+  <Container>
+    <div class="grid grid-cols-1 gap-xl lg:grid-cols-2 lg:items-start lg:gap-lg">
+      {/* ---------------- Left column: the form ---------------- */}
+      <div class="flex flex-col gap-md md:gap-lg">
+        {/* This frame's H2 is 32/44, not the token's 40/52 — see H2_32_44. */}
+        <SectionHeader header={header} as="h2" class={`${H2_32_44} ${HEADER_MEASURE}`} />
+
+        {/* b2blead "enhance" mode: their script takes over this form on load and
+            posts to their endpoint. It matches on field NAME, and ours are
+            already name / email / phone / message.
+
+            `action` posts to the same b2blead endpoint, so if their script is
+            blocked or fails the form still submits natively — no dead form and
+            no fake submission. Our own client-side validation runs first either
+            way.
+
+            NOTE: CONTACT_ENDPOINT (the placeholder Worker route) is no longer
+            the destination. b2blead owns submission now, per the client. The
+            constant is left in the content module for a future self-hosted
+            handler; nothing reads it here. */}
+        <form
+          data-contact-form
+          data-b2blead-form={b2blead.formId}
+          action={b2blead.submitEndpoint}
+          method="post"
+          class="flex flex-col gap-md md:gap-lg"
+        >
+          {/*
+            Spam trap. Hidden from sight, from the accessibility tree and from
+            the tab order; the Worker rejects any submission where it is filled.
+            Not user-facing copy, so it stays out of the content module.
+          */}
+          <div hidden aria-hidden="true">
+            <input
+              type="text"
+              name="company"
+              tabindex="-1"
+              autocomplete="off"
+              value=""
+            />
+          </div>
+
+          {
+            fieldRows.map((row) => (
+              <div
+                class:list={[
+                  "grid grid-cols-1 gap-sm",
+                  row.length > 1 && "sm:grid-cols-2 sm:gap-lg",
+                ]}
+              >
+                {row.map((field) => {
+                  const id = fid(field.name);
+                  const errorId = `${id}-error`;
+                  /* aria-describedby always points at the error node. It is
+                     empty (and display:none via `empty:hidden`) until the
+                     enhancement fills it, so it adds nothing when valid. */
+                  const shared = {
+                    id,
+                    name: field.name,
+                    required: field.required,
+                    autocomplete: field.autocomplete,
+                    "aria-describedby": errorId,
+                    "data-field": true,
+                    "data-missing": field.missingMessage,
+                    ...(field.invalidMessage ? { "data-invalid": field.invalidMessage } : {}),
+                  };
+                  return (
+                    <div class="flex flex-col gap-2xs">
+                      {/* Label -> field gap is 8 (`2xs`), not 16. The Figma
+                          measures it from a leading-trimmed cap box (label h 9,
+                          input top at +17), so the drawn white space is 8px.
+                          A CSS label carries a 20px line box with ~5px of
+                          descender slack below the baseline, which means 8 here
+                          renders ~13 optically — the nearest the token scale
+                          gets without gluing the label to its underline. */}
+                      <div class="flex flex-col gap-2xs">
+                        <label class="eyebrow text-text-tertiary" for={id}>
+                          {field.label}{field.required && <span aria-hidden="true">*</span>}
+                        </label>
+
+                        {field.multiline ? (
+                          <textarea
+                            {...shared}
+                            rows={field.rows ?? 3}
+                            class:list={[fieldClass, "min-h-[51px] resize-y"]}
+                          ></textarea>
+                        ) : (
+                          <input
+                            {...shared}
+                            type={field.type}
+                            inputmode={field.inputmode}
+                            pattern={field.pattern}
+                            class:list={[fieldClass, "h-[51px]"]}
+                          />
+                        )}
+                      </div>
+
+                      <p
+                        id={errorId}
+                        data-error
+                        class="empty:hidden text-sm leading-5 text-brand-red"
+                      ></p>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
+          }
+
+          {/* Attribution. A real fieldset/legend so the question is announced
+              with every option. Optional — a lead is not worth losing over a
+              marketing field. */}
+          <fieldset class="min-w-0 border-0 p-0">
+            {/* A legend is rendered outside the fieldset's own formatting
+                context, so the fieldset stays a plain block and the options get
+                their own flex container. */}
+            <legend class="eyebrow p-0 text-text-tertiary">{attribution.label}</legend>
+            {/* Same 8px label gap as the inputs above: the Figma puts the
+                first radio 17px below the legend's cap top. */}
+            <div class="mt-2xs flex flex-col gap-2xs">
+              {attribution.options.map((option) => (
+                /* Ring 24 + gap 8 = 32, which is what the drawn hug widths
+                   require: the five options measure 138 / 228 / 139 / 97 / 177
+                   and each is its label's text width plus a constant ~31-32.
+                   24 also matches the drawn 24px row height exactly, and is a
+                   better pointer target than the 20 this used to be. */
+                <label class="flex cursor-pointer items-center gap-2xs">
+                  <input
+                    type="radio"
+                    name={attribution.name}
+                    value={option.value}
+                    class="h-6 w-6 shrink-0 appearance-none rounded-full border border-border-primary bg-always-white transition-colors duration-150 checked:border-brand-red checked:bg-brand-red checked:shadow-[inset_0_0_0_5px_var(--color-always-white)] motion-reduce:transition-none"
+                  />
+                  <span class="text-base leading-6 text-text-primary">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {/*
+            The Figma pastes a screenshot of Google reCAPTCHA v2. The project has
+            already chosen Cloudflare Turnstile instead (.env.example) — no
+            Google cookie, a fraction of the payload, and it can run in managed
+            mode with no interaction. It mounts only when a site key exists, so
+            nothing renders until the client supplies TURNSTILE_SITE_KEY rather
+            than leaving a permanently empty 302x76 hole in the layout.
+          */}
+          {
+            captcha.siteKey && (
+              <div role="group" aria-label={captcha.label} class="min-h-[78px]">
+                <div class="cf-turnstile" data-sitekey={captcha.siteKey}></div>
+                <script
+                  is:inline
+                  async
+                  defer
+                  src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+                />
+              </div>
+            )
+          }
+
+          {/* Live regions. Both start empty and stay empty unless something
+              real happens — a failed client-side check, or a redirect back from
+              the Worker carrying its result flag. */}
+          <div
+            data-form-alert
+            data-message={feedback.invalid}
+            data-failure={feedback.failure}
+            data-failure-param={feedback.failureParam}
+            role="alert"
+            tabindex="-1"
+            class="empty:hidden border-l-2 border-brand-red pl-xs text-base leading-6 text-brand-red"
+          ></div>
+          <div
+            data-form-status
+            data-message={feedback.success}
+            data-param={feedback.successParam}
+            role="status"
+            tabindex="-1"
+            class="empty:hidden border-l-2 border-text-primary pl-xs text-base leading-6 text-text-primary"
+          ></div>
+
+          {/* Gutter is 32, not the 48 used between field rows. The drawn
+              consent copy breaks after "…you agree to our", which needs 322px
+              of measure; a 48 gutter leaves the paragraph only 315 beside the
+              200px button and drops "our" onto the link line, orphaning the
+              sentence. 32 restores the drawn two-line rag. */}
+          <div class="flex flex-col gap-sm sm:flex-row sm:items-center sm:justify-between sm:gap-md">
+            <p class="max-w-[339px] text-base leading-6 text-text-secondary">
+              {consent}
+              <a
+                href={consentLink.href}
+                class="text-brand-red underline underline-offset-2 transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none"
+                {...consentLink.external
+                  ? { rel: "noopener noreferrer", target: "_blank" }
+                  : {}}
+              >
+                {consentLink.label}
+              </a>
+            </p>
+
+            {/* Figma fills this button #1a1a1a, not brand red — the only dark
+                button in the design. Overridden with `!` because Button's own
+                variant class would otherwise win on source order alone. */}
+            <Button
+              type="submit"
+              variant="solid"
+              class="w-full shrink-0 bg-text-primary! hover:bg-always-black! sm:w-[200px]"
+            >
+              {submitLabel}
+            </Button>
+          </div>
+        </form>
+
+        <script
+          is:inline
+          src={b2blead.formScript}
+          data-b2blead-mode="enhance"
+          async
+        ></script>
+      </div>
+
+      {/* ---------------- Right column: the directory ---------------- */}
+      <div class="flex flex-col gap-lg lg:pt-sm">
+        {/*
+          Heading levels are set independently of the type tokens, which invert
+          the hierarchy in the design (`Global Presence.` is styled H4 while the
+          office names are styled H3). The outline runs h2, h3, h4.
+        */}
+        <h3
+          id={`${block._key}-directory`}
+          class="font-display text-base font-medium leading-6 text-text-primary"
+        >
+          {directory.heading}
+        </h3>
+
+        <ul role="list" aria-labelledby={`${block._key}-directory`} class="flex flex-col gap-md">
+          {
+            directory.items.map((item) => {
+              const lines = (group: DirectoryLine[]) =>
+                group.map((line) => (
+                  <span
+                    class:list={[
+                      "block",
+                      line.strong
+                        ? "font-semibold text-text-primary"
+                        : "text-text-secondary",
+                    ]}
+                  >
+                    {line.prefix}
+                    {line.href ? (
+                      <a
+                        href={line.href}
+                        class="transition-colors duration-150 hover:text-brand-red motion-reduce:transition-none"
+                        {...line.external
+                          ? { rel: "noopener noreferrer", target: "_blank" }
+                          : {}}
+                      >
+                        {line.text}
+                      </a>
+                    ) : (
+                      line.text
+                    )}
+                  </span>
+                ));
+
+              const body = item.groups.map((group) => (
+                <span class="block text-base leading-6">{lines(group)}</span>
+              ));
+
+              return (
+                <li class="flex items-start gap-sm">
+                  {/* 32x32 ring + 20x20 icon, as drawn. Decorative: the title
+                      next to it already says what the row is. */}
+                  <span
+                    class="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border-primary text-brand-red"
+                    aria-hidden="true"
+                  >
+                    {/* TODO(assets): replace with the Figma icon exports
+                        (Maps/Pin Location, Communication/Email,
+                        File & Folders/File Document). */}
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      {item.icon === "pin" && (
+                        <Fragment>
+                          <path d="M12 21.5s7-5.9 7-11.3a7 7 0 1 0-14 0c0 5.4 7 11.3 7 11.3z" />
+                          <circle cx="12" cy="10.2" r="2.6" />
+                        </Fragment>
+                      )}
+                      {item.icon === "email" && (
+                        <Fragment>
+                          <rect x="2.75" y="5" width="18.5" height="14" rx="1.5" />
+                          <path d="m3.5 6.5 8.5 6.2 8.5-6.2" />
+                        </Fragment>
+                      )}
+                      {item.icon === "document" && (
+                        <Fragment>
+                          <path d="M14 2.75H7.25A1.5 1.5 0 0 0 5.75 4.25v15.5a1.5 1.5 0 0 0 1.5 1.5h9.5a1.5 1.5 0 0 0 1.5-1.5V6.75z" />
+                          <path d="M14 2.75v4h4.25M8.75 12.5h6.5M8.75 16h6.5" />
+                        </Fragment>
+                      )}
+                    </svg>
+                  </span>
+
+                  <div class="flex min-w-0 flex-1 flex-col gap-2xs">
+                    <h4 class="text-[length:var(--step-h3)] leading-7 text-text-primary">
+                      {item.title}
+                    </h4>
+                    {item.contactInfo ? (
+                      <address class="flex flex-col gap-2xs not-italic">{body}</address>
+                    ) : (
+                      <div class="flex flex-col gap-2xs">{body}</div>
+                    )}
+                  </div>
+                </li>
+              );
+            })
+          }
+        </ul>
+      </div>
+    </div>
+
+    {/* ---------------- Map band ---------------- */}
+    <figure class="mt-lg md:mt-xl lg:mt-3xl">
+      <figcaption class="sr-only">{map.label}</figcaption>
+
+      <div class="relative aspect-square w-full overflow-hidden bg-bg-primary md:aspect-[1174/560]">
+        {/* The STAGE.
+
+            It always keeps Figma's 1174x560 proportion, and that is the whole
+            trick: because the stage never changes shape, the crop below and all
+            four pin coordinates stay correct at every width. Mobile just scales
+            the stage up and slides it — no geometry is re-derived, so there is
+            only one set of numbers to be wrong.
+
+            Why it needs scaling at all: the four offices sit in a 35.69% x
+            25.36% patch of the stage (Israel to the Philippines). Dropped
+            straight into a 390px-wide band that patch is 139x47px, and the
+            markers alone are 40px tall — they collide into one clump. So the
+            container goes square on mobile and the stage runs 1.737x its width,
+            which puts the cluster at 62% of the square, offset to centre it.
+
+            This replaced a fallback that stacked the offices as a text list
+            below `md`. That list was never reached in practice: the container
+            had no aspect ratio below `md`, so the absolutely-positioned map had
+            no box to fill and was clipped away entirely, leaving four pins on a
+            blank field. The office names are also already listed in full,
+            with addresses, directly above this band. */}
+        <div
+          class="absolute left-[-37.08%] top-[12.86%] aspect-[1174/560] w-[173.72%] md:left-0 md:top-0 md:w-full"
+        >
+        {
+          /*
+            TODO(assets): the world artwork has not been exported from Figma and
+            the live site has no equivalent (it embeds an interactive Google
+            Map). Export the clipped crop as ONE optimised SVG at exactly
+            1174x560 — landmass #cac4bc on #efece8, no ocean detail — and set
+            `map.image` in the content module. The pin percentages below already
+            match that crop and need no change. Until then the band renders as
+            the flat tinted field with the four markers on it, which is a
+            deliberate, complete state rather than a broken image.
+          */
+          map.image && (
+            /* Figma's crop. The map group is 1667.5x1060.5 sitting in an
+               1174x560 frame at offset -567 / -414.
+               NOTE the percentages are of the CONTAINER, not of the image: CSS
+               resolves `left`/`top` percentages against the containing block's
+               width. Expressing them as a fraction of the image's own size gave
+               -399px instead of -567px and slid every pin off its country. */
+            <img
+              src={map.image.src}
+              alt=""
+              aria-hidden="true"
+              width={map.image.width}
+              height={map.image.height}
+              loading="lazy"
+              decoding="async"
+              class="absolute h-auto max-w-none"
+              style="width:142.03%; left:-48.30%; top:-73.93%"
+            />
+          )
+        }
+
+        {/* One layout at every width now — the pins are positioned against the
+            stage, which never changes shape. */}
+        <ul role="list" class="absolute inset-0 block">
+          {
+            map.pins.map((pin) => {
+              const marker = (
+                <Fragment>
+                  {/* TODO(assets): replace with the Figma export
+                      (`Jrotbart Office Location`, 48x48 red teardrop carrying
+                      the J. Rotbart crown mark). Decorative — the label beside
+                      it names the office.
+
+                      Until then, drawn to the measured artwork rather than to
+                      the frame: the marker is a 48x48 BOX holding a 32x40
+                      teardrop, not a teardrop stretched to fill 48. Filling the
+                      frame rendered it 38x48 — a fifth too big — and made the
+                      map read as four oversized balloons. The 48 box is what
+                      `-translate-y-[24px]` below is measured against, so it
+                      stays; the art is inset 8/6 inside it.
+
+                      The head is a white disc with the crown knocked out of it
+                      in red — NOT a solid red teardrop with a white crown. The
+                      inversion is what gives the marker its 4px red ring and
+                      keeps it legible over the tinted landmass. */}
+                  <svg
+                    viewBox="0 0 48 48"
+                    class="h-10 w-10 shrink-0 md:h-12 md:w-12"
+                    aria-hidden="true"
+                  >
+                    <g transform="translate(8 6)">
+                      <path
+                        class="fill-brand-red"
+                        d="M16 0C7.2 0 0 7.2 0 16c0 10.4 13.4 22.4 14 22.9a3 3 0 0 0 4 0c.6-.5 14-12.5 14-22.9C32 7.2 24.8 0 16 0Z"
+                      />
+                      <circle class="fill-always-white" cx="16" cy="16" r="12" />
+                      {/* Same crown outline, scaled about its own centre to the
+                          13.5x9 the disc carries in the drawing. */}
+                      <path
+                        class="fill-brand-red"
+                        transform="translate(16 15) scale(.8 .71) translate(-16 -15)"
+                        d="M9.4 21.2h13.2l1.5-9.6-4.6 3.4L16 8.6l-3.5 6.4-4.6-3.4 1.5 9.6Z"
+                      />
+                    </g>
+                  </svg>
+                  {/* Below `md` the four labels sit ~66px apart on the square
+                      and overlap into an unreadable stack, so they go visually
+                      away — but only visually. `sr-only` keeps each office name
+                      in the accessibility tree, which matters because the
+                      marker beside it is aria-hidden; drop the text outright
+                      and every pin becomes an unnamed link. */}
+                  <span class="font-display text-[length:var(--step-h3)] font-medium leading-7 text-text-primary max-md:sr-only">
+                    {pin.label}
+                  </span>
+                </Fragment>
+              );
+
+              const inner = "flex flex-col items-center whitespace-nowrap";
+
+              /* `--pin-y` is where the marker's POINT lands, which is how Figma
+                 positions them. The art is a 32x40 teardrop inset (8,6) in a
+                 48x48 box, so its tip sits 46px down — hence -translate-y-[46px].
+                 The old 24px anchored the box centre, which floated every pin
+                 above its country.
+                 The drawn marker box is 48x48,
+                 so lifting the box by half of that puts its top on the drawn y
+                 and the label flush at the box bottom (label y = pin y + 48),
+                 horizontally centred on the pin. */
+              return (
+                <li
+                  style={`--pin-x:${pin.x}%;--pin-y:${pin.y}%`}
+                  class="absolute left-[var(--pin-x)] top-[var(--pin-y)] -translate-x-1/2 -translate-y-[46px]"
+                >
+                  {pin.href ? (
+                    <a
+                      href={pin.href}
+                      class:list={[
+                        inner,
+                        "transition-transform duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+                      ]}
+                      {...pin.external
+                        ? { rel: "noopener noreferrer", target: "_blank" }
+                        : {}}
+                    >
+                      {marker}
+                      {pin.external && <span class="sr-only">(opens in a new tab)</span>}
+                    </a>
+                  ) : (
+                    <span class:list={[inner]}>{marker}</span>
+                  )}
+                </li>
+              );
+            })
+          }
+        </ul>
+        </div>
+      </div>
+    </figure>
+  </Container>
+</section>
+
+<script>
+  /**
+   * Progressive enhancement for the contact form.
+   *
+   * Everything here is optional: without it the browser's own validation runs
+   * and the form posts exactly the same way. This only replaces the validation
+   * bubbles with inline, `aria-describedby`-linked messages, and surfaces the
+   * result the SERVER reported. It never fabricates a submission or a success.
+   */
+  type FieldEl = HTMLInputElement | HTMLTextAreaElement;
+
+  const params = new URLSearchParams(window.location.search);
+
+  document.querySelectorAll<HTMLFormElement>("form[data-contact-form]").forEach((form) => {
+    const fields = Array.from(form.querySelectorAll<FieldEl>("[data-field]"));
+    const alertBox = form.querySelector<HTMLElement>("[data-form-alert]");
+    const statusBox = form.querySelector<HTMLElement>("[data-form-status]");
+
+    // Only now, with the script running, is it safe to suppress native bubbles.
+    form.noValidate = true;
+
+    const errorNode = (el: FieldEl) => document.getElementById(`${el.id}-error`);
+
+    const validate = (el: FieldEl): boolean => {
+      const node = errorNode(el);
+      if (el.checkValidity()) {
+        el.removeAttribute("aria-invalid");
+        if (node) node.textContent = "";
+        return true;
+      }
+      el.setAttribute("aria-invalid", "true");
+      if (node) {
+        const message = el.validity.valueMissing
+          ? el.dataset.missing
+          : (el.dataset.invalid ?? el.dataset.missing);
+        node.textContent = message ?? el.validationMessage;
+      }
+      return false;
+    };
+
+    // Re-check only fields already showing an error, so nobody is scolded mid-typing.
+    fields.forEach((el) => {
+      const recheck = () => {
+        if (el.getAttribute("aria-invalid") === "true") validate(el);
+      };
+      el.addEventListener("input", recheck);
+      el.addEventListener("blur", recheck);
+    });
+
+    form.addEventListener("submit", (event) => {
+      const invalid = fields.filter((el) => !validate(el));
+      if (alertBox) alertBox.textContent = "";
+      if (invalid.length === 0) return; // native submit proceeds untouched
+      event.preventDefault();
+      if (alertBox) alertBox.textContent = alertBox.dataset.message ?? "";
+      invalid[0]?.focus();
+    });
+
+    // The Worker 303-redirects back with its outcome in the query string. That
+    // redirect is the ONLY thing that can produce a success or failure message.
+    const failureParam = alertBox?.dataset.failureParam;
+    const successParam = statusBox?.dataset.param;
+
+    if (alertBox && failureParam && params.has(failureParam)) {
+      alertBox.textContent = alertBox.dataset.failure ?? "";
+      alertBox.focus();
+    } else if (statusBox && successParam && params.has(successParam)) {
+      statusBox.textContent = statusBox.dataset.message ?? "";
+      statusBox.focus();
+    }
+  });
+</script>

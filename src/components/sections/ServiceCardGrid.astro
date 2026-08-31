@@ -1,0 +1,101 @@
+---
+import Container from "@primitives/Container.astro";
+import ArrowLink from "@primitives/ArrowLink.astro";
+import type { ServiceCardGridSection } from "@content/homepage/services";
+
+/**
+ * "More Services We Offer" — 4-up card grid.
+ * Figma `9813:6073` (inside section `9813:5974`).
+ *
+ * Four secondary services, each a 1:1 photo + title + body + Explore link.
+ * Copy comes from `src/content/homepage/services.ts`.
+ */
+interface Props {
+  block: ServiceCardGridSection;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, services } = block;
+---
+
+<style>
+  /*
+    EXPLORE affordance — same circled arrow as the service rows above: Figma
+    draws a 28px ring with a 1px border-primary stroke around the 12px arrow.
+    Applied to the arrow ArrowLink already renders rather than forking that
+    shared primitive, so its focus and `motion-reduce` behaviour is untouched.
+    28 / 7 are measured Figma geometry, not spacing-scale steps.
+  */
+  .service-card-grid :global(.explore-cta svg) {
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    padding: 7px;
+    border: 1px solid var(--color-border-primary);
+    border-radius: 9999px;
+  }
+</style>
+
+<section
+  id={block.anchorId}
+  aria-labelledby={`${block._key}-heading`}
+  class:list={["service-card-grid bg-bg-secondary py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div class="flex flex-col gap-lg">
+      {/* Intro is a fixed 720px measure in Figma — kept as a max-width so it
+          collapses cleanly rather than overflowing narrow viewports. */}
+      <div class="flex max-w-[720px] flex-col gap-xs">
+        {/*
+          Figma types this heading as Header/H4 (16/24) while the card titles
+          below it are Header/H3 (20/28) — the section heading is SMALLER than
+          the items it introduces.
+          TODO(client): confirm. Built to spec, but this inverts the visual
+          hierarchy and reads as a Figma slip.
+        */}
+        <h2 id={`${block._key}-heading`} class="text-base leading-6 text-text-primary">
+          {header.heading}
+        </h2>
+        {header.body && (
+          <p class="text-base leading-6 text-text-secondary">{header.body}</p>
+        )}
+      </div>
+
+      <ul
+        class="grid grid-cols-1 gap-lg md:grid-cols-2 md:gap-x-md md:gap-y-xl lg:grid-cols-4"
+      >
+        {services.map((service) => (
+          /* Cards stretch to the tallest in their grid row, the text block takes
+             the slack (flex-1), so every Explore link lands on a shared baseline.
+             This replaces Figma's fixed 160px text box, which would clip any copy
+             longer than the English original. */
+          <li class="flex flex-col gap-sm">
+            <img
+              src={service.image.src}
+              alt={service.image.decorative ? "" : service.image.alt}
+              aria-hidden={service.image.decorative ? "true" : undefined}
+              width={service.image.width}
+              height={service.image.height}
+              loading="lazy"
+              decoding="async"
+              class="aspect-square w-full object-cover"
+            />
+            <div class="flex flex-1 flex-col gap-2xs">
+              <h3 class="text-[length:var(--step-h3)] leading-[1.4] text-text-primary">
+                {service.title}
+              </h3>
+              <p class="text-base leading-6 text-text-secondary">{service.description}</p>
+            </div>
+            <ArrowLink
+              href={service.href}
+              class="explore-cta self-start text-brand-red! hover:text-brand-950!"
+            >
+              {service.ctaLabel}<span class="sr-only">: {service.title}</span>
+            </ArrowLink>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </Container>
+</section>

@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Auth and transactional pages carry noindex in their markup; they are listed
+# here as well so they are not crawled needlessly.
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /my-account/
+Disallow: /log-in/
+Disallow: /register/
+Disallow: /forget-password/
+Disallow: /reset-password/
+Disallow: /confirm-email/
+Disallow: /thank-you/
+
+# The current site omits this directive entirely.
+Sitemap: https://jrotbart.com/sitemap-index.xml

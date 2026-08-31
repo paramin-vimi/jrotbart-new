@@ -1,0 +1,47 @@
+---
+import type { CtaStyle } from "@content/types";
+
+interface Props {
+  href?: string;
+  type?: "button" | "submit";
+  variant?: Exclude<CtaStyle, "arrow">;
+  fullWidth?: boolean;
+  class?: string;
+  external?: boolean;
+  "aria-label"?: string;
+}
+
+const {
+  href,
+  type = "button",
+  variant = "solid",
+  fullWidth = false,
+  class: className = "",
+  external = false,
+  ...rest
+} = Astro.props;
+
+/* Figma: square corners globally (radius 0), padding 20px inline,
+   10px top / 12px bottom, label = Button token (Playfair 500 16/24). */
+const base =
+  "inline-flex items-center justify-center px-5 pt-2.5 pb-3 font-display text-base leading-6 font-medium " +
+  "transition-colors duration-150 motion-reduce:transition-none";
+
+const variants = {
+  solid: "bg-brand-red text-always-white hover:bg-brand-950",
+  outline:
+    "border border-border-primary bg-always-white text-text-primary hover:border-brand-red hover:text-brand-red",
+  ghost: "text-text-primary hover:text-brand-red",
+} as const;
+
+const cls = [base, variants[variant], fullWidth && "w-full", className];
+const Tag = href ? "a" : "button";
+---
+<Tag
+  class:list={cls}
+  {...href ? { href } : { type }}
+  {...external ? { rel: "noopener noreferrer", target: "_blank" } : {}}
+  {...rest}
+>
+  <slot />
+</Tag>

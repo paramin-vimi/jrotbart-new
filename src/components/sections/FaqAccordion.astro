@@ -1,0 +1,271 @@
+---
+/**
+ * FaqAccordion — "PEOPLE ALSO ASKED / Frequently Asked Questions".
+ *
+ * Figma node 10216:11187. Thirteen questions in a single 1px-boxed stack, then
+ * a centred "still have a question" block with the Talk to Our Value Expert
+ * button.
+ *
+ * Implementation notes
+ *  - Native <details>/<summary>. The accordion opens, closes and is keyboard
+ *    operable with zero JavaScript; the only script in this file is an
+ *    optional deep-link opener that does nothing if it never runs.
+ *  - Single-open is done with the native `name` attribute (an exclusive
+ *    accordion group), not script. Browsers without it fall back to
+ *    multi-open, which is a harmless degradation. Figma draws exactly one row
+ *    open, so single-open matches the design — but the design does not
+ *    actually state the rule, so this is a decision for the client to confirm.
+ *  - Figma draws two mirrored chevron SVGs (Expand More / Expand Less). Their
+ *    paths are exact reflections about y=14, so one path rotated 180deg is
+ *    pixel-identical and avoids shipping a second icon.
+ *  - Every row carries a stable id so questions can be deep-linked
+ *    (`/#faq-payment-methods`), replacing the live site's
+ *    `#b2blead_q=<question text>` scheme.
+ *
+ * Copy — including the footer paragraph and every TODO(client) placeholder —
+ * comes from `src/content/homepage/faq.ts`. Nothing is hardcoded here.
+ */
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import Button from "@primitives/Button.astro";
+import type { FaqAccordionBlock } from "@content/types";
+
+interface Props {
+  block: FaqAccordionBlock;
+  class?: string;
+  /**
+   * Paragraph under the footer heading. `FaqAccordionBlock["footer"]` has no
+   * body field and types.ts is owned by another workstream, so the string is
+   * passed in beside the block — see the TODO(types) note in faq.ts.
+   */
+  footerBody?: string;
+  /**
+   * Zero-based index of the row that starts open. Figma draws row 1 open.
+   * Pass -1 to start fully collapsed.
+   */
+  openIndex?: number;
+  /**
+   * Native exclusive-accordion group name. Pass "" to allow several rows open
+   * at once.
+   */
+  exclusiveGroup?: string;
+}
+
+const {
+  block,
+  class: className = "",
+  footerBody,
+  openIndex = 0,
+  exclusiveGroup = "home-faq",
+} = Astro.props;
+
+const { header, faqs, footer } = block;
+const headingId = `${block._key}-heading`;
+
+/**
+ * `headingAccent` is read as "the run WITHIN `heading` that is set in Playfair
+ * italic / text-tertiary". Figma puts it mid-line ("Frequently *Asked*
+ * Questions"); the shared SectionHeader primitive can only append an accent
+ * after the heading, so the H2 is composed here instead. Same approach as
+ * SocialFeed and ProductGrid, and it reuses the Overline primitive above so
+ * the eyebrow still matches every other section.
+ */
+const { heading, headingAccent } = header;
+const accentIndex = headingAccent ? heading.indexOf(headingAccent) : -1;
+const headingBefore = accentIndex >= 0 ? heading.slice(0, accentIndex) : heading;
+const headingAfter =
+  accentIndex >= 0 && headingAccent ? heading.slice(accentIndex + headingAccent.length) : "";
+---
+
+<!--
+  Responsive (no non-desktop frame exists in Figma — every value below the
+  desktop column is ours and needs client sign-off):
+    block padding   96 -> 64 (md) -> 48 (base)
+    section gap     96 -> 64 (md) -> 48 (base)
+    header gap      48 -> 32 (base)
+    row padding     24 -> 16 (base)
+    heading      32/44 -> 28/36 (base)
+  The 1px outer box on the accordion is KEPT at every width rather than
+  degrading to bare dividers — without it the rows lose their left and right
+  edges and read as loose text on the tinted ground.
+-->
+<section
+  id={block.anchorId}
+  aria-labelledby={headingId}
+  class:list={["bg-bg-primary py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div class="flex flex-col gap-lg md:gap-xl lg:gap-3xl">
+      <div class="flex flex-col gap-md lg:gap-lg">
+        <header class="flex flex-col gap-sm">
+          {header.overline && <Overline tone="red">{header.overline}</Overline>}
+
+          <!--
+            Figma measures this node at 32/44 (cap height 23px on the 1:1
+            render), which is SMALLER than the shared `--step-h2` ramp
+            (28 -> 40px) that global.css gives every other section heading.
+            global.css is owned by another workstream, so the measured value is
+            set locally here and the conflict is raised in the handover — if
+            `--step-h2` is corrected to 32/44 this override should be deleted.
+          -->
+          <h2
+            id={headingId}
+            class="text-[28px] leading-[36px] text-text-primary md:text-[32px] md:leading-[44px]"
+          >
+            {headingBefore}{
+              headingAccent && (
+                <em class="font-medium italic text-text-tertiary">{headingAccent}</em>
+              )
+            }{headingAfter}
+          </h2>
+        </header>
+
+        <!--
+          1px box on all four sides; rows divide it, the last row has no rule.
+
+          `-mb-px` on each row is the stroke MODEL, not a spacing tweak: Figma
+          draws the divider as an INSIDE stroke, so it paints over the last
+          pixel of the row's own 24px bottom padding and a collapsed row
+          measures 76 (24 + 28 icon + 24). A CSS border sits outside the
+          padding box and would make the same row 77 — imperceptible once, but
+          it compounds to 14px across thirteen rows and pushes the closing
+          "still have a question" block down with it. Pulling each row up by
+          the width of its own border restores Figma's 76px pitch while the
+          rule stays a real border (a box-shadow would match too, but forced-
+          colours mode drops shadows and the dividers would vanish).
+        -->
+        <div class="border border-border-primary">
+          {
+            faqs.map((faq, index) => (
+              <details
+                id={faq._id}
+                class="group -mb-px border-b border-border-primary last:mb-0 last:border-b-0"
+                open={index === openIndex}
+                {...exclusiveGroup ? { name: exclusiveGroup } : {}}
+              >
+                {/*
+                  The whole row is the control. On mobile that is
+                  16 + 28 + 16 = 60px tall, comfortably over the 44px minimum
+                  target size, and the focus ring is inset so it stays inside
+                  the 1px box instead of straddling it.
+
+                  Figma row heights: 76 collapsed (24 + 28 icon + 24) and 128
+                  expanded (24 + question 24 + 8 + answer 48 + 24), so the
+                  bottom padding drops to 8 while the row is open and the
+                  answer block owns the closing 24.
+
+                  Note the two are only consistent because Figma nests the
+                  chevron NEXT TO the whole text column (question + answer):
+                  collapsed, the 28px icon is the tallest thing in the row and
+                  sets its height; expanded, the 80px text column is taller and
+                  the icon's extra 4px costs nothing. <details> cannot nest the
+                  answer inside <summary>, so the icon would otherwise push the
+                  open row to 132. See the -mb-1 on the chevron below.
+                */}
+                <summary
+                  class="cursor-pointer list-none px-xs pt-xs pb-xs group-open:pb-2xs focus-visible:-outline-offset-2 md:px-sm md:pt-sm md:pb-sm [&::-webkit-details-marker]:hidden"
+                >
+                  {/*
+                    One heading element is <summary>'s permitted content, and
+                    the chevron is phrasing content inside it — so the row is a
+                    real h3 in the outline and still valid HTML.
+                  */}
+                  <h3 class="flex w-full items-start gap-3 text-base leading-6 font-semibold text-text-primary md:gap-2xs">
+                    <span class="min-w-0 flex-1 font-body">{faq.question}</span>
+                    {/*
+                      -mb-1 is the 28 - 24 icon overhang, not a spacing value:
+                      while the row is open the icon lays out as 24px (the
+                      question's line box) and paints its remaining 4px into
+                      the 8px gap above the answer, exactly as Figma draws it.
+                      Collapsed rows keep the full 28px and stay 76 tall.
+                    */}
+                    <svg
+                      viewBox="0 0 28 28"
+                      fill="none"
+                      aria-hidden="true"
+                      focusable="false"
+                      class="h-7 w-7 shrink-0 transition-transform duration-200 group-open:-mb-1 group-open:rotate-180 motion-reduce:transition-none"
+                    >
+                      <path
+                        d="M19.8333 11.6667L14.9603 15.9692C14.4105 16.4547 13.5895 16.4547 13.0397 15.9692L8.16667 11.6667"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </h3>
+                </summary>
+
+                {/*
+                  Figma wraps the answer at 1090 — the row's TEXT COLUMN, not
+                  the 1126 padding box: the answer is a sibling of the question
+                  inside that column, so it stops short of the chevron gutter.
+                  <details> forces the answer out of <summary>, so the row's
+                  flex row is mirrored here and an inert spacer holds the
+                  chevron's 28px column open. Keeps the answer's left edge on
+                  the question's and its right edge off the icon.
+                */}
+                <div class="flex items-start gap-3 px-xs pb-xs md:gap-2xs md:px-sm md:pb-sm">
+                  <div class="flex min-w-0 flex-1 flex-col gap-2xs">
+                    {faq.answer.map((paragraph) => (
+                      <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+                    ))}
+                  </div>
+                  <div class="h-0 w-7 shrink-0" aria-hidden="true" />
+                </div>
+              </details>
+            ))
+          }
+        </div>
+      </div>
+
+      {
+        footer && (
+          <div class="mx-auto flex w-full max-w-[587px] flex-col items-center gap-md text-center">
+            <div class="flex flex-col gap-xs">
+              {/* Figma: Header/H4 — Playfair Medium 16/24, same size as the body. */}
+              <h3 class="font-display text-base leading-6 font-medium text-text-primary">
+                {footer.heading}
+              </h3>
+              {footerBody && (
+                <p class="text-base leading-6 text-text-secondary">{footerBody}</p>
+              )}
+            </div>
+
+            {/*
+              Figma fixes the button at 240x46. Below 640 it goes full width
+              (capped at 320) so it reads as the section's one action rather
+              than a small tile floating in the middle of the screen.
+            */}
+            <Button
+              href={footer.cta.href}
+              variant={footer.cta.style === "arrow" ? "solid" : (footer.cta.style ?? "solid")}
+              external={footer.cta.external}
+              class="w-full max-w-[320px] sm:w-60 sm:max-w-none"
+            >
+              {footer.cta.label}
+            </Button>
+          </div>
+        )
+      }
+    </div>
+  </Container>
+</section>
+
+<script is:inline>
+  /*
+   * Progressive enhancement ONLY: open the row a URL fragment points at, e.g.
+   * /#faq-payment-methods. The accordion is fully functional without this —
+   * nothing here is required to expand a row by hand.
+   */
+  (function () {
+    function openFromHash() {
+      var id = window.location.hash.slice(1);
+      if (!id) return;
+      var el = document.getElementById(id);
+      if (el && el.tagName === "DETAILS" && !el.open) el.open = true;
+    }
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+  })();
+</script>

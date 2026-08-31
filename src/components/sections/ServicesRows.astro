@@ -1,0 +1,221 @@
+---
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import ArrowLink from "@primitives/ArrowLink.astro";
+import type { ServicesRowsSection, ServiceRowEntry } from "@content/homepage/services";
+
+/**
+ * Services — four full-width bordered service rows.
+ * Figma `10359:4504` (inside section `9813:5974`, whose layer name "Product" is stale).
+ *
+ * Structure per row: text column (title, body, two italic red FAQ cross-links,
+ * Explore link) beside a composited media column that bleeds to the row's bottom
+ * border.
+ *
+ * All copy is passed in from `src/content/homepage/services.ts`. Nothing here is
+ * hardcoded.
+ */
+interface Props {
+  block: ServicesRowsSection;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, services } = block;
+
+/* The spaces around the italic run are baked into the strings rather than left
+   as whitespace text nodes, so `compressHTML` can never weld the runs together
+   ("We OfferComprehensive"). */
+const headingLead = header.headingAccent ? `${header.heading} ` : header.heading;
+const headingTail = header.headingTail ? ` ${header.headingTail}` : "";
+
+/**
+ * MEDIA COMPOSITE — the interesting problem in this section.
+ *
+ * Figma hand-places each row's cut-out subject with absolute pixel offsets inside
+ * a 491 × 368.25 box; row 4's subject hangs 140.85px BELOW the box and is clipped.
+ * Absolute px offsets break the moment the column is not 491px wide, which is
+ * every breakpoint except the 1366 desktop frame.
+ *
+ * The fix: the media box is locked to 4:3 at every breakpoint, and every layer is
+ * positioned in PERCENTAGES of that box (see `CutoutPlacement` in the content
+ * module). The composite therefore scales linearly — the subject keeps its exact
+ * crop, its exact overhang and its exact relationship to the backdrop at 320px or
+ * at 1174px, with no per-breakpoint tuning and no magic numbers in the CSS.
+ */
+function cutoutStyle(row: ServiceRowEntry): string {
+  const p = row.cutoutPlacement;
+  if (!p) return "";
+  const rules = [`width:${p.widthPct}%`, `bottom:${p.bottomPct ?? 0}%`];
+  if (p.anchor === "center") {
+    rules.push("left:50%", "transform:translateX(-50%)");
+  } else {
+    rules.push(`${p.anchor}:${p.insetPct ?? 0}%`);
+  }
+  return rules.join(";");
+}
+---
+
+<!--
+  Adjacent-sibling collapse: when ServiceCardGrid follows this section they are
+  one visual section in the design (96px between blocks, not 96 + 96 of padding).
+  The rule lives here so both components stay independently droppable.
+-->
+<style>
+  .services-rows + :global(.service-card-grid) {
+    padding-block-start: 0;
+  }
+
+  /*
+    EXPLORE affordance — Figma draws the arrow inside a ring, not bare.
+    Measured off the 1366 frame: 28px circle, 1px border-primary stroke, the
+    same 12px arrow ArrowLink already renders, centred (7px inset).
+
+    ArrowLink is a shared primitive we do not own, so the ring is applied to the
+    arrow it renders rather than forking the component — nothing about its
+    markup, focus behaviour or `motion-reduce` handling changes. The ring also
+    corrects the CTA's vertical position: Figma's Explore item is 28px tall and
+    the label is centred inside it, which is 4px below where a bare 20px line
+    box puts it.
+
+    28 / 7 are measured Figma geometry, not steps on the spacing scale, so they
+    stay literal here; the stroke uses the border token.
+  */
+  .services-rows :global(.explore-cta svg) {
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    padding: 7px;
+    border: 1px solid var(--color-border-primary);
+    border-radius: 9999px;
+  }
+</style>
+
+<section
+  id={block.anchorId}
+  aria-labelledby={`${block._key}-heading`}
+  class:list={["services-rows bg-bg-secondary py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div class="flex flex-col gap-lg md:gap-xl">
+      {/* Section header. Two columns bottom-aligned on desktop; stacked below lg.
+          Rendered inline rather than via <SectionHeader> because this heading
+          italicises a run in the MIDDLE of the sentence, which SectionHeading's
+          trailing-accent model cannot express. */}
+      <div class="flex flex-col gap-md lg:flex-row lg:items-end lg:gap-3xl">
+        <div class="flex flex-col gap-sm lg:flex-1">
+          {header.overline && <Overline tone="red">{header.overline}</Overline>}
+          {/* Figma: Playfair Display Medium 40 / 44 — a 1.1 ratio, so the
+              stepped-down sizes keep the same proportion. */}
+          <h2
+            id={`${block._key}-heading`}
+            class="text-[length:var(--step-h2)] leading-[1.1] text-text-primary"
+          >
+            {headingLead}{header.headingAccent && (
+              <em class="font-medium italic text-text-tertiary">{header.headingAccent}</em>
+            )}{headingTail}
+          </h2>
+        </div>
+        {header.body && (
+          <p class="text-base leading-6 text-text-secondary lg:flex-1">{header.body}</p>
+        )}
+      </div>
+
+      {/* The four rows. A list so assistive tech announces the count. */}
+      <ul class="flex flex-col gap-md md:gap-xl">
+        {services.map((row) => (
+          <li>
+            <article
+              class="flex flex-col gap-md border border-border-primary px-sm pt-sm md:px-md md:pt-md lg:flex-row lg:items-start lg:gap-3xl lg:px-lg lg:pt-lg"
+            >
+              {/* Text first in the DOM at every breakpoint: it is the reading
+                  order, and on mobile it keeps the media pinned to the row's
+                  bottom border so the photo's fade still meets the frame edge. */}
+              <div class="flex flex-col gap-sm lg:min-w-0 lg:flex-1 lg:py-md">
+                <h3 class="text-base leading-6 text-text-primary">{row.title}</h3>
+                <p class="text-base leading-6 text-text-secondary">{row.description}</p>
+
+                {row.faqTeasers && row.faqTeasers.length > 0 && (
+                  <ul class="ps-sm list-disc marker:text-brand-red">
+                    {row.faqTeasers.map((teaser) => (
+                      <li class="text-base leading-6">
+                        <a
+                          href={teaser.href}
+                          class="italic text-brand-red underline-offset-4 hover:underline focus-visible:underline"
+                          {...teaser.external
+                            ? { rel: "noopener noreferrer", target: "_blank" }
+                            : {}}
+                        >
+                          {teaser.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* ArrowLink has no brand-red tone; the design's Explore label is
+                    brand red, so the token colour is forced on with `!`. */}
+                <ArrowLink
+                  href={row.href}
+                  class="explore-cta self-start text-brand-red! hover:text-brand-950!"
+                >
+                  {row.ctaLabel}<span class="sr-only">: {row.title}</span>
+                </ArrowLink>
+              </div>
+
+              {/* Media column — locked 4:3, clips everything that overflows. */}
+              <div
+                class="relative aspect-[4/3] w-full overflow-hidden lg:min-w-0 lg:flex-1 lg:self-end"
+              >
+                <img
+                  src={row.image.src}
+                  alt={row.image.decorative ? "" : row.image.alt}
+                  aria-hidden={row.image.decorative ? "true" : undefined}
+                  width={row.image.width}
+                  height={row.image.height}
+                  loading="lazy"
+                  decoding="async"
+                  class="absolute inset-x-0 top-0 w-full object-cover"
+                  style={`height:${row.backdropHeightPct ?? 100}%`}
+                />
+
+                {row.cutout && (
+                  <img
+                    src={row.cutout.src}
+                    alt={row.cutout.decorative ? "" : row.cutout.alt}
+                    aria-hidden={row.cutout.decorative ? "true" : undefined}
+                    width={row.cutout.width}
+                    height={row.cutout.height}
+                    loading="lazy"
+                    decoding="async"
+                    class="absolute h-auto max-w-none"
+                    style={cutoutStyle(row)}
+                  />
+                )}
+
+                {/* Bottom fade — Figma 491 x 184 (= half the media box),
+                    transparent to 52.585%.
+                    Two deliberate departures from the Figma gradient:
+                    - it ends in #ffffff against a #fdfcfc section, which leaves a
+                      visible seam; it ends in the real background token here.
+                    - its last stop sits at 105.04%, so the photo stays ~10%
+                      visible where it meets the row's bottom border. That reads
+                      as intentional over the Figma composite (an 88.8%-tall
+                      backdrop plus a cut-out standing on bare background) but not
+                      over the flat placeholder photos we ship today, so the stop
+                      is pulled back to 100%.
+                    TODO(assets): restore the 105% stop once the per-row backdrop
+                    and cut-out exports land. */}
+                <div
+                  class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-b from-bg-secondary/0 from-[52.5%] to-bg-secondary"
+                  aria-hidden="true"
+                >
+                </div>
+              </div>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </Container>
+</section>

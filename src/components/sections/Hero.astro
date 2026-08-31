@@ -1,0 +1,433 @@
+---
+import Container from "@primitives/Container.astro";
+import Button from "@primitives/Button.astro";
+import Overline from "@primitives/Overline.astro";
+import type { HeroBlock } from "@content/types";
+
+/**
+ * Homepage hero — Figma node 9813:5485 (1366 × 700).
+ *
+ * WHAT THE FIGMA FRAME DOES, AND WHAT THIS DOES INSTEAD
+ * The design stacks six absolutely positioned layers: (1) the team photo
+ * including its grey studio backdrop, which supplies a soft wash; (2) a pale
+ * chart illustration at 80% opacity; (3–5) three flat #f3efea scrims that fade
+ * in from the left, top and bottom so the text stays legible; (6) a
+ * transparent-PNG cutout of the same team, re-laid over the scrims so the
+ * people stay crisp.
+ *
+ * That is six network requests for what is really "warm ground, soft wash,
+ * crisp people". This renders it with ONE image and CSS:
+ *   - layers 0 + 1  → the section's own background: bg-primary plus a radial
+ *                     gradient wash mixed from theme tokens
+ *   - layers 3–5    → one `.hero-scrims` element carrying three linear gradients
+ *   - layers 2 + 6  → a single transparent PNG that already has the chart baked
+ *                     in behind the cut-out team, with a mask fading its top so
+ *                     the chart still reads as sitting *under* the top scrim
+ *
+ * Copy and image sources live in src/content/homepage/hero.ts. Nothing is
+ * hardcoded here.
+ */
+interface Props {
+  block: HeroBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const {
+  headingLead,
+  headingAccent,
+  body,
+  cta,
+  quickLinks,
+  accreditationLabel,
+  accreditations,
+  media,
+} = block;
+
+const headingId = `${block._key}-heading`;
+
+/* Cta.style widens to include "arrow", which Button does not accept. */
+const ctaVariant = cta.style && cta.style !== "arrow" ? cta.style : "solid";
+
+const cutout = media.cutout;
+const chart = media.chart;
+
+/* Figma sizes the three accreditation marks individually: SBMA is a 60x40
+   landscape lockup, the two association seals are 44x44 circles. There is no
+   per-logo size field in the CMS contract, so the box is derived from the
+   asset's own aspect ratio — landscape gets the wide box, square gets the
+   circle box. (Figma says object-fit: cover for the SBMA lockup; the interim
+   live-site PNG is a different crop, so it is contained rather than cropped
+   until the export lands — TODO(assets).) */
+const logoBox = (img: { width?: number; height?: number }) =>
+  img.width && img.height && img.width / img.height > 1.1
+    ? "h-8 w-[54px] sm:h-10 sm:w-[60px]"
+    : "h-9 w-9 sm:h-11 sm:w-11";
+---
+
+<section
+  id={block.anchorId}
+  class:list={["hero relative isolate overflow-hidden", className]}
+  aria-labelledby={headingId}
+>
+  {/* Figma layers 3–5. Purely presentational, so it is hidden from the a11y tree.
+      LAYER ORDER: ground → scrims (z -2) → photo (z -1) → text (auto).
+      The text column deliberately has NO z-index. It used to carry z-10, which
+      made it an isolated group and silently killed the that
+      drops the white matte off the interim accreditation PNGs — the SBMA mark
+      rendered in a white box. Pushing the two decorative layers behind with
+      negative z gives the same paint order and keeps the blend working. */}
+  {/* Figma layer 1 — the team plate whose only visible job is the soft wash on
+      the ground. Placed at Figma's x 117.01 / y 44 / 1266 x 722 so its copy of
+      the group sits exactly behind the sharp cutout and stays invisible under
+      the scrims. Do NOT stretch this full-bleed: scaling it up slides its team
+      out from behind the cutout and you get a second, ghosted group. */}
+  <div class="pointer-events-none absolute inset-0 z-[-4] mx-auto max-w-[1366px]" aria-hidden="true">
+    <img
+      src="/hero/backdrop.webp"
+      alt=""
+      aria-hidden="true"
+      width="1266"
+      height="722"
+      loading="eager"
+      decoding="async"
+      class="hero-backdrop absolute hidden h-auto lg:block"
+    />
+  </div>
+
+  {/* Figma layer 2 — the pale candlestick chart. It is its OWN layer in the
+      design, placed independently of the team and sitting UNDER the top scrim,
+      which is why it gets z-[-3] (scrims are -2, the team -1).
+
+      We used to ship one pre-composited plate from the old site with the chart
+      already baked in behind the people. That fixed the chart's position
+      relative to the team at whatever the old site chose, and it did not match
+      the design — a pixel diff against the Figma render outlined every figure
+      and the whole chart. Placing the two exported layers separately is the
+      only way this composition can actually match.
+
+      Geometry is Figma's, expressed as percentages of the 1366 x 700 frame so
+      it scales with the capped frame: x 619.57 (45.36%), y 143 (20.43%),
+      651.6 wide (47.70%), opacity 0.8. */}
+  <div class="pointer-events-none absolute inset-0 z-[-3] mx-auto max-w-[1366px]" aria-hidden="true">
+    <img
+      src={chart.src}
+      alt=""
+      aria-hidden="true"
+      width={chart.width}
+      height={chart.height}
+      loading="eager"
+      decoding="async"
+      class="hero-chart absolute hidden h-auto opacity-80 lg:block"
+    />
+  </div>
+
+  <div class="hero-scrims pointer-events-none absolute inset-0 z-[-2]" aria-hidden="true"></div>
+
+  {/* The Figma composition is authored on a 1366 canvas. Capping the frame at
+      1366 and centring it keeps the photo/text relationship exact on wider
+      viewports; the background and scrims above stay full-bleed. */}
+  <div class="hero-frame relative mx-auto w-full max-w-[1366px]">
+    <Container class="relative">
+      {/* Figma: 399 × 418 column at x=96, vertical flex, gap md (32). */}
+      <div class="flex max-w-[34rem] flex-col gap-md lg:max-w-[399px]">
+        {/* ---- Block 1: heading + body (gap sm / 24) ---- */}
+        <div class="flex flex-col gap-sm">
+          <h1
+            id={headingId}
+            class="font-display text-[length:var(--step-h1)] leading-[1.25] font-medium text-text-primary lg:text-[2.5rem] lg:leading-[52px]"
+          >
+            {/* The two lines are a hard break in the design (roman over muted
+                italic). Rendering each as a block keeps that break at every
+                width. From lg up the type is 40/52 — the H1 token. It was 44px
+                here, taken from the Figma text-layer property, but the frame
+                RENDERS the H1 ~9% smaller than that: line 1 measures 364px and
+                its ink 32px tall against our 399/35 at 44px, and both axes
+                scale by the same 0.91, which is a size difference and not a
+                font-metric one. 40px lands on 363 × 32. Trust the pixels.
+                white-space:nowrap is the design's, so line 1 never re-wraps
+                inside the 399px column; at 40px it clears the photo by 77px.
+                Below lg the nowrap is dropped and --step-h1 clamps 44 → 32px,
+                which keeps line 1 unbroken down to 375px and lets it wrap
+                rather than spill off-screen below ~340px. */}
+            <span class="block lg:whitespace-nowrap">{headingLead}</span>
+            <span class="block italic text-text-tertiary lg:whitespace-nowrap">{headingAccent}</span>
+          </h1>
+
+          <p class="text-base leading-6 text-text-secondary">{body}</p>
+        </div>
+
+        {/* ---- Block 2: accreditation row ---- */}
+        <div class="flex flex-col gap-2xs sm:flex-row sm:items-center sm:gap-xs">
+          <Overline class="shrink-0">{accreditationLabel}</Overline>
+          {/* drops the white matte the interim PNGs from the
+              live site are baked onto. Harmless once the transparent Figma
+              exports land, and safe here because the ground is always light. */}
+          <ul class="flex flex-wrap items-center gap-xs">
+            {
+              accreditations.map((item) => (
+                <li>
+                  <img
+                    src={item.image.src}
+                    alt={item.image.alt}
+                    width={item.image.width}
+                    height={item.image.height}
+                    decoding="async"
+                    class:list={["object-contain", logoBox(item.image)]}
+                  />
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        {/* ---- Block 3: primary CTA + quick-buy cards (368 wide in Figma) ---- */}
+        <div class="flex w-full flex-col gap-xs lg:max-w-[368px]">
+          <Button href={cta.href} variant={ctaVariant} external={cta.external} fullWidth>
+            {cta.label}
+          </Button>
+
+          {/* Side by side from 420px up: below that each card is under ~170px
+              and "LBMA-Certified" starts wrapping, so they stack instead. */}
+          <ul class="grid grid-cols-1 gap-xs min-[420px]:grid-cols-2">
+            {
+              quickLinks.map((link) => (
+                <li class="flex">
+                  {/* Figma: 176 x 72 with padding 16/12 and a 1px stroke drawn
+                      INSIDE the box. A CSS border sits outside the padding box,
+                      so the vertical padding gives back that 1px each side to
+                      keep the card exactly 72 tall. */}
+                  <a
+                    href={link.href}
+                    class="group flex min-h-[72px] w-full items-start gap-2xs border border-border-primary bg-always-white px-xs py-[11px] transition-colors duration-150 hover:border-brand-red motion-reduce:transition-none"
+                  >
+                    <img
+                      src={link.icon.src}
+                      alt=""
+                      aria-hidden="true"
+                      width={link.icon.width}
+                      height={link.icon.height}
+                      decoding="async"
+                      class="mt-0.5 h-6 w-6 shrink-0 object-contain"
+                    />
+                    <span class="flex flex-col">
+                      <span class="font-display text-base leading-6 font-medium text-text-primary transition-colors duration-150 group-hover:text-brand-red motion-reduce:transition-none">
+                        {link.label}
+                      </span>
+                      <span class="text-[0.9375rem] leading-6 text-text-secondary sm:text-base">
+                        {link.sublabel}
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+    </Container>
+
+    {/* ---- The photograph ----
+        Figma layer 6: the cut-out team, placed at x 541.01 / y 138 / 790 x 548
+        on the 1366 x 700 frame and sitting OVER the scrims. The exact numbers
+        live in the .hero-media rule below.
+
+        Below lg it leaves the flow position and becomes a full-bleed band
+        under the text — see the responsive notes at the foot of this file. */}
+    <div
+      class="hero-media mt-lg w-full lg:absolute lg:z-[-1] lg:mt-0"
+    >
+      <img
+        src={cutout.src}
+        alt={cutout.decorative ? "" : cutout.alt}
+        aria-hidden={cutout.decorative ? "true" : undefined}
+        width={cutout.width}
+        height={cutout.height}
+        sizes="(min-width: 1366px) 725px, (min-width: 1280px) 54vw, (min-width: 1024px) 50vw, 100vw"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        class="hero-cutout h-auto w-full"
+      />
+    </div>
+  </div>
+</section>
+
+
+
+<style>
+  /*
+    HEADROOM FOR THE OVERLAYING NAV
+    The top navigation is a sibling drawn last over the hero (Figma: nav
+    1366×132 at y=0, hero also at y=0), so the hero has to reserve its own
+    headroom. `--nav-height` is the seam: if the nav publishes its measured
+    height on :root we honour it; otherwise we fall back to the Figma value for
+    that breakpoint. 132 + 76 = 208, the text column's y in the design.
+  */
+  /* The frame carries the padding, not the section: that makes the frame's
+     border box the full height of the hero, which is what the photograph is
+     absolutely positioned against on desktop. */
+  .hero-frame {
+    /* The navbar is 88px and the utility bar 44px at every breakpoint, so the
+       fallback is the Figma 132 all the way down — a smaller fallback would
+       let the H1 slide under the navbar before the measured value lands. */
+    padding-top: calc(var(--nav-height, 132px) + 32px);
+    padding-bottom: var(--spacing-lg);
+  }
+
+  .hero {
+    /* Figma layers 0 + 1. The wash that the design got from a second copy of
+       the team photo, rebuilt from tokens. Both stops are opaque — the far one
+       is the page colour itself — so no alpha interpolation is involved. */
+    background-color: var(--color-bg-primary);
+    background-image: radial-gradient(
+      115% 92% at 70% 58%,
+      color-mix(in srgb, var(--color-bg-primary) 94%, var(--color-always-black)) 0%,
+      var(--color-bg-primary) 66%
+    );
+  }
+
+
+  /* Figma layers 3–5, as three gradients on one element.
+     #f3efea in the file ≈ bg-primary lifted ~22% toward white. */
+  .hero-scrims {
+    --hero-scrim: color-mix(in srgb, var(--color-bg-primary) 78%, var(--color-always-white));
+    background-image:
+      linear-gradient(to bottom, var(--hero-scrim) 0%, transparent 43%),
+      linear-gradient(to top, var(--hero-scrim) 0%, transparent 15%);
+  }
+
+  @media (min-width: 1024px) {
+    /* The radial-gradient wash that used to live here was a stand-in for the
+       backdrop plate, drawn before that layer could be exported. Both together
+       double-darken the ground, so the approximation is gone and the real
+       plate does the work. */
+
+    /* CLIENT DEVIATION FROM FIGMA: the frame is drawn 700px tall; the client
+       asked for a taller hero. Raised ~14% and the vertical padding raised with
+       it, so the composition scales rather than just gaining a gap at the
+       bottom. Revert both numbers to 76/74/620/700 to go back to the drawing. */
+    /* Figma 9813:5485: the composition runs y 208 -> 626 inside a 700px frame,
+       i.e. 208 above and 74 below. --hero-pad-top is the offset below the nav
+       (208 - 132 = 76). The photo is placed by Figma's own coordinates rather
+       than being anchored to this padding, so the two cannot drift apart. */
+    .hero-frame {
+      --hero-pad-top: 76px;
+      padding-top: calc(var(--nav-height, 132px) + var(--hero-pad-top));
+      padding-bottom: 74px;
+      min-height: 620px;
+    }
+
+    /* The left scrim only earns its keep once the text sits beside the photo.
+       Figma boxes, in px so they survive a viewport wider than the 1366 frame:
+       left 586 wide, opaque for its first 19.85% (116px) then fading out;
+       top 297 tall; bottom 102 tall. */
+    .hero-scrims {
+      background-image:
+        linear-gradient(to right, var(--hero-scrim) 0, var(--hero-scrim) 116px, transparent 586px),
+        linear-gradient(to bottom, var(--hero-scrim) 0, transparent 297px),
+        linear-gradient(to top, var(--hero-scrim) 0, transparent 102px);
+    }
+
+    /* One asset carries both the chart and the people, but in Figma the chart
+       sits UNDER the top scrim and the people sit OVER it. Fading the top of
+       the image restores that difference without a second request. The rgb()
+       values below are mask alpha, not paint — no colour is introduced. */
+    .hero-cutout {
+      -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.45) 0%, rgb(0 0 0 / 1) 22%);
+      mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.45) 0%, rgb(0 0 0 / 1) 22%);
+    }
+
+    /* FIGMA GEOMETRY, verbatim off frame 9813:5485 (1366 x 700).
+
+         chart  "image 194"  x 619.57  y 143  651.60 x 403.70  opacity 0.8
+         team   "jrt 1"      x 541.01  y 138  790.00 x 548.00
+
+       Expressed as percentages of the frame so they hold as the capped 1366
+       frame narrows. Because these are the design's own numbers, the team's
+       feet (ink y 619) land just above the bottom of the quick-buy cards
+       (column bottom y 626) exactly as drawn — no separate baseline anchor is
+       needed any more, and the earlier --hero-baseline machinery is gone. */
+    /* THE SEAM, and why the ground is not plain bg-primary here.
+
+       Figma never has to solve this: its canvas IS 1366, the plate spans
+       x 117-1383, its left edge hides under the opaque first 116px of the left
+       scrim and its right edge runs off-canvas. Our section is full-bleed, so
+       on any window wider than 1366 both plate edges are exposed against flat
+       ground and read as vertical lines — the client spotted exactly that.
+
+       The plate's own edges sample ~(217,214,212) and ~(230,227,226) against a
+       bg-primary of (239,236,232), which is the whole step. So the hero's
+       ground is mixed a few percent toward black to meet the plate where it
+       actually is, and the plate's edges fade over 13% so the join is a
+       gradient rather than a line. At 1366 almost none of this ground is
+       visible anyway, so the design match is untouched. */
+    .hero {
+      background-color: color-mix(in srgb, var(--color-bg-primary) 92%, var(--color-always-black));
+    }
+
+    /* backdrop "01 Group_3893 (1-1) 1"  x 117.01  y 44  1266 x 722 */
+    .hero-backdrop {
+      left: 8.57%;
+      top: 6.29%;
+      width: 92.68%;
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0) 13%, rgb(0 0 0) 87%, transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0) 13%, rgb(0 0 0) 87%, transparent 100%);
+    }
+
+    .hero-chart {
+      left: 45.36%;
+      top: 20.43%;
+      width: 47.70%;
+    }
+
+    .hero-media {
+      left: 39.61%;
+      top: 19.71%;
+      width: 57.83%;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .hero-frame {
+      min-height: 700px;
+    }
+  }
+</style>
+
+{/*
+  RESPONSIVE DECISIONS INVENTED HERE (no mobile design exists — please review)
+
+  1. < 1024px the hero becomes one column: text first, photograph last as a
+     full-bleed band. Text first because the H1 and the CTA are the conversion
+     payload and should not be pushed below a 200px image; it also keeps the
+     LCP element as text.
+  2. The H1 keeps its hard two-line break at every width. Each line is its own
+     block, so the break survives but a line can still wrap rather than
+     overflow. From 1024 up it is a flat 40px — the size the Figma frame
+     actually renders, see the note on the H1 itself — and line 1 measures
+     363px inside the designed 399px column, 36px clear of it. Below 1024
+     --step-h1 takes over and clamps 44 → 32px, which is what makes line 1
+     (~294px at 32px) fit a 375px viewport.
+  3. The left scrim is dropped below 1024px — with the text on plain ground it
+     would only tint the whole band for no legibility gain. Top and bottom
+     fades stay.
+  4. Accreditation row: label above the logos below 640px, inline from 640px.
+     Logos step 44 → 36px tall. The row wraps rather than shrinking further.
+  5. Quick-buy cards stack below 420px and sit side by side above it; their
+     subtitle drops 16 → 15px below 640px so "LBMA-Certified" holds one line.
+  6. The photograph is bottom-anchored on desktop (not top-anchored as in
+     Figma) so the team stands on a stable ground line as the hero's height
+     changes with content.
+  7. Hero min-height: none below 1024 (content-driven), 620px at lg, 700px at
+     xl — the Figma height only makes sense once the two columns are side by
+     side.
+
+  OPEN, NEEDS THE CLIENT / DESIGNER
+  - TODO(assets): a phone-shaped crop of the team photo. At 375px the 900×514
+    plate renders ~214px tall and the twenty faces are ~15px each. A tighter
+    crop (or a portrait alternate) would serve small screens far better than
+    scaling this one down.
+  - TODO(client): whether the nav goes opaque on scroll. Nothing is drawn, and
+    the hero's top scrim is what currently makes the transparent navbar legible.
+*/}

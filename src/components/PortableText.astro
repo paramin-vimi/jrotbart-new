@@ -1,0 +1,138 @@
+---
+import { toHTML, type PortableTextOptions } from "@portabletext/to-html";
+import { urlForImage } from "@lib/sanity";
+import type { PortableTextBlock } from "@lib/posts";
+
+/**
+ * Renders post body content.
+ *
+ * This is the render-side half of the guarantee made in the schema: the CMS
+ * only allows a restricted set of blocks and marks, and this file is the only
+ * place that turns them into markup. There is no `dangerouslySetInnerHTML` of
+ * editor-supplied HTML, because there is no HTML field to supply.
+ *
+ * Anything the schema does not know about renders as nothing rather than
+ * leaking an unstyled fallback into the page.
+ */
+
+interface Props {
+  value: PortableTextBlock[];
+  class?: string;
+}
+
+const { value, class: className = "" } = Astro.props;
+
+const esc = (s: unknown) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+/** Pull a YouTube ID out of any of the URL shapes editors paste. */
+function youtubeId(url: string): string | null {
+  const m = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
+  );
+  return m ? m[1] : null;
+}
+
+const options: PortableTextOptions = {
+  components: {
+    block: {
+      normal: ({ children }) =>
+        `<p class="mb-sm text-base leading-7 text-text-secondary">${children}</p>`,
+      h2: ({ children }) =>
+        `<h2 class="mt-xl mb-sm font-display text-[length:var(--step-h2)] leading-tight text-text-primary">${children}</h2>`,
+      h3: ({ children }) =>
+        `<h3 class="mt-lg mb-2xs font-display text-[length:var(--step-h3)] leading-snug text-text-primary">${children}</h3>`,
+      blockquote: ({ children }) =>
+        `<blockquote class="my-lg border-l-2 border-brand-red pl-sm font-display text-xl italic leading-relaxed text-text-primary">${children}</blockquote>`,
+    },
+
+    list: {
+      bullet: ({ children }) =>
+        `<ul class="mb-sm list-disc space-y-2xs pl-6 text-base leading-7 text-text-secondary">${children}</ul>`,
+      number: ({ children }) =>
+        `<ol class="mb-sm list-decimal space-y-2xs pl-6 text-base leading-7 text-text-secondary">${children}</ol>`,
+    },
+
+    marks: {
+      strong: ({ children }) => `<strong class="font-semibold text-text-primary">${children}</strong>`,
+      em: ({ children }) => `<em class="italic">${children}</em>`,
+      link: ({ children, value }) => {
+        const href = String(value?.href ?? "");
+        const external = /^https?:\/\//i.test(href) && !href.includes("jrotbart.com");
+        const rel = external ? ' target="_blank" rel="noopener noreferrer"' : "";
+        return `<a href="${esc(href)}"${rel} class="text-brand-red underline underline-offset-2 hover:text-brand-950">${children}</a>`;
+      },
+    },
+
+    types: {
+      image: ({ value }) => {
+        const builder = urlForImage(value);
+        const alt = esc(value?.alt);
+        // Sanity absent (seed content) — skip rather than emit a broken <img>.
+        if (!builder) return "";
+        const src = builder.width(1200).auto("format").fit("max").quality(78).url();
+        const srcset = [640, 900, 1200]
+          .map((w) => `${builder.width(w).auto("format").fit("max").quality(78).url()} ${w}w`)
+          .join(", ");
+        const caption = value?.caption
+          ? `<figcaption class="mt-2xs text-sm text-text-tertiary">${esc(value.caption)}</figcaption>`
+          : "";
+        return `<figure class="my-lg"><img src="${src}" srcset="${srcset}" sizes="(min-width: 768px) 720px, 100vw" alt="${alt}" loading="lazy" decoding="async" class="w-full" />${caption}</figure>`;
+      },
+
+      youtube: ({ value }) => {
+        const id = youtubeId(String(value?.url ?? ""));
+        if (!id) return "";
+        const title = esc(value?.title ?? "Video");
+        // Facade, matching the rest of the site: no iframe until asked for.
+        return `<figure class="my-lg">
+  <div class="video-facade relative overflow-hidden bg-always-black" style="aspect-ratio:16/9" data-youtube-id="${id}" data-title="${title}">
+    <img src="https://i.ytimg.com/vi/${id}/maxresdefault.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
+    <button type="button" class="group absolute inset-0 grid place-items-center bg-always-black/10 transition-colors hover:bg-always-black/25 motion-reduce:transition-none">
+      <span class="sr-only">Play video: ${title}</span>
+      <span class="grid h-16 w-16 place-items-center rounded-full bg-always-white/90 transition-transform duration-200 group-hover:scale-110 motion-reduce:transition-none" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="h-6 w-6 translate-x-0.5 fill-brand-red"><path d="M8 5v14l11-7z"/></svg>
+      </span>
+    </button>
+  </div>
+</figure>`;
+      },
+
+      callout: ({ value }) =>
+        `<aside class="my-lg border-l-2 border-brand-red bg-bg-primary px-sm py-xs text-base leading-7 text-text-primary">${esc(value?.text)}</aside>`,
+    },
+
+    // Anything the schema does not define renders as nothing, deliberately.
+    unknownType: () => "",
+    unknownMark: ({ children }) => String(children),
+    unknownBlockStyle: ({ children }) => `<p class="mb-sm">${children}</p>`,
+  },
+};
+
+const html = value?.length ? toHTML(value, options) : "";
+---
+
+{html && <div class:list={["post-body", className]} set:html={html} />}
+
+<script>
+  // Same click-to-load behaviour as VideoFacade, for videos inside post bodies.
+  document.querySelectorAll<HTMLElement>(".post-body .video-facade").forEach((el) => {
+    el.querySelector("button")?.addEventListener("click", () => {
+      const id = el.dataset.youtubeId;
+      if (!id) return;
+      const iframe = document.createElement("iframe");
+      iframe.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+      iframe.title = el.dataset.title ?? "Video";
+      iframe.allow =
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      iframe.allowFullscreen = true;
+      iframe.className = "absolute inset-0 h-full w-full border-0";
+      el.replaceChildren(iframe);
+      iframe.focus();
+    });
+  });
+</script>

@@ -1,0 +1,139 @@
+---
+/**
+ * TestimonialBand — full-bleed dark-red video testimonial band.
+ *
+ * Figma "Featured" (10369:8974 and 10369:8987): a component with two live
+ * instances on the homepage, so this takes all of its copy from a
+ * TestimonialBandBlock and hardcodes nothing.
+ *
+ * Desktop geometry (1366 frame): 1174 content column = 758 quote + 96 gap +
+ * 320 square media, 96px vertical padding, background brand-950, quote 24/34
+ * in always-white, a decorative 80x64 quote glyph behind the first lines, and
+ * a 32x1 rule before the uppercase attribution.
+ *
+ * Only the dark treatment is drawn in Figma, so `block.theme` is not branched
+ * on — a light variant would need a design.
+ */
+import Container from "@primitives/Container.astro";
+import VideoFacade from "@primitives/VideoFacade.astro";
+import type { TestimonialBandBlock } from "@content/types";
+
+interface Props {
+  block: TestimonialBandBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const testimonial = block.testimonial;
+
+/**
+ * Author-entered newlines are meaningful: the Alvarez & Marsal quote carries
+ * an explicit break after "years." in Figma. Split so each becomes a real
+ * <br> instead of being collapsed into a space.
+ */
+const quoteLines = testimonial.quote.split("\n");
+
+/**
+ * Figma renders "Albert Cheng - SBMA" — a plain hyphen with spaces. The
+ * uppercase is a CSS transform (.overline), so the accessible name stays in
+ * sentence case for screen readers.
+ */
+const attribution = `${testimonial.name} - ${testimonial.organisation}`;
+---
+
+<!--
+  `on-dark` switches the global :focus-visible ring to white.
+  The 1px bottom border is in the Figma node and is all but invisible against
+  brand-950; kept for fidelity.
+-->
+<section
+  id={block.anchorId}
+  class:list={[
+    "on-dark border-b border-border-primary bg-brand-950 py-lg lg:py-3xl",
+    className,
+  ]}
+>
+  <Container>
+    <!--
+      Responsive: stacked below 1024 (quote first, media below and
+      left-aligned), row from 1024 up. The 96px column gap only appears at
+      1280+ where there is room for it; 1024-1279 uses 48.
+    -->
+    <div class="flex flex-col gap-lg lg:flex-row lg:items-center lg:gap-lg xl:gap-3xl">
+      <figure class="m-0 flex min-w-0 flex-1 flex-col gap-md">
+        <div class="relative">
+          <!--
+            Decorative open-quote glyph. Sits at the top-left of the quote
+            block, behind the text (the blockquote is positioned, so it paints
+            on top). 80x64 at desktop, scaled to 56x45 on small screens.
+          -->
+          <svg
+            viewBox="0 0 80 64"
+            aria-hidden="true"
+            focusable="false"
+            class="pointer-events-none absolute top-0 left-0 h-[45px] w-14 md:h-16 md:w-20"
+          >
+            <path
+              class="fill-always-white opacity-30"
+              d="M19.6129 64C15.828 64 12.7312 63.2381 10.3226 61.7143C7.91398 60.1905 5.93548 58.2434 4.3871 55.873C2.66667 52.9947 1.46237 50.0317 0.774193 46.9841C0.258064 43.7672 0 41.1429 0 39.1111C0 30.8148 2.15054 23.2804 6.45161 16.5079C10.7527 9.73546 17.4624 4.23281 26.5806 0L28.9032 4.57143C23.5699 6.77249 18.9247 10.2434 14.9677 14.9841C11.1828 19.7249 9.29032 24.5503 9.29032 29.4603C9.29032 31.4921 9.54839 33.2698 10.0645 34.7937C12.8172 32.5926 16 31.4921 19.6129 31.4921C24.086 31.4921 27.957 32.9312 31.2258 35.8095C34.4946 38.6878 36.129 42.6667 36.129 47.746C36.129 52.4868 34.4946 56.3809 31.2258 59.4286C27.957 62.4762 24.086 64 19.6129 64ZM63.4839 64C59.6989 64 56.6022 63.2381 54.1936 61.7143C51.7849 60.1905 49.8065 58.2434 48.2581 55.873C46.5376 52.9947 45.3333 50.0317 44.6452 46.9841C44.129 43.7672 43.871 41.1429 43.871 39.1111C43.871 30.8148 46.0215 23.2804 50.3226 16.5079C54.6237 9.73546 61.3333 4.23281 70.4516 0L72.7742 4.57143C67.4409 6.77249 62.7957 10.2434 58.8387 14.9841C55.0538 19.7249 53.1613 24.5503 53.1613 29.4603C53.1613 31.4921 53.4194 33.2698 53.9355 34.7937C56.6882 32.5926 59.871 31.4921 63.4839 31.4921C67.957 31.4921 71.828 32.9312 75.0968 35.8095C78.3656 38.6878 80 42.6667 80 47.746C80 52.4868 78.3656 56.3809 75.0968 59.4286C71.828 62.4762 67.957 64 63.4839 64Z"
+            />
+          </svg>
+
+          <blockquote
+            class="relative m-0 text-xl leading-[30px] text-always-white md:text-2xl md:leading-[34px]"
+          >
+            <p>
+              {
+                quoteLines.map((line, index) => (
+                  <Fragment>
+                    {index > 0 && <br />}
+                    {line}
+                  </Fragment>
+                ))
+              }
+            </p>
+          </blockquote>
+        </div>
+
+        <figcaption class="flex items-center gap-xs">
+          <!-- Figma: 32 x 1 white rule before the attribution. -->
+          <span class="h-px w-8 shrink-0 bg-always-white" aria-hidden="true"></span>
+          <span class="eyebrow text-always-white">{attribution}</span>
+        </figcaption>
+      </figure>
+
+      <!--
+        Square media. Held at 320px at every breakpoint: stacked at tablet
+        widths a full-width square would be ~670px tall, which swamps the
+        quote. Left-aligned when stacked, matching the text column.
+
+        REVIEW: Figma draws the play button as a 64x64 black circle at 50%
+        opacity with a WHITE triangle. The shared VideoFacade primitive draws a
+        white circle with a brand-red triangle at the same 64x64 size. That is
+        a primitive-level divergence used by every video on the page, so it is
+        not patched locally here — it needs one decision applied in
+        VideoFacade.astro. Figma also draws no hover overlay on the thumbnail.
+      -->
+      <div class="w-full max-w-80 shrink-0 lg:w-80">
+        {
+          testimonial.video ? (
+            <VideoFacade video={testimonial.video} ratio="1/1" />
+          ) : (
+            /* No video on this testimonial: the portrait stands alone and the
+               play affordance is suppressed. Figma does not draw this case. */
+            <img
+              src={testimonial.portrait.src}
+              alt={testimonial.portrait.decorative ? "" : testimonial.portrait.alt}
+              aria-hidden={testimonial.portrait.decorative ? "true" : undefined}
+              width={testimonial.portrait.width}
+              height={testimonial.portrait.height}
+              loading="lazy"
+              decoding="async"
+              class="aspect-square w-full object-cover"
+            />
+          )
+        }
+      </div>
+    </div>
+  </Container>
+</section>

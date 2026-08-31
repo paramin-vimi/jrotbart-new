@@ -1,0 +1,12 @@
+---
+/** Figma "OVERLINE" text style. Rendered as a <p>, never a heading —
+    the live site used <h6> for eyebrows, which broke the heading outline. */
+interface Props { class?: string; tone?: "tertiary" | "red" | "white" }
+const { class: className = "", tone = "tertiary" } = Astro.props;
+const tones = {
+  tertiary: "text-text-tertiary",
+  red: "text-brand-red",
+  white: "text-always-white",
+} as const;
+---
+<p class:list={["eyebrow", tones[tone], className]}><slot /></p>

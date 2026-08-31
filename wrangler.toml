@@ -1,0 +1,22 @@
+# Cloudflare Workers deployment.
+#
+# Two Workers, both on the existing jrotbart.com zone:
+#   1. spot-price  — GET /api/spot, holds the metals.dev key as a secret
+#   2. (later) router — redirects + fall-through to WordPress during migration
+#
+# The static site itself deploys as Workers Static Assets.
+
+name = "jrotbart-spot-price"
+main = "workers/spot-price.ts"
+compatibility_date = "2026-08-01"
+
+# Secrets are NEVER committed. Set with:
+#   wrangler secret put METALS_DEV_API_KEY
+# Use a FRESHLY ROTATED key. The key serving production today is exposed in a
+# client-side asset on the current WordPress site and must be revoked before
+# launch. The exact location is in the readiness report, not in this file:
+# this repository is public and that key has not been rotated yet.
+
+[[routes]]
+pattern = "jrotbart.com/api/spot"
+zone_name = "jrotbart.com"

@@ -1,0 +1,166 @@
+---
+import type { VideoRef } from "@content/types";
+
+/**
+ * Click-to-play video, opening in a LIGHTBOX.
+ *
+ * Two things this solves.
+ *
+ * 1. Performance. The live site injects a YouTube iframe on page load for every
+ *    video, which costs roughly 1MB of third-party JavaScript each and renders
+ *    nothing to a crawler. Here the page ships a real poster image and a button;
+ *    the iframe is only created once a viewer asks for it.
+ *
+ * 2. Presentation. Playing inline meant a 320px-square testimonial portrait
+ *    became a 320px-square video player, complete with YouTube Shorts chrome —
+ *    unwatchable. The client asked for a popup, so the video now opens centred
+ *    and large over a dimmed page.
+ *
+ * Built on native <dialog>, which gives the focus trap, Escape-to-close and
+ * focus restoration for free rather than reimplementing them. One dialog is
+ * shared by every video on the page.
+ */
+interface Props {
+  video: VideoRef;
+  class?: string;
+  ratio?: string;
+}
+const { video, class: className = "", ratio = "16/9" } = Astro.props;
+---
+
+<div
+  class:list={["video-facade relative overflow-hidden bg-always-black", className]}
+  style={`aspect-ratio:${ratio}`}
+>
+  <img
+    src={video.poster.src}
+    alt={video.poster.alt}
+    width={video.poster.width}
+    height={video.poster.height}
+    loading="lazy"
+    decoding="async"
+    class="absolute inset-0 h-full w-full object-cover"
+  />
+
+  <button
+    type="button"
+    class="group absolute inset-0 grid place-items-center bg-always-black/10 transition-colors hover:bg-always-black/25 motion-reduce:transition-none"
+    data-play
+    data-youtube-id={video.youtubeId}
+    data-title={video.title}
+    data-ratio={video.aspect ?? "16/9"}
+  >
+    <span class="sr-only">Play video: {video.title}</span>
+    {/* Figma draws a dark translucent disc with a white triangle. */}
+    <span
+      class="grid h-16 w-16 place-items-center rounded-full bg-always-black/45 ring-1 ring-always-white/40 backdrop-blur-sm transition-transform duration-200 group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 24 24" class="h-6 w-6 translate-x-0.5 fill-always-white">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+    </span>
+  </button>
+</div>
+
+{/* One shared dialog for the whole page. Rendered once, however many
+    VideoFacades are on it — hence the id guard in the script below. */}
+<div id="video-lightbox-root" data-video-lightbox-root></div>
+
+<script>
+  // Create the dialog once per page, not once per video.
+  function lightbox(): HTMLDialogElement {
+    let dlg = document.querySelector<HTMLDialogElement>("dialog[data-video-lightbox]");
+    if (dlg) return dlg;
+
+    dlg = document.createElement("dialog");
+    dlg.setAttribute("data-video-lightbox", "");
+    dlg.setAttribute("aria-label", "Video player");
+    // The dialog fills the viewport and centres its content with flex.
+    // Sizing the dialog itself to the video did not work: it stubbornly
+    // resolved to 720px (half the viewport) whatever the content, so the
+    // -50% translate centred the wrong box and the video sat off to one side.
+    // Letting it cover the viewport removes the whole class of problem.
+    dlg.className =
+      "m-0 h-dvh max-h-none w-screen max-w-none border-0 bg-transparent p-0 " +
+      "backdrop:bg-black/80 backdrop:backdrop-blur-sm";
+
+    dlg.innerHTML = `
+      <div class="flex h-full w-full items-center justify-center p-4" data-backdrop>
+      <div class="relative w-fit">
+        <div class="relative overflow-hidden bg-black shadow-2xl" data-slot></div>
+        <button type="button" data-close
+          class="absolute -top-11 right-0 flex items-center gap-2 text-sm font-semibold uppercase tracking-[2.5px] text-white hover:text-white/75">
+          Close
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      </div>`;
+
+    document.body.appendChild(dlg);
+
+    const clear = () => {
+      const slot = dlg!.querySelector("[data-slot]");
+      if (slot) slot.innerHTML = "";        // stops playback on close
+      document.documentElement.style.overflow = "";
+    };
+
+    dlg.addEventListener("close", clear);
+    dlg.addEventListener("cancel", clear);
+    dlg.querySelector("[data-close]")?.addEventListener("click", () => dlg!.close());
+    // Clicking the backdrop (i.e. the dialog element itself) closes it.
+    dlg.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      // Close on the dialog itself or on the centring wrapper — i.e. any click
+      // that is not on the video or the close button.
+      if (t === dlg || t.dataset.backdrop !== undefined) dlg!.close();
+    });
+
+    return dlg;
+  }
+
+  document.querySelectorAll<HTMLButtonElement>(".video-facade [data-play]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.youtubeId;
+      if (!id) return;
+
+      const dlg = lightbox();
+      const slot = dlg.querySelector("[data-slot]") as HTMLElement;
+
+      // Size the frame to the VIDEO's shape, not a fixed 16:9. The testimonials
+      // are portrait Shorts; forcing them into a landscape box pillarboxed them
+      // with big black bars and pushed the dialog off-centre.
+      const raw = btn.dataset.ratio ?? "16/9";
+      const [rw, rh] = raw.split("/").map(Number);
+      const ratio = rw && rh ? rw / rh : 16 / 9;
+      if (ratio >= 1) {
+        slot.style.width = "min(88vw, 860px)";
+        slot.style.height = "auto";
+      } else {
+        // Portrait: bound by height so it never runs off the top and bottom.
+        slot.style.height = "min(78vh, 720px)";
+        slot.style.width = "auto";
+      }
+      slot.style.aspectRatio = String(ratio);
+
+      const iframe = document.createElement("iframe");
+      iframe.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+      iframe.title = btn.dataset.title ?? "Video";
+      iframe.allow =
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      iframe.allowFullscreen = true;
+      iframe.className = "absolute inset-0 h-full w-full border-0";
+      slot.replaceChildren(iframe);
+
+      document.documentElement.style.overflow = "hidden";
+      dlg.showModal();   // native: focus trap + Escape + focus restoration
+
+      // Focus the Close button, NOT the iframe. Autofocus would otherwise land
+      // inside the cross-origin YouTube frame, and Escape pressed in there
+      // never reaches this document — the dialog would refuse to close.
+      dlg.querySelector<HTMLButtonElement>("[data-close]")?.focus();
+    });
+  });
+</script>

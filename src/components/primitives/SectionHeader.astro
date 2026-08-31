@@ -1,0 +1,55 @@
+---
+import Overline from "./Overline.astro";
+import Button from "./Button.astro";
+import ArrowLink from "./ArrowLink.astro";
+import type { SectionHeading } from "@content/types";
+
+interface Props {
+  header: SectionHeading;
+  /** h2 for top-level page sections, h3 when nested inside one. */
+  as?: "h2" | "h3";
+  align?: "left" | "center";
+  tone?: "dark" | "light";
+  class?: string;
+}
+
+const { header, as: Tag = "h2", align = "left", tone = "dark", class: className = "" } = Astro.props;
+
+const headingTone = tone === "light" ? "text-always-white" : "text-text-primary";
+const bodyTone = tone === "light" ? "text-always-white/80" : "text-text-secondary";
+const accentTone = tone === "light" ? "text-always-white/70" : "text-text-tertiary";
+---
+<div
+  class:list={[
+    "flex flex-col gap-sm",
+    align === "center" && "items-center text-center",
+    className,
+  ]}
+>
+  {header.overline && (
+    <Overline tone={tone === "light" ? "white" : "red"}>{header.overline}</Overline>
+  )}
+
+  <Tag class:list={["text-[length:var(--step-h2)] leading-[1.375] md:leading-[var(--line-h2)]", headingTone]}>
+    {header.heading}
+    {header.headingAccent && (
+      <em class:list={["font-medium italic", accentTone]}> {header.headingAccent}</em>
+    )}
+  </Tag>
+
+  {header.body && (
+    <p class:list={["max-w-[65ch] text-base leading-6", bodyTone]}>{header.body}</p>
+  )}
+
+  {header.cta && (
+    header.cta.style === "arrow" ? (
+      <ArrowLink href={header.cta.href} tone={tone} external={header.cta.external}>
+        {header.cta.label}
+      </ArrowLink>
+    ) : (
+      <Button href={header.cta.href} variant={header.cta.style ?? "solid"} external={header.cta.external} class="self-start">
+        {header.cta.label}
+      </Button>
+    )
+  )}
+</div>

@@ -1,0 +1,149 @@
+---
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import ArrowLink from "@primitives/ArrowLink.astro";
+import type { Post, PostCategory } from "@lib/posts";
+import type { Page } from "astro";
+
+/**
+ * Shared archive UI for the blog index and the four category archives.
+ *
+ * This fixes two concrete failures on the current site:
+ *   1. Every category, tag and author archive returns HTTP 200 with a
+ *      ZERO-BYTE body — 480 URLs submitted to Google that serve nothing.
+ *   2. 256 of 463 posts (56%) have no internal link path at all, because
+ *      /blogs-events-press/ lists only 198 and has no pagination.
+ * Real paginated archives are what reconnect those posts.
+ */
+
+interface Props {
+  page: Page<Post>;
+  heading: string;
+  overline?: string;
+  description?: string;
+  categories: PostCategory[];
+  /** Slug of the active category, or null on the all-posts index. */
+  activeCategory?: string | null;
+  /** Base path for the filter links, e.g. "/blogs-events-press". */
+  indexPath?: string;
+}
+
+const {
+  page,
+  heading,
+  overline,
+  description,
+  categories,
+  activeCategory = null,
+  indexPath = "/blogs-events-press",
+} = Astro.props;
+
+const fmt = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+---
+
+<Container class="pt-[calc(132px+var(--spacing-xl))] pb-lg">
+  <div class="max-w-[46rem]">
+    {overline && <Overline tone="red">{overline}</Overline>}
+    <h1 class="mt-2xs font-display text-[length:var(--step-h1)] leading-tight text-text-primary">
+      {heading}
+    </h1>
+    {description && (
+      <p class="mt-sm text-base leading-7 text-text-secondary">{description}</p>
+    )}
+  </div>
+
+  {/* Category filter. Real links to real pages — not query-string filters on
+      one URL, which is what the current mega-menu does (?c=resources). */}
+  <nav class="mt-lg flex flex-wrap gap-2xs" aria-label="Filter by category">
+    <a
+      href={`${indexPath}/`}
+      aria-current={activeCategory === null ? "page" : undefined}
+      class:list={[
+        "button-text border px-sm py-2xs transition-colors motion-reduce:transition-none",
+        activeCategory === null
+          ? "border-brand-red bg-brand-red text-always-white"
+          : "border-border-primary text-text-secondary hover:border-brand-red hover:text-brand-red",
+      ]}
+    >
+      All
+    </a>
+    {categories.map((c) => (
+      <a
+        href={`/${c.slug}/`}
+        aria-current={activeCategory === c.slug ? "page" : undefined}
+        class:list={[
+          "button-text border px-sm py-2xs transition-colors motion-reduce:transition-none",
+          activeCategory === c.slug
+            ? "border-brand-red bg-brand-red text-always-white"
+            : "border-border-primary text-text-secondary hover:border-brand-red hover:text-brand-red",
+        ]}
+      >
+        {c.title}
+      </a>
+    ))}
+  </nav>
+</Container>
+
+<Container class="pb-3xl">
+  {page.data.length === 0 ? (
+    <p class="py-xl text-base text-text-secondary">
+      There are no posts in this category yet.
+    </p>
+  ) : (
+    /* First row on page 1 loads eagerly; everything below the fold is lazy. */
+    <ul class="grid gap-lg sm:grid-cols-2 lg:grid-cols-3">
+      {page.data.map((post, i) => (
+        <li class="flex flex-col border-b border-border-primary pb-lg">
+          <a href={`/${post.slug}/`} class="group flex flex-1 flex-col gap-xs">
+            <img
+              src={post.featuredImage.src}
+              srcset={post.featuredImage.srcset}
+              sizes="(min-width: 1024px) 370px, (min-width: 640px) 45vw, 90vw"
+              alt={post.featuredImage.alt}
+              width={post.featuredImage.width}
+              height={post.featuredImage.height}
+              loading={page.currentPage === 1 && i < 3 ? "eager" : "lazy"}
+              decoding="async"
+              class="aspect-[4/3] w-full object-cover"
+            />
+
+            <div class="flex items-center gap-2xs text-sm text-text-tertiary">
+              <span class="eyebrow">{post.category.title}</span>
+              <span aria-hidden="true">·</span>
+              <time datetime={post.publishedAt}>{fmt(post.publishedAt)}</time>
+            </div>
+
+            <h2 class="font-display text-xl leading-snug text-text-primary group-hover:text-brand-red">
+              {post.title}
+            </h2>
+
+            <p class="text-base leading-6 text-text-secondary">{post.excerpt}</p>
+
+            <span class="button-text mt-auto pt-xs text-brand-red">Read more →</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )}
+
+  {page.lastPage > 1 && (
+    <nav class="mt-xl flex items-center justify-between gap-sm" aria-label="Pagination">
+      {page.url.prev ? (
+        <ArrowLink href={page.url.prev} class="[&_svg]:rotate-180">Previous</ArrowLink>
+      ) : (
+        <span />
+      )}
+
+      <p class="text-sm text-text-tertiary" aria-live="polite">
+        Page {page.currentPage} of {page.lastPage}
+      </p>
+
+      {page.url.next ? <ArrowLink href={page.url.next}>Next</ArrowLink> : <span />}
+    </nav>
+  )}
+</Container>

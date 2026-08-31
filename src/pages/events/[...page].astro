@@ -1,0 +1,58 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import TopNavigation from "@components/TopNavigation.astro";
+import SiteFooter from "@components/SiteFooter.astro";
+import PostArchive from "@components/PostArchive.astro";
+import { getPostsByCategory, getCategories } from "@lib/posts";
+import { buildGraph, organizationNode, webSiteNode } from "@lib/schema";
+import type { GetStaticPaths, Page } from "astro";
+import type { Post, PostCategory } from "@lib/posts";
+
+/**
+ * "Events" category archive.
+ *
+ * The equivalent URL on the current site (/category/events/) returns HTTP 200
+ * with a zero-byte body. This one is real, paginated and indexable.
+ */
+export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
+  // NOTE: inlined rather than referencing an outer const — Astro hoists
+  // getStaticPaths into its own module scope, where outer consts are not in scope.
+  const posts = await getPostsByCategory("events");
+  const categories = await getCategories();
+  return paginate(posts, { pageSize: 12, props: { categories } });
+};
+
+const SLUG = "events";
+interface Props {
+  page: Page<Post>;
+  categories: PostCategory[];
+}
+
+const { page, categories } = Astro.props;
+const category = categories.find((c) => c.slug === SLUG);
+
+const seo = {
+  title:
+    page.currentPage === 1
+      ? "Events | J. Rotbart & Co."
+      : `Events — page ${page.currentPage} | J. Rotbart & Co.`,
+  description:
+    category?.description ??
+    "Events from J. Rotbart & Co., a boutique bullion house serving Hong Kong, Singapore, Manila and Tel Aviv.",
+};
+
+const schema = buildGraph([organizationNode(), webSiteNode()]);
+---
+
+<BaseLayout seo={seo} schema={schema}>
+  <TopNavigation slot="header" />
+  <PostArchive
+    page={page}
+    overline="News & Events"
+    heading="Events"
+    description={category?.description}
+    categories={categories}
+    activeCategory={SLUG}
+  />
+  <SiteFooter slot="footer" />
+</BaseLayout>

@@ -1,0 +1,131 @@
+---
+/**
+ * Live spot-price ticker (gold / silver / platinum / palladium).
+ *
+ * This is the only live data on the homepage. How it differs from the current site:
+ *
+ *   Current                                  This build
+ *   -------                                  ----------
+ *   metals.dev API key hardcoded in a        Key held as a secret in a Cloudflare
+ *   public, cacheable JS file                Worker; never reaches the browser
+ *   One metals.dev call per visitor          One upstream call per 60s, shared by
+ *   per page load                            every visitor at the edge
+ *   Auto-refresh commented out — prices      Refreshes on an interval and on tab
+ *   frozen at page load                      re-focus
+ *   No failure handling                      Explicit unavailable state, no CLS
+ *
+ * See workers/spot-price.ts for the server side.
+ *
+ * OPEN DECISION (client): on upstream failure we currently show "Spot prices
+ * unavailable" rather than a silently stale price. For a bullion dealer a stale
+ * gold price reads as a trust problem, so this is the safer default — but if you
+ * would rather show the last known price with an "as of" timestamp, that is a
+ * one-line change in the render() function below.
+ */
+
+const METALS = [
+  { key: "gold", label: "Gold" },
+  { key: "silver", label: "Silver" },
+  { key: "platinum", label: "Platinum" },
+  { key: "palladium", label: "Palladium" },
+] as const;
+---
+
+<div
+  class="price-ticker flex min-h-5 items-center gap-xs overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+  data-price-ticker
+>
+  <!-- aria-live so screen readers hear an update, but politely -->
+  <ul
+    class="flex items-center gap-xs"
+    data-ticker-list
+    aria-live="polite"
+    aria-label="Live precious metal spot prices, US dollars per troy ounce"
+  >
+    {METALS.map((m) => (
+      <li class="flex items-center gap-1 text-sm leading-5 text-always-white">
+        <span class="font-semibold">{m.label}:</span>
+        {/* min-width reserves space so arriving prices cause no layout shift */}
+        {/* Figma: value is the same always-white as the label, weight 400
+            against the label's 600 — not a dimmed white. */}
+        <span
+          class="inline-block min-w-[7.5ch] font-normal tabular-nums text-always-white"
+          data-metal={m.key}
+        >—</span>
+      </li>
+    ))}
+  </ul>
+
+  <p
+    class="hidden text-sm leading-5 text-always-white/60"
+    data-ticker-error
+    role="status"
+  >
+    Spot prices unavailable
+  </p>
+</div>
+
+<script>
+  const ENDPOINT = "/api/spot";
+  const REFRESH_MS = 60_000;
+
+  const root = document.querySelector<HTMLElement>("[data-price-ticker]");
+  const list = root?.querySelector<HTMLElement>("[data-ticker-list]");
+  const errorEl = root?.querySelector<HTMLElement>("[data-ticker-error]");
+
+  type SpotResponse = {
+    currency: string;
+    unit: string;
+    metals: Partial<Record<"gold" | "silver" | "platinum" | "palladium", number>>;
+  };
+
+  const format = (n: number) =>
+    `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/oz`;
+
+  function showError() {
+    if (!list || !errorEl) return;
+    list.classList.add("hidden");
+    errorEl.classList.remove("hidden");
+  }
+
+  function showPrices(data: SpotResponse) {
+    if (!root || !list || !errorEl) return;
+    let any = false;
+    for (const [metal, value] of Object.entries(data.metals ?? {})) {
+      const el = root.querySelector<HTMLElement>(`[data-metal="${metal}"]`);
+      if (el && typeof value === "number" && Number.isFinite(value)) {
+        el.textContent = format(value);
+        any = true;
+      }
+    }
+    if (!any) return showError();
+    errorEl.classList.add("hidden");
+    list.classList.remove("hidden");
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(ENDPOINT, { headers: { accept: "application/json" } });
+      if (!res.ok) throw new Error(`spot endpoint ${res.status}`);
+      showPrices((await res.json()) as SpotResponse);
+    } catch {
+      // Deliberately quiet: a missing ticker must never break the page.
+      showError();
+    }
+  }
+
+  if (root) {
+    load();
+    let timer = window.setInterval(load, REFRESH_MS);
+
+    // Don't poll a hidden tab; refresh immediately when the viewer returns.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        window.clearInterval(timer);
+      } else {
+        load();
+        timer = window.setInterval(load, REFRESH_MS);
+      }
+    });
+  }
+</script>

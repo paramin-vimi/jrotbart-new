@@ -1,0 +1,91 @@
+---
+import "@/styles/global.css";
+import type { Seo } from "@content/types";
+import { b2blead } from "@content/integrations";
+import BackToTop from "@components/BackToTop.astro";
+
+interface Props {
+  seo: Seo;
+  /** JSON-LD graph for this page, built with lib/schema.ts */
+  schema?: object;
+}
+
+const { seo, schema } = Astro.props;
+const canonical = seo.canonical ?? new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = seo.ogImage?.src
+  ? new URL(seo.ogImage.src, Astro.site).href
+  : new URL("/og-default.jpg", Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{seo.title}</title>
+    <meta name="description" content={seo.description} />
+    <link rel="canonical" href={canonical} />
+    {seo.noindex && <meta name="robots" content="noindex, follow" />}
+    {!seo.noindex && <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />}
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="J. Rotbart & Co." />
+    <meta property="og:locale" content="en" />
+    <meta property="og:title" content={seo.title} />
+    <meta property="og:description" content={seo.description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+
+    <!-- X / Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={seo.title} />
+    <meta name="twitter:description" content={seo.description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <meta name="theme-color" content="#81161a" />
+
+    {/* Favicons, generated from the crown mark in the Figma logo lockup
+        (Group 9643). The live site ships JPEG favicons, which is why they
+        render with artefacts; these are a proper SVG + PNG + ICO set. */}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    {schema && (
+      <script
+        type="application/ld+json"
+        is:inline
+        set:html={JSON.stringify(schema)}
+      />
+    )}
+
+    <slot name="head" />
+  </head>
+
+  <body>
+    <a href="#main" class="sr-only-focusable bg-always-white text-text-primary px-4 py-2 border border-border-primary">
+      Skip to main content
+    </a>
+
+    <slot name="header" />
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <slot name="footer" />
+
+    <BackToTop />
+
+    {/* b2blead site-wide deployment (the AI chat agent). Loaded on every page,
+        async and last so it never blocks render.
+        TODO(client): this is an unconsented third-party script — see the
+        privacy note in src/content/integrations.ts. */}
+    <script is:inline src={b2blead.deploymentScript} async></script>
+  </body>
+</html>

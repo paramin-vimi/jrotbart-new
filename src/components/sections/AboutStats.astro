@@ -1,0 +1,167 @@
+---
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import Button from "@primitives/Button.astro";
+import type { AboutStatsSection, StatIconName } from "@content/homepage/about";
+
+/**
+ * Block A of Figma `10229:7543` — About intro + 2×2 statistics grid.
+ *
+ * Desktop geometry (1366 frame): 1174 container, two columns 410 / 668 with a
+ * 96px gutter; the right column is a 2×2 wrap grid of 318px cards, 32px gap.
+ *
+ * BLOCK ORDER. Figma stacks the frame as A (this block) → B (Expertise +
+ * video) → C (Office locations), and src/pages/index.astro now renders them in
+ * that order. The inter-block spacing below stays order-independent anyway.
+ *
+ * The heading is hand-built rather than delegated to <SectionHeader>: this
+ * heading places its italic accent *mid-string* ("Dedicated to *Preserving*
+ * Your Wealth") and uses text-secondary for it, neither of which the primitive
+ * supports. Every other primitive is used as-is.
+ */
+interface Props {
+  block: AboutStatsSection;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, stats } = block;
+
+const headingId = `${block._key}-heading`;
+const surface = block.theme === "light" ? "bg-bg-secondary" : "bg-bg-primary";
+
+/**
+ * 28×28 line icons, drawn inline so they inherit `currentColor` (brand red) and
+ * cost no extra request. Paths only — the <svg> wrapper is shared below.
+ * TODO(assets): replace with the exported Figma icons
+ * (General/Shield Safe, Office/Safebox, Maps/Earth Pin, Finance/Coin).
+ */
+/**
+ * Blocks A, B and C of Figma frame `10229:7543` (About+stats, Expertise+video,
+ * Office locations) render as three sibling <section>s. Inside that frame the
+ * blocks are 96px apart, but two adjacent sections each padded 96px produce a
+ * 192px seam — double the design. `frame-10229-7543` marks all three, and a
+ * marked section that touches another halves the padding on THAT EDGE ONLY:
+ * 48 + 48 = 96 at lg, 32 + 32 = 64 at md, 24 + 24 = 48 at base. The frame's
+ * outer edges keep the full 96. Deliberately order-independent — the DOM order
+ * of the three blocks is wrong today (see the note in this file's report) and
+ * this must keep working when it is corrected.
+ */
+const FRAME_SEAM =
+  "frame-10229-7543 " +
+  "[.frame-10229-7543+&]:pt-sm md:[.frame-10229-7543+&]:pt-md lg:[.frame-10229-7543+&]:pt-lg " +
+  "has-[+.frame-10229-7543]:pb-sm md:has-[+.frame-10229-7543]:pb-md lg:has-[+.frame-10229-7543]:pb-lg";
+
+const STAT_ICONS: Record<StatIconName, string> = {
+  "shield-safe":
+    '<path d="M12 3l7.5 2.8v5.4c0 4.4-3 8.2-7.5 9.3-4.5-1.1-7.5-4.9-7.5-9.3V5.8L12 3z"/><path d="M9 12.2l2 2 4.2-4.2"/>',
+  safebox:
+    '<rect x="3" y="4.5" width="18" height="15" rx="1.5"/><circle cx="10.5" cy="12" r="3.6"/><path d="M10.5 12h3.1M17 9.6v4.8M6.6 19.5V21M17.4 19.5V21"/>',
+  "earth-pin":
+    '<circle cx="10.5" cy="10.5" r="7.5"/><path d="M3 10.5h15M10.5 3c2.1 2.2 3.2 4.8 3.2 7.5s-1.1 5.3-3.2 7.5c-2.1-2.2-3.2-4.8-3.2-7.5S8.4 5.2 10.5 3z"/><path d="M18.5 13.6c1.4 0 2.5 1.1 2.5 2.5 0 1.9-2.5 4.9-2.5 4.9S16 18 16 16.1c0-1.4 1.1-2.5 2.5-2.5z"/>',
+  coin:
+    '<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M19.5 6v5c0 1.66-3.36 3-7.5 3s-7.5-1.34-7.5-3V6"/><path d="M19.5 11v5c0 1.66-3.36 3-7.5 3s-7.5-1.34-7.5-3v-5"/>',
+};
+---
+
+<section
+  id={block.anchorId}
+  aria-labelledby={headingId}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", FRAME_SEAM, className]}
+>
+  <Container>
+    <!-- Desktop: 410 / 96 / 668. Below lg the intro stacks above the stats. -->
+    <div class="flex flex-col gap-lg lg:flex-row lg:items-start lg:gap-3xl">
+      <!-- Intro -->
+      <div class="flex flex-col gap-md lg:w-[410px] lg:shrink-0">
+        <div class="flex flex-col gap-sm">
+          {header.overline && <Overline tone="red">{header.overline}</Overline>}
+
+          {/* `text-wrap` (= wrap) overrides the `text-wrap: balance` set on
+              every heading in the base layer. Figma wraps greedily and breaks
+              this heading after "Preserving"; balancing re-breaks it after
+              "Dedicated to", which splits the italic accent off its own line.
+
+              SIZE: measured off the Figma render, this heading is 32px on a
+              44px line, not the 40px the shared `--step-h2` ramp tops out at
+              ("Dedicated" is 143px wide in the export; at 40px it draws 179).
+              The ramp is shared with sections owned elsewhere, so it is capped
+              here rather than changed in global.css. The cap matters
+              compositionally, not just metrically: at 40px the heading needs
+              three lines in a 410px column and swamps the paragraph beneath it;
+              at 32px it breaks after "Preserving" exactly as the design does.
+              32 x 1.375 = the same 44px line box, so nothing below moves. */}
+          <h2
+            id={headingId}
+            class="text-wrap text-[length:min(var(--step-h2),2rem)] leading-[1.375] text-text-primary"
+          >{header.heading}{header.headingAccent && (
+              <em class="font-medium italic text-text-secondary"
+                >{header.headingAccent}</em
+              >
+            )}{header.headingTrail}</h2>
+
+          {header.body && (
+            <p class="text-base leading-6 text-text-secondary">{header.body}</p>
+          )}
+        </div>
+
+        <!-- Figma button: 240 × 46 fixed. Mobile: full width, capped so it does
+             not stretch edge-to-edge on tablets. -->
+        {header.cta && (
+          <Button
+            href={header.cta.href}
+            variant="solid"
+            external={header.cta.external}
+            class="w-full max-w-[20rem] sm:w-60 sm:max-w-none"
+          >
+            {header.cta.label}
+          </Button>
+        )}
+      </div>
+
+      <!-- Statistics. A list: four peer facts, order is not meaningful. -->
+      <ul
+        role="list"
+        class="grid grid-cols-1 gap-md sm:grid-cols-2 lg:min-w-0 lg:flex-1"
+      >
+        {stats.map((stat) => (
+          <li class="flex flex-col gap-xs">
+            <span
+              class="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-border-primary text-brand-red"
+              aria-hidden="true"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                class="h-7 w-7"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                set:html={STAT_ICONS[stat.icon]}
+              ></svg>
+            </span>
+
+            <!-- Numeral + suffix share a baseline (Figma: align-end, 2px gap). -->
+            <p class="flex flex-wrap items-end gap-[2px] text-text-primary">
+              <span
+                class="font-display text-[2rem] font-medium italic leading-[1.15] md:text-[2.5rem] md:leading-[52px]"
+                >{stat.value}</span
+              >
+              <span
+                class="font-display text-[length:var(--step-h3)] font-medium leading-7"
+                >{stat.suffix}</span
+              >
+            </p>
+
+            <h3 class="text-[length:var(--step-h3)] leading-7 text-text-primary">
+              {stat.label}
+            </h3>
+
+            <p class="text-base leading-6 text-text-secondary">{stat.caption}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </Container>
+</section>

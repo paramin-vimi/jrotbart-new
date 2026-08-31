@@ -1,0 +1,143 @@
+---
+/**
+ * Open-an-Account CTA band — Figma 9813:6123.
+ *
+ * A compact utility conversion band, not a hero CTA: the heading is set at the
+ * H4 size (16/24) even though it is semantically the section's <h2>.
+ *
+ * Desktop is two columns split by a 1px rule at x=909 — implemented as a
+ * border-right on the left column so it can never outlive an empty badge list.
+ */
+import Container from "@primitives/Container.astro";
+import Button from "@primitives/Button.astro";
+import Overline from "@primitives/Overline.astro";
+import type { CtaBandBlock, CtaStyle } from "@content/types";
+
+interface Props {
+  block: CtaBandBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { heading, body, cta, helperLinks = [], badgeLabel, badges = [] } = block;
+
+/** `Cta.style` allows "arrow", which the Button primitive does not render. */
+const buttonVariant: Exclude<CtaStyle, "arrow"> =
+  cta.style && cta.style !== "arrow" ? cta.style : "solid";
+
+const hasBadges = badges.length > 0;
+
+/* Shared inline-link treatment for the two helper sentences. The underline is
+   already on at rest in the comp, so hover needs a second signal — a shift to
+   brand-950, per the spec's own proposal. */
+const inlineLink =
+  "text-brand-red underline underline-offset-2 transition-colors duration-150 " +
+  "hover:text-brand-950 motion-reduce:transition-none";
+---
+
+<section
+  id={block.anchorId}
+  class:list={["bg-bg-primary py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div class="flex flex-col gap-md lg:flex-row lg:items-center lg:gap-0">
+      <!-- Left column: heading, body, CTA, helper links -->
+      <div
+        class:list={[
+          "flex flex-col",
+          hasBadges && "lg:flex-1 lg:border-r lg:border-border-primary lg:pr-lg",
+        ]}
+      >
+        <h2 class="font-display text-base leading-6 font-medium text-text-primary">
+          {heading}
+        </h2>
+
+        {
+          body && (
+            <p class="mt-xs max-w-[766px] text-base leading-6 text-text-secondary">
+              {body}
+            </p>
+          )
+        }
+
+        {/* Figma: 200 × 46 fixed. Below `sm` it goes full-width — a 200px
+            button stranded on a 375px screen reads as an afterthought. */}
+        <Button
+          href={cta.href}
+          variant={buttonVariant}
+          external={cta.external}
+          class="mt-md w-full sm:w-[200px]"
+        >
+          {cta.label}
+        </Button>
+
+        {
+          helperLinks.length > 0 && (
+            /* A real UL: disc markers sitting in the 24px indent, 24px line
+               rhythm, markers in text-secondary — as drawn. Deliberately not a
+               flex column: `display:flex` blockifies the items and, while the
+               markers survive it in current engines, there is nothing here for
+               flex to do. */
+            <ul class="mt-md list-disc pl-sm text-base leading-6 text-text-secondary marker:text-text-secondary">
+              {helperLinks.map((item) => (
+                <li>
+                  {item.prefix}{" "}
+                  <a
+                    href={item.link.href}
+                    class={inlineLink}
+                    {...item.link.external
+                      ? { rel: "noopener noreferrer", target: "_blank" }
+                      : {}}
+                  >
+                    {item.link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+
+      <!--
+        Badge column. On desktop it is inset 48px past the rule and optically
+        centred against the left column. On mobile the vertical rule becomes a
+        horizontal one above the block, the 48px inset is dropped, and the
+        badges are allowed to wrap.
+      -->
+      {
+        hasBadges && (
+          <div class="border-t border-border-primary pt-md lg:w-[360px] lg:shrink-0 lg:border-t-0 lg:pt-0 lg:pl-lg">
+            {badgeLabel && <Overline tone="tertiary">{badgeLabel}</Overline>}
+
+            <ul role="list" class="mt-sm flex flex-wrap items-center gap-sm md:gap-md">
+              {badges.map((badge) => (
+                <li>
+                  {/* The display box comes from the data, so adding a fourth
+                      badge needs no CSS. BOTH axes are honoured — the comp
+                      draws SBMA in a 120×80 slot and the two seals in 64×64,
+                      which is what makes the row measure exactly 312 and puts
+                      the seals where the comp puts them. Sizing on height alone
+                      let the interim 109×89 SBMA PNG collapse its slot to 98px
+                      and drag both seals ~22px left. `object-contain` keeps any
+                      artwork letterboxed inside its designed box.
+                      Below `md` every badge renders at 72% of that box. */}
+                  <img
+                    src={badge.image.src}
+                    alt={badge.image.decorative ? "" : badge.image.alt}
+                    aria-hidden={badge.image.decorative ? "true" : undefined}
+                    width={badge.image.width}
+                    height={badge.image.height}
+                    loading="lazy"
+                    decoding="async"
+                    style={`--badge-w:${badge.image.width ?? 64}px;--badge-h:${badge.image.height ?? 64}px`}
+                    class="h-[calc(var(--badge-h)*0.72)] w-[calc(var(--badge-w)*0.72)] object-contain md:h-[var(--badge-h)] md:w-[var(--badge-w)]"
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </div>
+  </Container>
+</section>

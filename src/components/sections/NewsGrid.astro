@@ -1,0 +1,229 @@
+---
+/**
+ * "Precious Metals News and Media" — Figma 9813:6137, block 1.
+ *
+ * A 3-up article grid with a Blog / Press / Event taxonomy and DD.MM.YYYY
+ * dates, under a two-column header (eyebrow + two-tone heading on the left,
+ * intro paragraph on the right).
+ */
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import type { NewsGridBlock } from "@content/types";
+
+interface Props {
+  block: NewsGridBlock;
+  /** The per-card affordance ("Read more"). See the note in news.ts. */
+  cardCtaLabel: string;
+  class?: string;
+}
+
+const { block, cardCtaLabel, class: className = "" } = Astro.props;
+
+/* The intro lives in the header row's right column, so it is pulled out of the
+   object handed to SectionHeader (which stacks everything vertically). */
+const { body: intro, ...headingOnly } = block.header;
+
+const articles = block.limit ? block.articles.slice(0, block.limit) : block.articles;
+
+/**
+ * Dates are stored ISO and formatted at render. Parsed as a string rather than
+ * via `new Date()`: a date-only ISO string has no timezone, so Date would
+ * resolve it in the build machine's locale and could shift the day by one.
+ */
+const displayDate = (iso: string) => {
+  const [year, month, day] = iso.slice(0, 10).split("-");
+  return `${day}.${month}.${year}`;
+};
+
+/**
+ * H2 override — 32/44, per Figma 9813:6137.
+ *
+ * SectionHeader sets `--step-h2`, which tops out at 40px with a 1.3 line-height
+ * (= 40/52). This frame's H2 is 32/44: at 40px "Precious Metals News and Media."
+ * measures ~620px and cannot fit the 563px column the comp draws it on, so the
+ * geometry confirms 32. The global token is not ours to change (it is shared
+ * with sections whose H2 may legitimately be 40), so the size is corrected here
+ * with a child selector, which outranks the primitive's own utility.
+ * TODO: if `--step-h2` is ever re-measured at 32/44 site-wide, delete this.
+ *
+ * The clamp keeps the responsive ramp the token provided: 24px ≤768 → 28px at
+ * ~1024 → 32px at the 1366 design width. 1.375 = 44/32.
+ */
+const H2_32_44 =
+  "[&>h2]:text-[length:clamp(1.5rem,0.86rem_+_1.34vw,2rem)] [&>h2]:leading-[1.375]";
+
+/**
+ * OVERLINE leading trim — the one correction this frame needs everywhere.
+ *
+ * Every OVERLINE node in 9813:6137 reports a height of 9: Figma measures an
+ * eyebrow as its cap-height box, and each 24px gap in the comp is struck from
+ * that glyph edge. In CSS the same text is a real 20px line box — 4px of
+ * leading above the caps, 7px below — so every gap that follows an eyebrow
+ * renders 11px looser than drawn.
+ *
+ * That 11px is not cosmetic here, it costs the frame two alignments it is
+ * built on:
+ *   - In the header row the H2 baseline lands on the intro paragraph's third
+ *     baseline. Eleven pixels low and the two columns end ragged instead.
+ *   - In the card the miss compounds (header + meta row) and pushes the image,
+ *     title, excerpt and READ MORE 22px down the comp.
+ * Trimming the leading rather than shaving the 24px token keeps the spacing
+ * scale honest and lands every element on its comp coordinate to the pixel.
+ *
+ * Safe because `eyebrow` is uppercase-only (`text-transform`), so nothing in
+ * these strings descends below the baseline or rises above the cap line.
+ * TODO: this belongs in the Overline primitive as an opt-in `trim` prop — the
+ * same 9px-node measurement holds page-wide. Primitives are out of scope here.
+ */
+const OVERLINE_TRIM = "-mt-[4px] -mb-[7px]";
+const HEADER_OVERLINE_TRIM = "[&>.eyebrow]:-mt-[4px] [&>.eyebrow]:-mb-[7px]";
+---
+
+<section
+  id={block.anchorId}
+  class:list={["bg-bg-secondary py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <!-- Header row: 563 / 563 two-up on desktop, stacked below `lg`. -->
+    <div class="grid gap-sm lg:grid-cols-2 lg:gap-lg">
+      <SectionHeader
+        header={headingOnly}
+        as="h2"
+        class={`${H2_32_44} ${HEADER_OVERLINE_TRIM}`}
+      />
+
+      {
+        intro && (
+          /* Figma offsets the intro +5px so its first line sits with the
+             eyebrow rather than flush to the row top. */
+          <p class="max-w-[563px] text-base leading-6 text-text-secondary lg:pt-1">
+            {intro}
+          </p>
+        )
+      }
+    </div>
+
+    <!--
+      Article grid. Desktop is 3 × 370 with a 32px gutter. Below `lg` it drops
+      to two columns and then to a single column — a stack, not a carousel:
+      three cards do not earn the controls, the swipe affordance or the
+      reduced-motion handling a carousel would need.
+    -->
+    <ul
+      role="list"
+      class="mt-md grid gap-md sm:grid-cols-2 lg:mt-lg lg:grid-cols-3"
+    >
+      {
+        articles.map((article) => (
+          <li class="group relative flex flex-col gap-sm">
+            {/*
+              Meta row: category left, date right.
+              TODO(client): the comp labels these BLOG / PRESS / EVENT. What
+              renders is the raw CMS category title (Resources / News / Press),
+              because the homepage swaps this block's `articles` for live posts
+              and `toArticle` in src/lib/posts.ts passes `category.title`
+              straight through. The Resources→Blog / Events→Event mapping is
+              written down in news.ts but nothing applies it. Needs fixing in
+              the post layer, which is outside this component.
+
+              The row carries OVERLINE_TRIM on both labels (see the note above
+              it): with the 20px line box trimmed back to the comp's 9px glyph
+              box, the row's own height collapses to 9 and the 24px gap below it
+              puts the image top on 254 — the comp's number — instead of 276.
+            */}
+            <div class="flex items-baseline justify-between gap-xs">
+              <Overline tone="red" class={OVERLINE_TRIM}>
+                {article.category}
+              </Overline>
+              <Overline tone="tertiary" class={`shrink-0 ${OVERLINE_TRIM}`}>
+                <time datetime={article.date.slice(0, 10)}>
+                  {displayDate(article.date)}
+                </time>
+              </Overline>
+            </div>
+
+            {/*
+              Figma crops to 1.24:1. Below `md` that is a lot of vertical space
+              on a full-bleed card, so the crop opens out to 16:9.
+              NOTE: the interim assets are 4:5 social cards with headline type
+              baked in — any landscape crop slices that type. Flagged in the
+              report; the Figma export must be editorial photography.
+            */}
+            <img
+              src={article.image.src}
+              alt={article.image.decorative ? "" : article.image.alt}
+              aria-hidden={article.image.decorative ? "true" : undefined}
+              width={article.image.width}
+              height={article.image.height}
+              loading="lazy"
+              decoding="async"
+              class="aspect-[16/9] w-full object-cover md:aspect-[370/299]"
+            />
+
+            <div class="flex flex-col gap-2xs">
+              {/*
+                The title is the card's only real link. Its ::after is stretched
+                over the whole card, so the card is clickable but there is one
+                tab stop and the accessible name is the article title — rather
+                than three identical "Read more" links.
+                It is deliberately NOT clamped: the title is the only label the
+                card carries, and real titles run to three lines.
+              */}
+              <h3 class="font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary">
+                <a
+                  href={article.href}
+                  class="transition-colors duration-150 group-hover:text-brand-red after:absolute after:inset-0 after:content-[''] motion-reduce:transition-none"
+                >
+                  {article.title}
+                </a>
+              </h3>
+
+              {/* The comp draws the ellipsis on the excerpt only. */}
+              <p class="line-clamp-2 text-base leading-6 text-text-secondary">
+                {article.excerpt}
+              </p>
+            </div>
+
+            {/*
+              "READ MORE" is a visual affordance, not a second link — the whole
+              card already routes to the article. aria-hidden keeps it out of
+              the accessibility tree so it is not announced as a duplicate.
+              `mt-auto` pins it to the card's baseline so the row stays tidy
+              when titles run to different depths.
+
+              The arrow is the comp's `Navigations/Arrow Go/Default` icon: a
+              28×28 circle with a 1px `border-primary` rule and a brand-red
+              glyph, set 8px (`2xs`) after the label — which is what makes the
+              whole affordance the 127×28 the comp measures.
+              TODO: this treatment belongs in the ArrowLink primitive (it is the
+              same Figma component used for EXPLORE and for the arrow links on
+              other sections); it is inlined here because primitives are out of
+              scope for this pass.
+            */}
+            <p
+              class="button-text mt-auto flex items-center gap-2xs text-brand-red"
+              aria-hidden="true"
+            >
+              <span>{cardCtaLabel}</span>
+              <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border-primary">
+                <svg
+                  class="h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                >
+                  <path
+                    d="M1 6h9M6.5 2l4 4-4 4"
+                    stroke="currentColor"
+                    stroke-width="1.25"
+                    stroke-linecap="square"
+                  />
+                </svg>
+              </span>
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+  </Container>
+</section>

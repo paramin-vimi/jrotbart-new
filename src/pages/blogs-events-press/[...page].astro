@@ -1,0 +1,54 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import TopNavigation from "@components/TopNavigation.astro";
+import SiteFooter from "@components/SiteFooter.astro";
+import PostArchive from "@components/PostArchive.astro";
+import { getAllPosts, getCategories } from "@lib/posts";
+import { buildGraph, organizationNode, webSiteNode } from "@lib/schema";
+import type { GetStaticPaths, Page } from "astro";
+import type { Post, PostCategory } from "@lib/posts";
+
+/**
+ * The blog index.
+ *
+ * URL preserved from the live site: /blogs-events-press/. It is a Tier-1 URL
+ * in the SEO inventory and is linked from the mega menu, so it keeps its path
+ * even though the name is awkward.
+ */
+export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
+  const posts = await getAllPosts();
+  const categories = await getCategories();
+  return paginate(posts, { pageSize: 12, props: { categories } });
+};
+
+interface Props {
+  page: Page<Post>;
+  categories: PostCategory[];
+}
+
+const { page, categories } = Astro.props;
+
+const seo = {
+  title:
+    page.currentPage === 1
+      ? "News, Events & Insights | J. Rotbart & Co."
+      : `News, Events & Insights — page ${page.currentPage} | J. Rotbart & Co.`,
+  description:
+    "Market analysis, press coverage and guidance on buying, storing and shipping physical precious metals from J. Rotbart & Co.",
+};
+
+const schema = buildGraph([organizationNode(), webSiteNode()]);
+---
+
+<BaseLayout seo={seo} schema={schema}>
+  <TopNavigation slot="header" />
+  <PostArchive
+    page={page}
+    overline="News & Events"
+    heading="Precious Metals News and Media"
+    description="Market analysis, press coverage and practical guidance from our team across Hong Kong, Singapore, Manila and Tel Aviv."
+    categories={categories}
+    activeCategory={null}
+  />
+  <SiteFooter slot="footer" />
+</BaseLayout>

@@ -1,0 +1,214 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import TopNavigation from "@components/TopNavigation.astro";
+import SiteFooter from "@components/SiteFooter.astro";
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import ArrowLink from "@primitives/ArrowLink.astro";
+import PortableText from "@components/PortableText.astro";
+import { getAllPosts, type Post } from "@lib/posts";
+import { buildGraph, organizationNode, webSiteNode } from "@lib/schema";
+
+/**
+ * Individual post.
+ *
+ * URL: flat root slug — /why-asian-families-hold-physical-gold/ — matching the
+ * live WordPress site exactly. All 463 existing posts keep their current path,
+ * so nothing needs redirecting when they migrate. Do not move these under
+ * /insights/ or /blog/; there is no upside that justifies 463 redirects.
+ */
+export async function getStaticPaths() {
+  const posts = await getAllPosts();
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post, all: posts },
+  }));
+}
+
+interface Props {
+  post: Post;
+  all: Post[];
+}
+
+const { post, all } = Astro.props;
+
+const url = new URL(`/${post.slug}/`, Astro.site).href;
+
+const seo = {
+  title: post.metaTitle || `${post.title} | J. Rotbart & Co.`,
+  description: post.metaDescription || post.excerpt,
+  canonical: url,
+  noindex: post.noindex,
+  ogImage: post.ogImage ?? post.featuredImage,
+};
+
+const published = new Date(post.publishedAt);
+const displayDate = published.toLocaleDateString("en-GB", {
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+});
+
+// Three more from the same category, newest first.
+const related = all
+  .filter((p) => p.slug !== post.slug && p.category.slug === post.category.slug)
+  .slice(0, 3);
+
+const schema = buildGraph([
+  organizationNode(),
+  webSiteNode(),
+  {
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: post.title,
+    description: post.excerpt,
+    image: post.featuredImage.src,
+    datePublished: post.publishedAt,
+    author: { "@type": "Person", name: post.author.name },
+    publisher: { "@id": "https://jrotbart.com/#organization" },
+    mainEntityOfPage: url,
+    articleSection: post.category.title,
+  },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://jrotbart.com/" },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: post.category.title,
+        item: `https://jrotbart.com/${post.category.slug}/`,
+      },
+      { "@type": "ListItem", position: 3, name: post.title, item: url },
+    ],
+  },
+]);
+---
+
+<BaseLayout seo={seo} schema={schema}>
+  <TopNavigation slot="header" />
+
+  <article>
+    {/* Nav overlays the hero on the homepage; article pages need real headroom. */}
+    <Container class="pt-[calc(132px+var(--spacing-xl))] pb-lg">
+      <nav aria-label="Breadcrumb" class="mb-sm">
+        <ol class="flex flex-wrap items-center gap-2xs text-sm text-text-tertiary">
+          <li><a href="/" class="hover:text-brand-red">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li>
+            <a href={`/${post.category.slug}/`} class="hover:text-brand-red">
+              {post.category.title}
+            </a>
+          </li>
+        </ol>
+      </nav>
+
+      <div class="max-w-[46rem]">
+        <Overline tone="red">{post.category.title}</Overline>
+        <h1 class="mt-2xs font-display text-[length:var(--step-h1)] leading-tight text-text-primary">
+          {post.title}
+        </h1>
+
+        <div class="mt-sm flex flex-wrap items-center gap-x-sm gap-y-2xs text-sm text-text-tertiary">
+          <time datetime={post.publishedAt}>{displayDate}</time>
+          <span aria-hidden="true">·</span>
+          <span>{post.author.name}</span>
+          {post.author.role && <span class="text-text-inactive">{post.author.role}</span>}
+        </div>
+      </div>
+    </Container>
+
+    <Container class="pb-xl">
+      <img
+        src={post.featuredImage.src}
+        srcset={post.featuredImage.srcset}
+        sizes="(min-width: 1174px) 1174px, 100vw"
+        alt={post.featuredImage.alt}
+        width={post.featuredImage.width}
+        height={post.featuredImage.height}
+        class="aspect-[16/9] w-full object-cover"
+        fetchpriority="high"
+        decoding="async"
+      />
+    </Container>
+
+    <Container class="pb-3xl">
+      <div class="max-w-[46rem]">
+        <p class="mb-lg font-display text-xl leading-relaxed text-text-primary">
+          {post.excerpt}
+        </p>
+
+        <PortableText value={post.body} />
+
+        {post.downloads.length > 0 && (
+          <section class="mt-xl border-t border-border-primary pt-lg" aria-labelledby="downloads-heading">
+            <h2 id="downloads-heading" class="font-display text-[length:var(--step-h3)] text-text-primary">
+              Downloads
+            </h2>
+            <ul class="mt-sm flex flex-col gap-2xs">
+              {post.downloads.map((d) => (
+                <li>
+                  <a
+                    href={d.url}
+                    class="inline-flex items-center gap-2xs text-base text-brand-red underline underline-offset-2 hover:text-brand-950"
+                  >
+                    <svg viewBox="0 0 20 20" class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                      <path d="M10 3v10m0 0l-4-4m4 4l4-4M4 16h12" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    {d.label}
+                    <span class="sr-only">(PDF)</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {post.tags.length > 0 && (
+          <ul class="mt-xl flex flex-wrap gap-2xs" aria-label="Tags">
+            {post.tags.map((tag) => (
+              <li class="border border-border-primary px-2xs py-1 text-sm text-text-tertiary">{tag}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Container>
+
+    {related.length > 0 && (
+      <section class="border-t border-border-primary bg-bg-primary py-3xl" aria-labelledby="related-heading">
+        <Container>
+          <div class="mb-lg flex items-end justify-between gap-sm">
+            <h2 id="related-heading" class="font-display text-[length:var(--step-h2)] text-text-primary">
+              More in {post.category.title}
+            </h2>
+            <ArrowLink href={`/${post.category.slug}/`}>View all</ArrowLink>
+          </div>
+
+          <ul class="grid gap-lg sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((r) => (
+              <li class="flex flex-col">
+                <a href={`/${r.slug}/`} class="group flex flex-col gap-xs">
+                  <img
+                    src={r.featuredImage.src}
+                    alt={r.featuredImage.alt}
+                    width={r.featuredImage.width}
+                    height={r.featuredImage.height}
+                    loading="lazy"
+                    decoding="async"
+                    class="aspect-[4/3] w-full object-cover"
+                  />
+                  <span class="eyebrow text-text-tertiary">{r.category.title}</span>
+                  <h3 class="font-display text-lg leading-snug text-text-primary group-hover:text-brand-red">
+                    {r.title}
+                  </h3>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Container>
+      </section>
+    )}
+  </article>
+
+  <SiteFooter slot="footer" />
+</BaseLayout>

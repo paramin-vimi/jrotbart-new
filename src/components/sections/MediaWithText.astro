@@ -1,0 +1,150 @@
+---
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import Button from "@primitives/Button.astro";
+import ArrowLink from "@primitives/ArrowLink.astro";
+import VideoFacade from "@primitives/VideoFacade.astro";
+import type { MediaWithTextBlock, VideoRef } from "@content/types";
+
+/**
+ * Generic media + text block. Used by the homepage "Expertise" block
+ * (Figma `10229:7600`): copy column beside a YouTube facade.
+ *
+ * Media may be a `VideoRef` (rendered through VideoFacade — click-to-load, no
+ * third-party JS until asked) or a plain `ImageRef`.
+ *
+ * ORDERING CONVENTION: Figma places the FAQ cross-link BETWEEN the first and
+ * second paragraphs. `MediaWithTextBlock` has no way to interleave them, so the
+ * rule here is: teasers render after the FIRST paragraph, remaining paragraphs
+ * follow. Documented so content editors can predict it.
+ */
+interface Props {
+  block: MediaWithTextBlock;
+  /** h2 when the block is its own section; h3 when nested under another h2. */
+  as?: "h2" | "h3";
+  /** Media aspect ratio. Figma: 668/392. */
+  ratio?: string;
+  class?: string;
+}
+
+// Cast: Astro cannot infer `Astro.props` in a component that renders a dynamic
+// `<Tag>`, which would leave every destructured value implicitly `any`.
+const { block, as: Tag = "h2", ratio = "668/392", class: className = "" } =
+  Astro.props as Props;
+const { header, body, media, mediaSide, faqTeasers, cta } = block;
+
+/** See AboutStats.astro. Blocks A/B/C of Figma frame `10229:7543` sit 96px
+    apart; three sibling sections each padded 96 would seam at 192. A marked
+    section halves the padding only on an edge it shares with another marked
+    section. This component has exactly one instance (the homepage Expertise
+    block), which is inside that frame. */
+const FRAME_SEAM =
+  "frame-10229-7543 " +
+  "[.frame-10229-7543+&]:pt-sm md:[.frame-10229-7543+&]:pt-md lg:[.frame-10229-7543+&]:pt-lg " +
+  "has-[+.frame-10229-7543]:pb-sm md:has-[+.frame-10229-7543]:pb-md lg:has-[+.frame-10229-7543]:pb-lg";
+
+/** Figma pairs the "Button Text" label with a 28px arrow inside a 1px hairline
+    circle. ArrowLink draws a bare 12px glyph and is owned elsewhere, so the
+    circle is applied here rather than by forking the primitive. */
+const ARROW_CIRCLE =
+  "[&>svg]:size-7 [&>svg]:rounded-full [&>svg]:border [&>svg]:border-border-primary [&>svg]:p-2";
+
+const isVideo = (m: MediaWithTextBlock["media"]): m is VideoRef => "youtubeId" in m;
+/* Space baked into the string — see ServicesRows.astro. */
+const headingLead = header.headingAccent ? `${header.heading} ` : header.heading;
+const [firstParagraph, ...restParagraphs] = body;
+---
+
+<section
+  id={block.anchorId}
+  class:list={[
+    "media-with-text py-lg md:py-xl lg:py-3xl",
+    FRAME_SEAM,
+    block.theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary",
+    className,
+  ]}
+>
+  <Container>
+    <div class="flex flex-col gap-md lg:flex-row lg:items-start lg:gap-3xl">
+      {/* Copy column. Always first in the DOM so the heading leads the reading
+          order; `mediaSide` only reorders the visual columns at lg and up. */}
+      <div class="flex flex-col gap-sm lg:min-w-0 lg:flex-1">
+        {header.overline && <Overline tone="red">{header.overline}</Overline>}
+
+        <Tag class="text-base leading-6 text-text-primary">{headingLead}{header.headingAccent && (
+          <em class="font-medium italic text-text-tertiary">{header.headingAccent}</em>
+        )}</Tag>
+
+        {firstParagraph && (
+          <p class="text-base leading-6 text-text-secondary">{firstParagraph}</p>
+        )}
+
+        {faqTeasers && faqTeasers.length > 0 && (
+          <ul class="ps-sm list-disc marker:text-brand-red">
+            {faqTeasers.map((teaser) => (
+              <li class="text-base leading-6">
+                <a
+                  href={teaser.href}
+                  class="italic text-brand-red underline-offset-4 hover:underline focus-visible:underline"
+                  {...teaser.external ? { rel: "noopener noreferrer", target: "_blank" } : {}}
+                >
+                  {teaser.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {restParagraphs.map((paragraph) => (
+          <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+        ))}
+
+        {cta && (
+          cta.style === "arrow" ? (
+            <ArrowLink
+              href={cta.href}
+              external={cta.external}
+              class={`self-start text-brand-red! hover:text-brand-950! ${ARROW_CIRCLE}`}
+            >
+              {cta.label}
+            </ArrowLink>
+          ) : (
+            <Button
+              href={cta.href}
+              variant={cta.style === "outline" || cta.style === "ghost" ? cta.style : "solid"}
+              external={cta.external}
+              class="self-start"
+            >
+              {cta.label}
+            </Button>
+          )
+        )}
+      </div>
+
+      {/* Media column. Figma derives its width from the text column's height;
+          in CSS it is a fixed share of the row so it cannot reflow unpredictably. */}
+      <div
+        class:list={[
+          "w-full lg:w-[42.4%] lg:shrink-0",
+          mediaSide === "left" && "lg:order-first",
+        ]}
+      >
+        {isVideo(media) ? (
+          <VideoFacade video={media} ratio={ratio} />
+        ) : (
+          <img
+            src={media.src}
+            alt={media.decorative ? "" : media.alt}
+            aria-hidden={media.decorative ? "true" : undefined}
+            width={media.width}
+            height={media.height}
+            loading="lazy"
+            decoding="async"
+            class="w-full object-cover"
+            style={`aspect-ratio:${ratio}`}
+          />
+        )}
+      </div>
+    </div>
+  </Container>
+</section>

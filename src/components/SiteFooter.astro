@@ -1,0 +1,433 @@
+---
+/**
+ * SiteFooter — Figma node 9813:6346 (instance of a shared Footer component).
+ *
+ * Desktop geometry (1366 frame, 1174 content column, background always-black):
+ *
+ *   pt 96
+ *   ├ brand lockup                     279.8 × 40
+ *   ├ gap 64 (xl)
+ *   ├ main row                         1174 × 164, justify-between, items-start
+ *   │   ├ sitemap block  640 = 2 × 320 columns, 8px item gap → 32px pitch
+ *   │   └ subscribe block 534, 16px stack: OVERLINE / input / consent / social
+ *   ├ gap 64 (xl)
+ *   └ legal bar                        1174 × 72, 1px top rule, 24px padding-block
+ *
+ * The footer has no bottom padding of its own — the legal bar's own 24px is the
+ * last 24px of the 500px block. That is why the root sets padding-top only.
+ *
+ * RESPONSIVE DECISIONS WE INVENTED (there is no mobile comp — please review):
+ *
+ *  1. SITEMAP COLLAPSES TO ONE LIST BELOW 640px. Two 320px columns nominally
+ *     fit a 375px screen with 24px gutters, but only just, and "News & Events"
+ *     and "Open an account" would wrap mid-label. One 8-item list reads better
+ *     and gives every link a full-width target. Two columns return at `sm`.
+ *     The 8px item gap is dropped below `sm` — the 44px rows already separate
+ *     themselves, and keeping it would add 64px to a footer that is already
+ *     the tallest thing on a phone.
+ *  2. TAP TARGETS. Every link in the sitemap gets a 44px minimum height below
+ *     `sm`, then drops back to the design's exact 24px row at `sm` and up where
+ *     a pointer is the likely input. The arrow submit is a 44 × 44 hit area at
+ *     every size; the four social marks are 40 × 44. Both are pulled flush to
+ *     the content edge with a negative margin, so the glyphs land exactly where
+ *     the comp draws them (arrow flush right; social pitch 40, row 144 wide)
+ *     and the social row still occupies only the comp's 24px of height.
+ *     40 rather than 44 wide is deliberate: 44 forced a 44px pitch and pushed
+ *     the last social mark 12px past the comp. 40 × 44 is still well over the
+ *     WCAG 2.5.8 minimum (24 × 24), and the four boxes tile with no dead gap
+ *     between them, so nothing is harder to hit than it was.
+ *
+ *  2b. SITEMAP BLOCK IS 640 / 1174 = 54.5145%, NOT A HARD 640px. The comp's
+ *     640 + 534 split only adds up when the content column is the full 1174,
+ *     which `container-site` reaches at 1366 and above. Pinning 640px from
+ *     `lg` starved the subscribe block to 288px at 1024 and reflowed the
+ *     consent line to five lines. As a percentage it resolves to exactly
+ *     640 / 534 at the design width and stays in proportion below it.
+ *  3. DOM ORDER IS NEVER REORDERED. The comp puts the sitemap left and the
+ *     subscribe block right; stacked, the sitemap comes first. It is tempting
+ *     to float subscribe to the top on mobile, but doing it in CSS would
+ *     divorce the visual order from the tab order. If the client wants
+ *     subscribe first on mobile, we change the source order for every size.
+ *  4. LEGAL BAR STACKS BELOW `md`: copyright first, then the legal links,
+ *     left-aligned, 16px apart. It grows from 72px to roughly 112px.
+ *  5. THE LOCKUP IS NOT SCALED. 279.8 × 40 clears a 375px viewport with 24px
+ *     gutters, so shrinking it would only cost legibility.
+ *  6. VERTICAL RHYTHM STEPS DOWN: top padding 96 → 64 (md) → 48 (base), root
+ *     gap 64 → 48, matching the container gutters that `container-site`
+ *     already steps at the same breakpoints.
+ *
+ * STATES WE INVENTED (the comp draws default states only, spec §9):
+ *  - links underline on hover, icons fade to text-inactive
+ *  - the input's rule goes solid white on focus-within, on top of the global
+ *    white :focus-visible ring that `.on-dark` supplies
+ *  - success / error / not-yet-connected messaging renders into a live region
+ *    under the input; the comp has no slot for it, so the row is free to grow
+ */
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import { b2blead } from "@content/integrations";
+import type { ImageRef, SiteFooter } from "@content/types";
+import {
+  footer as footerContent,
+  footerLogo,
+  newsletterMessages,
+  NEWSLETTER_ENDPOINT,
+  type NewsletterMessages,
+} from "@content/footer";
+
+interface Props {
+  /** Defaults to the global singleton so the footer can be dropped in bare. */
+  footer?: SiteFooter;
+  logo?: ImageRef;
+  messages?: NewsletterMessages;
+  class?: string;
+}
+
+const {
+  footer = footerContent,
+  logo = footerLogo,
+  messages = newsletterMessages,
+  class: className = "",
+} = Astro.props;
+
+const { columns, newsletter, social, legalLinks, copyright } = footer;
+
+/**
+ * Dynamic copyright year. The design hardcodes 2026 and the live site still
+ * says 2024, so the content module stores a `{year}` token instead. The build
+ * year is rendered server-side (correct with JavaScript disabled) and a three
+ * line script re-checks it in the browser, so a static build that sits through
+ * New Year's Eve does not go stale.
+ */
+const copyrightParts = copyright.split("{year}");
+const hasYearToken = copyrightParts.length > 1;
+const copyrightBefore = copyrightParts[0] ?? copyright;
+const copyrightAfter = hasYearToken ? copyrightParts.slice(1).join("{year}") : "";
+const buildYear = String(new Date().getFullYear());
+
+/**
+ * Social marks, inlined so they inherit currentColor for hover states rather
+ * than shipping six separate monochrome files (Figma spec §4).
+ * `box` is the glyph's own leaf size: Messenger is drawn 18 × 18 inside its
+ * 24px slot and must keep that inset rather than being stretched.
+ * TODO(assets): these paths are transcribed from the Figma exports; re-check
+ * them against the real export when the icon set is delivered.
+ */
+const socialIcons: Record<string, { box: number; d: string }> = {
+  instagram: {
+    box: 24,
+    d: "M11.9976 8.99861C10.345 8.99861 8.99636 10.3472 8.99636 11.9998C8.99636 13.6524 10.345 15.0011 11.9976 15.0011C13.6502 15.0011 14.9988 13.6524 14.9988 11.9998C14.9988 10.3472 13.6502 8.99861 11.9976 8.99861ZM20.999 11.9998C20.999 10.757 21.0103 9.52546 20.9405 8.28489C20.8707 6.84394 20.5419 5.5651 19.4883 4.51141C18.4323 3.45547 17.1557 3.129 15.7148 3.05921C14.472 2.98941 13.2404 3.00067 11.9998 3.00067C10.757 3.00067 9.52546 2.98941 8.28489 3.05921C6.84395 3.129 5.5651 3.45772 4.51141 4.51141C3.45547 5.56736 3.129 6.84394 3.05921 8.28489C2.98941 9.52771 3.00067 10.7593 3.00067 11.9998C3.00067 13.2404 2.98941 14.4742 3.05921 15.7148C3.129 17.1557 3.45772 18.4346 4.51141 19.4883C5.56736 20.5442 6.84395 20.8707 8.28489 20.9405C9.52771 21.0103 10.7593 20.999 11.9998 20.999C13.2426 20.999 14.4742 21.0103 15.7148 20.9405C17.1557 20.8707 18.4346 20.5419 19.4883 19.4883C20.5442 18.4323 20.8707 17.1557 20.9405 15.7148C21.0125 14.4742 20.999 13.2426 20.999 11.9998V11.9998ZM11.9976 16.6176C9.44215 16.6176 7.3798 14.5553 7.3798 11.9998C7.3798 9.4444 9.44215 7.38205 11.9976 7.38205C14.553 7.38205 16.6154 9.4444 16.6154 11.9998C16.6154 14.5553 14.553 16.6176 11.9976 16.6176ZM16.8045 8.27138C16.2078 8.27138 15.726 7.78957 15.726 7.19292C15.726 6.59628 16.2078 6.11447 16.8045 6.11447C17.4011 6.11447 17.8829 6.59628 17.8829 7.19292C17.8831 7.3346 17.8554 7.47492 17.8012 7.60584C17.7471 7.73677 17.6677 7.85573 17.5675 7.95591C17.4673 8.05609 17.3483 8.13552 17.2174 8.18965C17.0865 8.24379 16.9462 8.27156 16.8045 8.27138V8.27138Z",
+  },
+  messenger: {
+    box: 18,
+    d: "M0 8.73C0 3.71363 3.92963 0 9 0C14.0704 0 18 3.71363 18 8.73C18 13.7464 14.0704 17.46 9 17.46C8.08875 17.46 7.21575 17.3396 6.3945 17.1146C6.23526 17.0703 6.06561 17.0822 5.91412 17.1484L4.12762 17.9381C4.01973 17.9857 3.90179 18.0061 3.78418 17.9974C3.66657 17.9888 3.55289 17.9514 3.45313 17.8885C3.35336 17.8256 3.27057 17.7392 3.21202 17.6368C3.15348 17.5344 3.12098 17.4192 3.11737 17.3014L3.06787 15.7005C3.06446 15.6031 3.04125 15.5073 2.99967 15.4191C2.95809 15.3309 2.899 15.2521 2.826 15.1875C1.0755 13.6215 0 11.3535 0 8.73ZM6.23925 7.08863L3.5955 11.2826C3.34238 11.6854 3.83625 12.1387 4.21537 11.8519L7.056 9.69638C7.14943 9.62541 7.26343 9.58681 7.38075 9.5864C7.49807 9.586 7.61233 9.62381 7.70625 9.69412L9.80887 11.2714C9.95806 11.3833 10.1288 11.463 10.3103 11.5056C10.4919 11.5482 10.6803 11.5528 10.8637 11.5189C11.0471 11.4851 11.2214 11.4137 11.3758 11.3091C11.5302 11.2045 11.6613 11.0691 11.7608 10.9114L14.4045 6.71738C14.6587 6.31463 14.1638 5.86125 13.7846 6.14813L10.944 8.30363C10.8506 8.37459 10.7366 8.41319 10.6193 8.4136C10.5019 8.414 10.3877 8.37619 10.2937 8.30587L8.19113 6.7275C8.04194 6.61562 7.87119 6.53587 7.68965 6.49326C7.50811 6.45065 7.31971 6.44612 7.13633 6.47994C6.95295 6.51376 6.77856 6.58521 6.62417 6.68978C6.46977 6.79435 6.33871 6.92976 6.23925 7.0875V7.08863Z",
+  },
+  twitter: {
+    box: 24,
+    d: "M21 6.40084C20.3375 6.70199 19.6233 6.89989 18.8834 6.99453C19.6405 6.53851 20.2256 5.81576 20.501 4.94673C19.7868 5.37694 18.9952 5.67809 18.1606 5.85017C17.4809 5.11021 16.5258 4.68 15.4417 4.68C13.4197 4.68 11.7677 6.33201 11.7677 8.3712C11.7677 8.66375 11.8021 8.94769 11.8623 9.21442C8.79924 9.05954 6.0717 7.58822 4.25621 5.35973C3.93786 5.9018 3.75717 6.53851 3.75717 7.20964C3.75717 8.49166 4.40249 9.62742 5.40057 10.2727C4.78968 10.2727 4.2218 10.1007 3.72275 9.84252V9.86834C3.72275 11.658 4.99618 13.1551 6.6826 13.4907C6.14116 13.6389 5.57274 13.6595 5.02199 13.5509C5.25568 14.2844 5.71337 14.9262 6.3307 15.3862C6.94804 15.8461 7.69398 16.101 8.46367 16.115C7.15896 17.1479 5.54168 17.7062 3.87763 17.6982C3.58509 17.6982 3.29254 17.681 3 17.6465C4.6348 18.6963 6.57935 19.3072 8.66157 19.3072C15.4417 19.3072 19.1673 13.68 19.1673 8.80141C19.1673 8.63794 19.1673 8.48306 19.1587 8.31958C19.8815 7.80333 20.501 7.14941 21 6.40084Z",
+  },
+  youtube: {
+    box: 24,
+    d: "M12.2201 4.8C12.7007 4.8027 13.9031 4.8144 15.1812 4.8657L15.6348 4.8855C16.921 4.94581 18.2063 5.05021 18.8444 5.22752C19.6949 5.46693 20.3628 6.16357 20.5887 7.04741C20.9487 8.45148 20.9937 11.1894 20.9991 11.8528L21 11.9896V12.1462C20.9937 12.8095 20.9487 15.5483 20.5887 16.9515C20.3601 17.8381 19.6913 18.5356 18.8444 18.7714C18.2063 18.9487 16.921 19.0531 15.6348 19.1134L15.1812 19.1341C13.9031 19.1845 12.7007 19.1971 12.2201 19.1989L12.0086 19.1998H11.779C10.762 19.1935 6.50838 19.1476 5.15471 18.7714C4.30507 18.532 3.63633 17.8354 3.41042 16.9515C3.0504 15.5474 3.0054 12.8095 3 12.1462V11.8528C3.0054 11.1894 3.0504 8.45058 3.41042 7.04741C3.63903 6.16087 4.30777 5.46333 5.15561 5.22842C6.50838 4.8513 10.7629 4.8054 11.7799 4.8H12.2201ZM10.1995 8.8502V15.1505L15.5997 12.0004L10.1995 8.8502Z",
+  },
+  /* Not in the Figma icon set — present so the LinkedIn entry commented out in
+     content/footer.ts renders the moment the client asks for it.
+     TODO(assets): swap for a Figma-drawn mark if LinkedIn is approved. */
+  linkedin: {
+    box: 24,
+    d: "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452z",
+  },
+};
+
+/** Never render a social slot we have no mark for. */
+const socialLinks = social.filter((item) => item.icon in socialIcons);
+
+/* Shared link treatment. The comp draws no hover state at all (spec §9), so an
+   underline is the least inventive signal available on a black ground. */
+const footerLink =
+  "text-base leading-6 font-semibold text-always-white underline-offset-4 " +
+  "transition-colors duration-150 hover:underline motion-reduce:transition-none";
+---
+
+<footer
+  class:list={["on-dark bg-always-black pt-lg md:pt-xl lg:pt-3xl", className]}
+>
+  <Container class="flex flex-col gap-lg md:gap-xl">
+    <!-- ── Brand lockup ────────────────────────────────────────────
+         Not a link: the sitemap two rows down already carries "Home",
+         and a second home link here would only add a tab stop. -->
+    <img
+      src={logo.src}
+      alt={logo.decorative ? "" : logo.alt}
+      aria-hidden={logo.decorative ? "true" : undefined}
+      width={logo.width}
+      height={logo.height}
+      loading="lazy"
+      decoding="async"
+      class="h-10 w-auto self-start object-contain object-left"
+    />
+
+    <!-- ── Main row: sitemap + subscribe ───────────────────────────
+         lg gives the sitemap 640/1174 of the row so the subscribe block
+         resolves to exactly 534 at the 1366 design width and stays in
+         proportion below it; md splits the row 50/50; below that the two
+         blocks stack. The comp has no gap between the two — 640 + 534 is
+         the whole 1174 — hence lg:gap-0. -->
+    <div class="flex flex-col gap-xl md:flex-row md:gap-lg lg:gap-0">
+      <!-- Sitemap. Two <nav> landmarks rather than one, so their headings
+           (which the design never paints) can serve as accessible names. -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:flex-1 lg:w-[54.5145%] lg:flex-none">
+        {
+          columns.map((column) => (
+            <nav aria-label={column.heading}>
+              <ul role="list" class="flex flex-col sm:gap-2xs">
+                {column.links.map((link) => (
+                  <li>
+                    <a
+                      href={link.href}
+                      class:list={["inline-flex min-h-11 items-center sm:min-h-0", footerLink]}
+                      {...link.external
+                        ? { rel: "noopener noreferrer", target: "_blank" }
+                        : {}}
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))
+        }
+      </div>
+
+      <!-- Subscribe -->
+      <div class="flex flex-col gap-xs md:flex-1">
+        <form
+          class="flex flex-col gap-2xs"
+          data-newsletter-form
+          data-b2blead-form={b2blead.newsletterFormId}
+          data-endpoint={NEWSLETTER_ENDPOINT}
+          data-consent-text={newsletter.consent}
+          data-msg-pending={messages.pending}
+          data-msg-success={messages.success}
+          data-msg-error={messages.error}
+          data-msg-invalid={messages.invalid}
+          action={b2blead.newsletterSubmitEndpoint}
+          method="post"
+          aria-label={newsletter.heading}
+        >
+          {/* The comp's SUBSCRIBE box is 9px tall, not 20 — Figma has vertical
+              trim on for this node, so the 20px line box's half-leading is not
+              part of the layout. Untrimmed, the leading pushed the input, the
+              consent line, the social row and the whole legal bar 11px below
+              where the comp draws them. `text-box` reproduces the trim in CSS;
+              where it is unsupported the type is identical and only the 11px
+              comes back, so this is a pure progressive enhancement.
+              This belongs on the global `eyebrow` utility rather than here —
+              every other eyebrow on the site has the same 11px of untrimmed
+              leading — but `styles/global.css` is out of scope for this pass.
+              See report. */}
+          <Overline tone="white" class="[text-box:trim-both_cap_alphabetic]">
+            {newsletter.heading}
+          </Overline>
+
+          {/* The label is real, just not painted — the comp shows a placeholder
+              only, and a placeholder is not an accessible name. */}
+          <label class="sr-only" for="footer-newsletter-email">
+            {newsletter.placeholder}
+          </label>
+
+          <div
+            class="flex min-h-[51px] items-center gap-xs border-b border-border-white-opacity transition-colors duration-150 focus-within:border-always-white motion-reduce:transition-none"
+          >
+            <input
+              id="footer-newsletter-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              placeholder={newsletter.placeholder}
+              class="min-w-0 flex-1 bg-transparent text-base leading-6 text-always-white placeholder:text-text-inactive"
+            />
+
+            {/* 24px glyph, 44px hit area, pulled 10px right so the arrow still
+                sits flush with the container edge as drawn. */}
+            <button
+              type="submit"
+              class="-mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center text-always-white transition-colors duration-150 hover:text-text-inactive motion-reduce:transition-none"
+            >
+              <span class="sr-only">{newsletter.cta}</span>
+              <svg
+                viewBox="0 0 24 24"
+                class="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M13 6L18.2929 11.2929C18.6834 11.6834 18.6834 12.3166 18.2929 12.7071L13 18M18 12L5 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* No slot for this exists in the comp; it collapses when empty. */}
+          <p
+            data-newsletter-status
+            role="status"
+            aria-live="polite"
+            class="text-sm leading-5 text-always-white empty:hidden"
+          >
+          </p>
+        </form>
+
+        {/* b2blead enhances this form the same way it does the contact form.
+            The live site's footer signup posted to a Mailjet endpoint that has
+            been returning 404 and silently discarding every subscriber; this
+            replaces it with a destination that actually receives them. */}
+        <script
+          is:inline
+          src={b2blead.newsletterScript}
+          data-b2blead-mode="enhance"
+          async
+        ></script>
+
+        {/* 14/20 regular. The token set has no "paragraph small" — see report. */}
+        <p class="max-w-[534px] text-sm leading-5 text-always-white">
+          {newsletter.consent}
+        </p>
+
+        {
+          socialLinks.length > 0 && (
+            <ul role="list" class="-mx-2 -my-2.5 flex items-center">
+              {socialLinks.map((item) => {
+                const icon = socialIcons[item.icon]!;
+                return (
+                  <li>
+                    <a
+                      href={item.href}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                      class="flex h-11 w-10 items-center justify-center text-always-white transition-colors duration-150 hover:text-text-inactive motion-reduce:transition-none"
+                    >
+                      <span class="sr-only">{item.platform}</span>
+                      <svg
+                        viewBox={`0 0 ${icon.box} ${icon.box}`}
+                        style={`width:${icon.box}px;height:${icon.box}px`}
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d={icon.d} />
+                      </svg>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        }
+      </div>
+    </div>
+
+    <!-- ── Legal bar ───────────────────────────────────────────────
+         The footer's only bottom padding lives here, exactly as in the comp. -->
+    <div
+      class="flex flex-col items-start gap-xs border-t border-border-white-opacity py-sm md:flex-row md:items-center md:justify-between"
+    >
+      <p class="text-base leading-6 text-always-white">{copyrightBefore}{hasYearToken && <span data-footer-year>{buildYear}</span>}{copyrightAfter}</p>
+
+      {
+        legalLinks.length > 0 && (
+          <nav aria-label="Legal">
+            <ul role="list" class="flex flex-wrap items-center gap-sm">
+              {legalLinks.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    class={footerLink}
+                    {...link.external
+                      ? { rel: "noopener noreferrer", target: "_blank" }
+                      : {}}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+    </div>
+  </Container>
+</footer>
+
+<script>
+  // ── Newsletter ────────────────────────────────────────────────────
+  // The markup is real; the submission is not faked. Until an endpoint is
+  // configured the form validates, reports, and tells the visitor the truth.
+  const form = document.querySelector<HTMLFormElement>("[data-newsletter-form]");
+
+  if (form) {
+    const status = form.querySelector<HTMLElement>("[data-newsletter-status]");
+    const input = form.querySelector<HTMLInputElement>('input[type="email"]');
+    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const endpoint = form.dataset.endpoint ?? "";
+
+    const say = (text: string) => {
+      if (status) status.textContent = text;
+    };
+
+    form.addEventListener("submit", async (event) => {
+      // Always intercept. With no endpoint a native submit would post to the
+      // current URL, reload the page and drop the address on the floor.
+      event.preventDefault();
+      if (!input) return;
+
+      if (!input.checkValidity()) {
+        input.reportValidity();
+        say(form.dataset.msgInvalid ?? "");
+        return;
+      }
+
+      if (!endpoint) {
+        say(form.dataset.msgPending ?? "");
+        return;
+      }
+
+      submit?.setAttribute("disabled", "");
+      say("");
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: input.value,
+            source: "site-footer",
+            // The consent line is an explicit consent statement, so record
+            // what was agreed to and when — not just the address.
+            consentText: form.dataset.consentText ?? "",
+            consentedAt: new Date().toISOString(),
+          }),
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        form.reset();
+        say(form.dataset.msgSuccess ?? "");
+      } catch {
+        say(form.dataset.msgError ?? "");
+      } finally {
+        submit?.removeAttribute("disabled");
+      }
+    });
+  }
+
+  // ── Copyright year ────────────────────────────────────────────────
+  // A static build bakes in the year it was built. Correct it client-side so
+  // a page that outlives 31 December does not advertise a stale date.
+  const yearEl = document.querySelector<HTMLElement>("[data-footer-year]");
+  if (yearEl) {
+    const currentYear = String(new Date().getFullYear());
+    if (yearEl.textContent !== currentYear) yearEl.textContent = currentYear;
+  }
+</script>

@@ -1,0 +1,230 @@
+---
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import Button from "@primitives/Button.astro";
+import ArrowLink from "@primitives/ArrowLink.astro";
+import type { Office } from "@content/types";
+import type { OfficeGridSection } from "@content/homepage/about";
+
+/**
+ * Block C of Figma `10229:7543` — office locations.
+ *
+ * Desktop geometry (1366 frame): 1174 container; header row 539 / 96 / 539 with
+ * the paragraph bottom-aligned to the heading; then a 2 × 587 by 2 × 344 grid
+ * with ZERO gap and a 1px hairline system; then the CTA, 32px below.
+ *
+ * THE HAIRLINE SYSTEM (and why it is not the Figma's)
+ * ---------------------------------------------------
+ * Figma draws it as: wrapper `border-top` + `border-left`, every cell
+ * `border-bottom` + `border-right`. At two columns that composes into a closed
+ * box with interior rules. At ONE column (mobile) it degenerates: you are left
+ * with a full-height left rail plus a per-card right rail boxing in a single
+ * stacked column, which reads as a stack of empty containers rather than a
+ * grid, and it eats horizontal space at the width where copy needs it most.
+ *
+ * So the system is switched at the breakpoint rather than shrunk:
+ *   • base (1 column)  — horizontal rules only: wrapper `border-t`, cells
+ *     `border-b`. Cards read as a divided list. No vertical rails.
+ *   • sm+ (2 columns)  — the full Figma system: wrapper `border-t border-l`,
+ *     cells `border-b border-r`.
+ * The vertical borders are therefore `sm:`-prefixed and nothing else changes.
+ *
+ * The Figma has exactly four offices, so the 2-column grid is always full. If an
+ * odd number is ever published the final row would leave a hole and the bottom
+ * and right edges would break, so a decorative filler cell closes it.
+ */
+interface Props {
+  block: OfficeGridSection;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, offices, blurbs, cta } = block;
+
+const surface = block.theme === "light" ? "bg-bg-secondary" : "bg-bg-primary";
+
+/** `<section>` is only exposed as a landmark when it is named. */
+const sectionLabel = [header.heading, header.headingAccent]
+  .filter(Boolean)
+  .join(" ");
+
+/** Two columns from `sm`; an odd count would break the outer edges there. */
+const needsFillerCell = offices.length % 2 === 1;
+
+/**
+ * TODO(client): supply a canonical Google Maps place URL per office
+ * (`Office.mapUrl` in src/content/offices.ts, currently unset for all four).
+ * Until then the link is derived from the published address, which always
+ * resolves and never invents a location.
+ */
+/** See AboutStats.astro for why this exists. Blocks A/B/C of frame
+    `10229:7543` sit 96px apart; three sections each padded 96 would seam at
+    192. A marked section halves the padding only on an edge it shares with
+    another marked section. */
+const FRAME_SEAM =
+  "frame-10229-7543 " +
+  "[.frame-10229-7543+&]:pt-sm md:[.frame-10229-7543+&]:pt-md lg:[.frame-10229-7543+&]:pt-lg " +
+  "has-[+.frame-10229-7543]:pb-sm md:has-[+.frame-10229-7543]:pb-md lg:has-[+.frame-10229-7543]:pb-lg";
+
+/**
+ * Figma "Button Text" pairs its label with a 28px arrow inside a 1px hairline
+ * circle (`Navigations/Arrow Go/Default`, 5 instances in this frame). ArrowLink
+ * is a shared primitive that draws a bare 12px glyph and is owned elsewhere, so
+ * the circle is applied from the call site instead of forking the primitive.
+ */
+const ARROW_CIRCLE =
+  "[&>svg]:size-7 [&>svg]:rounded-full [&>svg]:border [&>svg]:border-border-primary [&>svg]:p-2";
+
+const mapHref = (office: Office): string =>
+  office.mapUrl ??
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    [office.city, ...office.address].join(", "),
+  )}`;
+---
+
+<section
+  id={block.anchorId}
+  aria-label={sectionLabel}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", FRAME_SEAM, className]}
+>
+  <Container>
+    <div class="flex flex-col gap-lg">
+      <!-- Header. Figma aligns the paragraph to the baseline of the heading;
+           that only makes sense side by side, so below lg it simply stacks. -->
+      <div class="flex flex-col gap-sm lg:flex-row lg:items-end lg:gap-3xl">
+        {/* Hand-built rather than <SectionHeader>: Figma breaks this heading
+            HARD after the comma (roman line 1, italic line 2) and sets it on a
+            44px line-height, neither of which the primitive does — it soft-wraps
+            on a 52px line-height. Block-level spans instead of <br> so the
+            heading is still announced as one continuous string.
+
+            SIZE: 32px in the Figma export ("Personal Service." measures 232px
+            wide there; at the ramp's 40px it draws 292), capped locally because
+            `--step-h2` is shared with sections owned elsewhere. See the same
+            note in AboutStats.astro. At 40px this heading out-weighed the
+            paragraph sitting beside it, which the design keeps as an equal
+            partner in a 50/50 row. 32 x 1.375 keeps the 44px line box, so the
+            bottom-alignment with that paragraph is unchanged. */}
+        <div class="flex flex-col gap-sm lg:min-w-0 lg:flex-1">
+          {header.overline && <Overline tone="red">{header.overline}</Overline>}
+          <h2 class="text-[length:min(var(--step-h2),2rem)] leading-[1.375] text-text-primary">
+            <span class="block">{header.heading}</span>
+            {header.headingAccent && (
+              <em class="block font-medium italic text-text-tertiary">
+                {header.headingAccent}
+              </em>
+            )}
+          </h2>
+        </div>
+        {header.body && (
+          <p class="text-base leading-6 text-text-secondary lg:min-w-0 lg:flex-1">
+            {header.body}
+          </p>
+        )}
+      </div>
+
+      <div class="flex flex-col gap-md">
+        <ul
+          role="list"
+          class="grid grid-cols-1 border-t border-border-primary sm:grid-cols-2 sm:border-l"
+        >
+          {offices.map((office) => {
+            const blurb = blurbs?.[office._id];
+            return (
+              <li class="border-b border-border-primary sm:border-r">
+                <article
+                  class="flex items-start gap-sm p-sm md:p-md lg:min-h-[344px]"
+                  aria-labelledby={`${block._key}-${office._id}`}
+                >
+                  <span
+                    class="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-border-primary text-brand-red"
+                    aria-hidden="true"
+                  >
+                    {/* TODO(assets): replace with the Figma export
+                        (Maps/Pin Location/Default). */}
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="h-7 w-7"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M12 21.5s7-5.9 7-11.3a7 7 0 1 0-14 0c0 5.4 7 11.3 7 11.3z" />
+                      <circle cx="12" cy="10.2" r="2.6" />
+                    </svg>
+                  </span>
+
+                  <div class="flex min-w-0 flex-1 flex-col gap-sm">
+                    <div class="flex flex-col gap-2xs">
+                      <h3
+                        id={`${block._key}-${office._id}`}
+                        class="text-[length:var(--step-h3)] leading-7 text-text-primary"
+                      >
+                        {office.city}
+                      </h3>
+
+                      <address class="text-base not-italic leading-6 text-text-secondary">
+                        {office.address.map((line) => <span class="block">{line}</span>)}
+                        {office.phone && (
+                          <span class="block">
+                            Tel:{" "}
+                            <a
+                              href={`tel:${office.phoneHref ?? office.phone.replace(/[^+\d]/g, "")}`}
+                              class="transition-colors duration-150 hover:text-brand-red motion-reduce:transition-none"
+                            >
+                              {office.phone}
+                            </a>
+                          </span>
+                        )}
+                      </address>
+                    </div>
+
+                    {/* Figma puts a descriptive paragraph here; all four are
+                        lorem ipsum, so the slot carries the office's real
+                        opening hours until approved copy exists (see about.ts). */}
+                    {office.openingHours && (
+                      <p class="text-base leading-6 text-text-secondary">
+                        {office.openingHours}
+                      </p>
+                    )}
+                    {blurb && (
+                      <p class="text-base leading-6 text-text-secondary">{blurb}</p>
+                    )}
+
+                    <ArrowLink
+                      href={mapHref(office)}
+                      external
+                      class={`text-brand-red! hover:text-brand-950! ${ARROW_CIRCLE}`}
+                    >
+                      Map<span class="sr-only"> — {office.city} office, opens in a new tab</span>
+                    </ArrowLink>
+                  </div>
+                </article>
+              </li>
+            );
+          })}
+
+          {needsFillerCell && (
+            <li
+              aria-hidden="true"
+              class="hidden border-b border-border-primary sm:block sm:border-r"
+            ></li>
+          )}
+        </ul>
+
+        {cta && (
+          <Button
+            href={cta.href}
+            variant="solid"
+            external={cta.external}
+            class="w-full max-w-[20rem] sm:w-60 sm:max-w-none"
+          >
+            {cta.label}
+          </Button>
+        )}
+      </div>
+    </div>
+  </Container>
+</section>

@@ -1,0 +1,74 @@
+---
+/**
+ * Back-to-top control.
+ *
+ * Bottom-LEFT by request, which also keeps it clear of the b2blead chat widget
+ * that sits bottom-right.
+ *
+ * Not in the Figma — the page is ~15,800px tall and the design gives no way
+ * back up, so this is ours.
+ *
+ * It is a real <button>, hidden from the tab order and the accessibility tree
+ * until it is actually available: a control that does nothing at the top of the
+ * page should not be reachable there. Keyboard users already have Home, so this
+ * is a convenience for pointer users rather than the only route up.
+ */
+---
+
+<button
+  type="button"
+  data-back-to-top
+  hidden
+  class="fixed bottom-6 left-6 z-40 grid h-11 w-11 place-items-center rounded-full border border-border-primary bg-bg-secondary text-text-primary shadow-lg transition-[opacity,transform,color,border-color] duration-200 hover:border-brand-red hover:text-brand-red motion-reduce:transition-none"
+>
+  <span class="sr-only">Back to top</span>
+  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+    <path d="M12 19V6M6 12l6-6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+</button>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>("[data-back-to-top]");
+
+  if (btn) {
+    // Appears once you are a screen or so down — far enough that going back up
+    // is a real journey, not a nudge.
+    const THRESHOLD = 600;
+    let ticking = false;
+
+    const sync = () => {
+      const show = window.scrollY > THRESHOLD;
+      // `hidden` also removes it from the tab order and the a11y tree, so the
+      // opacity/translate are purely the entrance.
+      if (show && btn.hidden) {
+        btn.hidden = false;
+        requestAnimationFrame(() => btn.classList.remove("opacity-0", "translate-y-2"));
+      } else if (!show && !btn.hidden) {
+        btn.classList.add("opacity-0", "translate-y-2");
+        // Wait for the fade before removing it, unless motion is reduced.
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduce) btn.hidden = true;
+        else window.setTimeout(() => { if (window.scrollY <= THRESHOLD) btn.hidden = true; }, 200);
+      }
+      ticking = false;
+    };
+
+    btn.classList.add("opacity-0", "translate-y-2");
+
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(sync);
+    }, { passive: true });
+
+    btn.addEventListener("click", () => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+      // Move focus somewhere sensible rather than leaving it on a button that
+      // is about to disappear.
+      document.querySelector<HTMLElement>("[data-site-header] a")?.focus({ preventScroll: true });
+    });
+
+    sync();
+  }
+</script>

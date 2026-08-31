@@ -1,0 +1,547 @@
+---
+import PriceTicker from "./PriceTicker.astro";
+import Container from "@primitives/Container.astro";
+import MegaPanel from "./MegaPanel.astro";
+import NavIcon from "./NavIcon.astro";
+import { navigation } from "@content/navigation";
+
+/**
+ * Global header — black utility bar (ticker + utility links) over a transparent
+ * navbar that overlays the hero.
+ *
+ * DESIGN DECISIONS WE INVENTED (the Figma does not specify these — please review):
+ *
+ * 1. STICKY ON SCROLL. The design draws the navbar transparent over a light
+ *    hero and gives no state for it over the dark testimonial bands or the
+ *    black footer. On a 15,800px page a header that scrolls away entirely
+ *    leaves no way back to navigation. We therefore keep it transparent at the
+ *    top, then pin it with a solid background once the hero is passed.
+ *    (The current WordPress site is not sticky — this is a change.)
+ *
+ * 2. MOBILE PATTERN. No hamburger, drawer or mobile ticker treatment exists in
+ *    the file. Below 1024px we collapse to a hamburger + right-hand drawer;
+ *    utility links move into the drawer; the ticker stays visible but becomes
+ *    horizontally scrollable rather than being dropped — spot prices are the
+ *    single most-checked piece of information for this audience.
+ *
+ * 3. DROPDOWNS. Carets are drawn but no panels are. We use accessible
+ *    disclosure menus populated from the current site's mega menu.
+ */
+
+const { menu, utilityLinks, languages, showPriceTicker } = navigation;
+
+/* 20x20 stroke icons, traced off the Figma nav render at 1366.
+   `account` is a KEY inside a ring, not the person glyph a generic icon set
+   offers: ring r7.3, a small bow ring on the left touching the ring's inner
+   edge, a shaft running to centre-right, one tooth pointing down. */
+const icons: Record<string, string> = {
+  mail: "M2 4h16v12H2zM2 5l8 6 8-6",
+  account:
+    "M17.3 10a7.3 7.3 0 11-14.6 0 7.3 7.3 0 0114.6 0M6.2 10a1.6 1.6 0 11-3.2 0 1.6 1.6 0 013.2 0M6.2 10h5M10.4 10v1.9",
+};
+
+const currentLanguage = languages.find((l) => l.current) ?? languages[0];
+---
+
+<header
+  data-site-header
+  class="fixed inset-x-0 top-0 z-50 transition-transform duration-200 motion-reduce:transition-none"
+>
+  <!-- ── Utility bar ─────────────────────────────────────────────── -->
+  <div data-utility-bar class="on-dark bg-always-black">
+    <Container class="flex h-11 items-center justify-between gap-sm">
+      {showPriceTicker ? <PriceTicker /> : <div />}
+
+      <nav
+        class="hidden items-center gap-xs lg:flex"
+        aria-label="Utility"
+      >
+        {utilityLinks.map((link) => (
+          <a
+            href={link.href}
+            class="flex items-center gap-1 text-sm leading-5 font-semibold text-always-white transition-colors hover:text-always-white/75 motion-reduce:transition-none"
+          >
+            <svg viewBox="0 0 20 20" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+              <path d={icons[link.icon]} stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            {link.label}
+          </a>
+        ))}
+
+        {/* Language switcher — Figma draws flag 20x20 + gap 4 + label + gap 4 +
+            chevron 20x20.
+
+            A <details> was click-only, which made it behave differently from
+            every other menu in the header. It is now the same button + panel
+            with the same hover-intent, so all four menus open and close alike.
+            Flags come from the live site; Figma's icon set only ships US/TH. */}
+        {languages.length > 1 ? (
+          <div class="relative" data-lang-menu>
+            <button
+              type="button"
+              data-lang-trigger
+              aria-expanded="false"
+              aria-controls="language-menu"
+              class="flex cursor-pointer items-center gap-1 text-sm leading-5 font-semibold text-always-white"
+            >
+              <svg viewBox="0 0 20 20" class="h-5 w-5 shrink-0" aria-hidden="true">
+                <rect x="1.5" y="4" width="17" height="12" fill="#ffffff" />
+                <g fill="#b22234">
+                  <rect x="1.5" y="4" width="17" height="0.92" />
+                  <rect x="1.5" y="5.85" width="17" height="0.92" />
+                  <rect x="1.5" y="7.69" width="17" height="0.92" />
+                  <rect x="1.5" y="9.54" width="17" height="0.92" />
+                  <rect x="1.5" y="11.38" width="17" height="0.92" />
+                  <rect x="1.5" y="13.23" width="17" height="0.92" />
+                  <rect x="1.5" y="15.08" width="17" height="0.92" />
+                </g>
+                <rect x="1.5" y="4" width="7.2" height="6.46" fill="#3c3b6e" />
+              </svg>
+              {currentLanguage?.label}
+              <svg viewBox="0 0 20 20" class="h-5 w-5 shrink-0 fill-current transition-transform duration-150 motion-reduce:transition-none" aria-hidden="true"><path d="M6 8l4 4 4-4z" /></svg>
+            </button>
+            <ul
+              id="language-menu"
+              data-lang-panel
+              class="invisible absolute right-0 top-full z-10 mt-2 min-w-48 bg-always-white py-2 opacity-0 shadow-lg transition-opacity duration-150 motion-reduce:transition-none"
+            >
+              {languages.map((l) => (
+                <li>
+                  <a
+                    href={l.href}
+                    aria-current={l.current ? "true" : undefined}
+                    {...(l.external ? { rel: "noopener noreferrer" } : {})}
+                    class="flex items-center gap-2xs px-4 py-2 text-sm text-text-primary hover:bg-bg-primary"
+                  >
+                    {l.flag && (
+                      <img src={l.flag} alt="" aria-hidden="true" width="20" height="14"
+                        class="h-3.5 w-5 shrink-0 object-cover" loading="lazy" decoding="async" />
+                    )}
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <span class="flex items-center gap-1 text-sm leading-5 font-semibold text-always-white">
+            <svg viewBox="0 0 20 20" class="h-5 w-5 shrink-0" aria-hidden="true">
+              <rect x="1.5" y="4" width="17" height="12" fill="#ffffff" />
+              <g fill="#b22234">
+                <rect x="1.5" y="4" width="17" height="0.92" />
+                <rect x="1.5" y="5.85" width="17" height="0.92" />
+                <rect x="1.5" y="7.69" width="17" height="0.92" />
+                <rect x="1.5" y="9.54" width="17" height="0.92" />
+                <rect x="1.5" y="11.38" width="17" height="0.92" />
+                <rect x="1.5" y="13.23" width="17" height="0.92" />
+                <rect x="1.5" y="15.08" width="17" height="0.92" />
+              </g>
+              <rect x="1.5" y="4" width="7.2" height="6.46" fill="#3c3b6e" />
+            </svg>
+            {currentLanguage?.label}
+            <svg viewBox="0 0 20 20" class="h-5 w-5 shrink-0 fill-current" aria-hidden="true"><path d="M6 8l4 4 4-4z" /></svg>
+          </span>
+        )}
+      </nav>
+    </Container>
+  </div>
+
+  <!-- ── Navbar ──────────────────────────────────────────────────── -->
+  <div
+    data-navbar
+    class="h-[88px] border-b border-border-primary transition-colors duration-200 motion-reduce:transition-none"
+  >
+    {/* The 88px is the Figma navbar height *including* its 1px bottom rule
+        (Figma strokes are drawn inside the frame), so the height sits on the
+        bordered element and the inner row fills what is left — 44 + 88 = the
+        132px nav the hero reserves headroom for. */}
+    <Container class="flex h-full items-center justify-between gap-lg">
+      <a href="/" class="shrink-0" aria-label="J. Rotbart & Co. — home">
+        {/* Figma "Group 9643" (279.8 x 40), exported as SVG — crown in
+            brand red over a near-black wordmark, for the light header. The
+            footer uses the same lockup in white. Replaces the live site's own
+            SVG, which was a close match but not the design's asset. */}
+        <img
+          src="/figma/logo-dark.svg"
+          alt="J. Rotbart & Co. — Precious Metals"
+          width="280"
+          height="40"
+          class="h-9 w-auto lg:h-10"
+          fetchpriority="high"
+        />
+      </a>
+
+      <!-- Desktop menu -->
+      <nav class="hidden lg:block" aria-label="Primary">
+        {/* Figma's 48px item gap is measured at 1366 and only fits there: the
+            six labels need 450px, so 48px gaps need 690px of row and there is
+            only 600px at 1024 — "News & Events" wrapped onto two lines, which
+            reads as broken. Two steps down to the widths that actually fit
+            (24px to 1120, 32px to 1280). 1280 and up, including the 1366
+            design width, is untouched. */}
+        <ul class="flex items-center gap-sm min-[1120px]:gap-md xl:gap-lg">
+          {menu.map((item) =>
+            item.children?.length ? (
+              <li data-dropdown>
+                <button
+                  type="button"
+                  class="flex items-center gap-0 font-display text-base leading-6 font-medium text-text-primary transition-colors hover:text-brand-red aria-expanded:text-brand-red motion-reduce:transition-none"
+                  aria-expanded="false"
+                  aria-controls={`mega-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                >
+                  {item.label}
+                  {/* Figma: filled down-triangle in a 24×24 box, flush against
+                      the label (gap 0), offset 2px down inside its box. */}
+                  <svg viewBox="0 0 24 24" class="h-6 w-6 translate-y-[2px] fill-current transition-transform duration-150 motion-reduce:transition-none" aria-hidden="true"><path d="M7.5 10.5h9L12 16z" /></svg>
+                </button>
+              </li>
+            ) : (
+              <li>
+                <a
+                  href={item.href}
+                  class="font-display text-base leading-6 font-medium text-text-primary transition-colors hover:text-brand-red motion-reduce:transition-none"
+                >
+                  {item.label}
+                </a>
+              </li>
+            )
+          )}
+        </ul>
+      </nav>
+
+      <!-- Mobile toggle -->
+      <button
+        type="button"
+        data-menu-toggle
+        class="lg:hidden"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <span class="sr-only">Open menu</span>
+        <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round" />
+        </svg>
+      </button>
+    </Container>
+
+    {/* Mega panels live at navbar level, not inside a menu item, so they can
+        span the full row width. */}
+    {menu
+      .filter((item) => item.children?.length)
+      .map((item) => (
+        <MegaPanel
+          item={item}
+          id={`mega-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+        />
+      ))}
+  </div>
+
+  <!-- ── Mobile drawer ───────────────────────────────────────────── -->
+  <div
+    id="mobile-menu"
+    data-mobile-menu
+    hidden
+    class="fixed inset-0 z-50 lg:hidden"
+  >
+    <div data-menu-scrim class="absolute inset-0 bg-always-black/50"></div>
+
+    <div
+      class="absolute inset-y-0 right-0 flex w-[min(360px,100%)] flex-col overflow-y-auto bg-always-white"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Site menu"
+    >
+      <div class="flex items-center justify-between border-b border-border-primary px-sm py-xs">
+        <span class="eyebrow text-text-tertiary">Menu</span>
+        <button type="button" data-menu-close class="p-2">
+          <span class="sr-only">Close menu</span>
+          <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      <nav class="flex-1 px-sm py-xs" aria-label="Primary mobile">
+        <ul class="flex flex-col">
+          {menu.map((item) => (
+            <li class="border-b border-border-primary last:border-0">
+              {item.children?.length ? (
+                <details>
+                  <summary class="flex cursor-pointer list-none items-center justify-between py-3.5 font-display text-lg font-medium text-text-primary">
+                    {item.label}
+                    <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current transition-transform duration-150 [details[open]_&]:rotate-180 motion-reduce:transition-none" aria-hidden="true"><path d="M6 8l4 5 4-5z" /></svg>
+                  </summary>
+                  {/* The drawer carries the same icons and descriptions as the
+                      desktop panel — on a phone the description is doing more
+                      work, not less, because there is no hover to explore with. */}
+                  <ul class="flex flex-col gap-2xs pb-sm">
+                    {item.children.map((child) => (
+                      <li>
+                        <a href={child.href} class="flex items-start gap-2xs py-1.5">
+                          {child.icon && (
+                            <span
+                              class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border-primary text-brand-red"
+                              aria-hidden="true"
+                            >
+                              <NavIcon name={child.icon} class="h-4 w-4" />
+                            </span>
+                          )}
+                          <span class="flex flex-col">
+                            <span class="font-display text-base font-medium text-text-primary">{child.label}</span>
+                            {child.description && (
+                              <span class="text-sm leading-5 text-text-secondary">{child.description}</span>
+                            )}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                    <li>
+                      <a href={item.href} class="button-text inline-flex items-center gap-2xs py-2 text-brand-red">
+                        View all {item.label}
+                      </a>
+                    </li>
+                  </ul>
+                </details>
+              ) : (
+                <a href={item.href} class="block py-3.5 font-display text-lg font-medium text-text-primary">{item.label}</a>
+              )}
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div class="flex flex-col gap-2xs border-t border-border-primary px-sm py-xs">
+        {utilityLinks.map((link) => (
+          <a href={link.href} class="button-text py-2 text-text-primary">{link.label}</a>
+        ))}
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  // ── Header on scroll ──────────────────────────────────────────────
+  //
+  // Only the NAVBAR is sticky. The black utility bar belongs to the top of the
+  // page, so once you scroll the whole header slides up by exactly the utility
+  // bar's height: the black bar leaves, the navbar lands on top:0 and stays.
+  //
+  // Sliding rather than switching position keeps it smooth. The header used to
+  // be `absolute` and only became `fixed` past a 600px sentinel, so it vanished
+  // for 600px and then snapped back — which read as lag.
+  const header = document.querySelector<HTMLElement>("[data-site-header]");
+  const navbar = document.querySelector<HTMLElement>("[data-navbar]");
+  const utility = document.querySelector<HTMLElement>("[data-utility-bar]");
+
+  if (header && navbar) {
+    let ticking = false;
+    const THRESHOLD = 24;
+
+    const sync = () => {
+      const scrolled = window.scrollY > THRESHOLD;
+      const lift = utility?.offsetHeight ?? 44;
+      header.style.transform = scrolled ? `translateY(-${lift}px)` : "";
+      navbar.classList.toggle("bg-bg-secondary", scrolled);
+      navbar.classList.toggle("shadow-sm", scrolled);
+      ticking = false;
+    };
+
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(sync);
+    }, { passive: true });
+
+    sync();
+    document.documentElement.style.setProperty("--nav-height", `${header.offsetHeight}px`);
+  }
+
+  // ── Language menu ─────────────────────────────────────────────────
+  //
+  // Same hover-intent as the mega menus, so every menu in the header behaves
+  // identically. It was a <details>, which only opened on click.
+  const langWrap = document.querySelector<HTMLElement>("[data-lang-menu]");
+  if (langWrap) {
+    const trigger = langWrap.querySelector<HTMLButtonElement>("[data-lang-trigger]");
+    const panel = langWrap.querySelector<HTMLElement>("[data-lang-panel]");
+
+    if (trigger && panel) {
+      let openT: number | undefined;
+      let closeT: number | undefined;
+
+      const set = (open: boolean) => {
+        window.clearTimeout(openT);
+        window.clearTimeout(closeT);
+        trigger.setAttribute("aria-expanded", String(open));
+        trigger.querySelector("svg:last-of-type")?.classList.toggle("rotate-180", open);
+        panel.classList.toggle("invisible", !open);
+        panel.classList.toggle("opacity-0", !open);
+      };
+
+      langWrap.addEventListener("mouseenter", () => {
+        window.clearTimeout(closeT);
+        openT = window.setTimeout(() => set(true), 90);
+      });
+      langWrap.addEventListener("mouseleave", () => {
+        window.clearTimeout(openT);
+        closeT = window.setTimeout(() => set(false), 220);
+      });
+      trigger.addEventListener("click", () =>
+        set(trigger.getAttribute("aria-expanded") !== "true")
+      );
+      langWrap.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { set(false); trigger.focus(); }
+      });
+      langWrap.addEventListener("focusout", (e) => {
+        if (!langWrap.contains(e.relatedTarget as Node)) set(false);
+      });
+      document.addEventListener("click", (e) => {
+        if (!langWrap.contains(e.target as Node)) set(false);
+      });
+    }
+  }
+
+
+  // ── Desktop mega menu ─────────────────────────────────────────────
+  //
+  // One panel open at a time. Opens on hover-intent or on click/Enter, closes
+  // on Escape, on outside click, and when focus leaves the header entirely.
+  //
+  // Hover-intent matters here: the panels are full-width, so opening the moment
+  // the pointer grazes a label makes the whole header twitch as you move across
+  // it. A short delay in, and a longer one out, means a diagonal move toward
+  // the panel does not close it under the cursor.
+  const navbarEl = document.querySelector<HTMLElement>("[data-navbar]");
+
+  if (navbarEl) {
+    const triggers = [...navbarEl.querySelectorAll<HTMLButtonElement>("[data-dropdown] button")];
+    const OPEN_DELAY = 90;
+    const CLOSE_DELAY = 220;
+    let openTimer: number | undefined;
+    let closeTimer: number | undefined;
+    let current: HTMLButtonElement | null = null;
+
+    const panelFor = (btn: HTMLButtonElement) => {
+      const id = btn.getAttribute("aria-controls");
+      return id ? document.getElementById(id) : null;
+    };
+
+    const setOpen = (btn: HTMLButtonElement | null) => {
+      window.clearTimeout(openTimer);
+      window.clearTimeout(closeTimer);
+
+      for (const t of triggers) {
+        const isOpen = t === btn;
+        const panel = panelFor(t);
+        t.setAttribute("aria-expanded", String(isOpen));
+        t.querySelector("svg")?.classList.toggle("rotate-180", isOpen);
+        panel?.classList.toggle("invisible", !isOpen);
+        panel?.classList.toggle("opacity-0", !isOpen);
+      }
+      current = btn;
+    };
+
+    const scheduleOpen = (btn: HTMLButtonElement) => {
+      window.clearTimeout(closeTimer);
+      // Already showing a panel? Switch immediately — no delay between siblings.
+      if (current && current !== btn) return setOpen(btn);
+      window.clearTimeout(openTimer);
+      openTimer = window.setTimeout(() => setOpen(btn), OPEN_DELAY);
+    };
+
+    const scheduleClose = () => {
+      window.clearTimeout(openTimer);
+      window.clearTimeout(closeTimer);
+      closeTimer = window.setTimeout(() => setOpen(null), CLOSE_DELAY);
+    };
+
+    for (const btn of triggers) {
+      const panel = panelFor(btn);
+
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        setOpen(current === btn ? null : btn);
+      });
+
+      btn.parentElement?.addEventListener("mouseenter", () => scheduleOpen(btn));
+      btn.parentElement?.addEventListener("mouseleave", scheduleClose);
+      panel?.addEventListener("mouseenter", () => window.clearTimeout(closeTimer));
+      panel?.addEventListener("mouseleave", scheduleClose);
+
+      // Keyboard: Down opens and moves into the panel.
+      btn.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setOpen(btn);
+          // The panel is `visibility: hidden` until setOpen removes the class,
+          // and a hidden element cannot take focus. Wait one frame for the
+          // style change to flush before moving into it.
+          requestAnimationFrame(() =>
+            panelFor(btn)?.querySelector<HTMLElement>("a")?.focus()
+          );
+        }
+      });
+    }
+
+    // Escape closes and returns focus to the trigger that opened it.
+    navbarEl.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || !current) return;
+      const btn = current;
+      setOpen(null);
+      btn.focus();
+    });
+
+    // Tabbing out of the header closes whatever is open.
+    navbarEl.addEventListener("focusout", (e) => {
+      if (!navbarEl.contains(e.relatedTarget as Node)) setOpen(null);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!navbarEl.contains(e.target as Node)) setOpen(null);
+    });
+  }
+
+  // ── Mobile drawer with focus trap ─────────────────────────────────
+  const toggle = document.querySelector<HTMLButtonElement>("[data-menu-toggle]");
+  const drawer = document.querySelector<HTMLElement>("[data-mobile-menu]");
+  const closeBtn = drawer?.querySelector<HTMLButtonElement>("[data-menu-close]");
+  const scrim = drawer?.querySelector<HTMLElement>("[data-menu-scrim]");
+
+  if (toggle && drawer) {
+    let lastFocused: HTMLElement | null = null;
+
+    const setOpen = (state: boolean) => {
+      drawer.hidden = !state;
+      toggle.setAttribute("aria-expanded", String(state));
+      document.documentElement.style.overflow = state ? "hidden" : "";
+      if (state) {
+        lastFocused = document.activeElement as HTMLElement;
+        drawer.querySelector<HTMLElement>("[data-menu-close]")?.focus();
+      } else {
+        lastFocused?.focus();
+      }
+    };
+
+    toggle.addEventListener("click", () => setOpen(true));
+    closeBtn?.addEventListener("click", () => setOpen(false));
+    scrim?.addEventListener("click", () => setOpen(false));
+
+    drawer.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") return setOpen(false);
+      if (e.key !== "Tab") return;
+      const focusables = drawer.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), summary, input, [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
+    // Close the drawer if the viewport grows past the breakpoint.
+    matchMedia("(min-width: 1024px)").addEventListener("change", (e) => {
+      if (e.matches && !drawer.hidden) setOpen(false);
+    });
+  }
+</script>

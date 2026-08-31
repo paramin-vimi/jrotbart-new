@@ -1,0 +1,152 @@
+---
+/**
+ * SocialFeed — "LATEST UPDATES / Smarter Investment Starts Here".
+ *
+ * Figma node 9813:5910. In the design the feed is a flat 2436x988 screenshot
+ * of the live site's third-party LinkedIn widget (Elfsight app
+ * 9468f01e-fe66-439f-89e9-5e7b7d0508f6) with zero layers, so nothing about the
+ * cards is specified. This rebuilds it as native markup:
+ *
+ *   - No third-party embed, no iframe, no vendor CSS, no white seam between
+ *     cards, and the content is in the HTML for crawlers.
+ *   - The design's fixed 476px viewport with clipped cards cannot survive a
+ *     breakpoint change, so card height is driven by content with the title
+ *     and body line-clamped instead.
+ *   - A scroll-snap track: without JavaScript it is a swipeable, keyboard
+ *     scrollable row; with JavaScript it gains the pagination dots Figma
+ *     draws.
+ *
+ * Figma draws exactly ONE affordance under the feed: a 32x32 three-dot
+ * pagination glyph. No arrows, no autoplay indicator, no pause control — so
+ * this carries none of them, and does not autorotate. (Autorotation would also
+ * oblige us to ship a pause control under WCAG 2.2.2, which the design has no
+ * room for.)
+ *
+ * All editorial copy comes from the block. The carousel's own control labels
+ * are props with English defaults so the component renders correctly even if
+ * the page does not pass them; `socialFeedControls` in the content module
+ * carries translatable overrides.
+ */
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import { elfsight } from "@content/integrations";
+
+import type { SocialFeedBlock } from "@content/types";
+
+interface Props {
+  block: SocialFeedBlock;
+  class?: string;
+  /** BCP-47 tag used to format the "N days ago" label. */
+  locale?: string;
+  readMoreLabel?: string;
+  /** "%s" is replaced with the 1-based page number. */
+  pageLabel?: string;
+  /** Accessible names for the prev/next controls. */
+  previousLabel?: string;
+  nextLabel?: string;
+}
+
+const {
+  block,
+  class: className = "",
+  locale = "en",
+  readMoreLabel = "Read more",
+  pageLabel = "Go to page %s",
+  previousLabel = "Previous posts",
+  nextLabel = "Next posts",
+} = Astro.props;
+
+const items = block.items ?? [];
+const headingId = `${block._key}-heading`;
+
+/**
+ * Figma sets "Investment" in Playfair italic / text-tertiary in the MIDDLE of
+ * the heading. The shared SectionHeader primitive can only append an accent
+ * after the heading, so the header is built here instead — reusing the
+ * Overline primitive so every eyebrow on the page still matches.
+ * `headingAccent` is read as "the run within `heading` to emphasise"; if it is
+ * absent or not found the heading renders plain.
+ */
+const { heading, headingAccent } = block.header;
+const accentIndex = headingAccent ? heading.indexOf(headingAccent) : -1;
+const headingLead = accentIndex >= 0 ? heading.slice(0, accentIndex) : heading;
+const headingTrail =
+  accentIndex >= 0 && headingAccent ? heading.slice(accentIndex + headingAccent.length) : "";
+
+/**
+ * Relative timestamps are computed at build time from the ISO `date`, never
+ * stored pre-formatted. A statically built feed is rebuilt whenever the
+ * content is re-published, so the labels are as fresh as the deploy.
+ */
+const relativeTime = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+const buildTime = Date.now();
+
+function relativeLabel(iso: string): string {
+  const days = Math.round((new Date(iso).getTime() - buildTime) / 86_400_000);
+  const magnitude = Math.abs(days);
+  if (magnitude < 7) return relativeTime.format(days, "day");
+  if (magnitude < 30) return relativeTime.format(Math.round(days / 7), "week");
+  if (magnitude < 365) return relativeTime.format(Math.round(days / 30), "month");
+  return relativeTime.format(Math.round(days / 365), "year");
+}
+
+/* Figma gutter measures ~19.3px off the raster; snapped to the 16px `xs`
+   token so the grid stays on the design system's spacing scale. */
+const cardBasis = [
+  "basis-[85%]", // mobile: one card with a peek, so the row reads as scrollable
+  "md:basis-[calc((100%-16px)/2)]",
+  "lg:basis-[calc((100%-32px)/3)]",
+  "xl:basis-[calc((100%-48px)/4)]",
+].join(" ");
+---
+
+{
+  items.length > 0 && (
+    <section
+      id={block.anchorId}
+      aria-labelledby={headingId}
+      class:list={["bg-bg-secondary py-lg lg:py-3xl", className]}
+    >
+      <Container>
+        <div class="flex flex-col gap-md lg:gap-lg">
+          {/* Header: left-aligned at every breakpoint, matching Figma. */}
+          <div class="flex flex-col gap-sm">
+            {block.header.overline && <Overline tone="red">{block.header.overline}</Overline>}
+            {/*
+              Figma Header/H2 = Playfair Medium 32/44 for this section. NOT the
+              shared `--step-h2` token, which tops out at 40px: the page carries
+              two heading sizes (40/44 on Product/Services/About/Offices, the
+              true H2 32/44 on Latest Updates/News/FAQ/Contact), and this is the
+              32 one. Steps down to 24/32 below 768 where 32px is too heavy.
+              TODO(client): the designer should reduce those two sizes to one.
+            */}
+            <h2
+              id={headingId}
+              class="text-2xl leading-8 text-text-primary md:text-[32px] md:leading-[44px]"
+            >
+              {headingLead}
+              {accentIndex >= 0 && (
+                <em class="font-medium italic text-text-tertiary">{headingAccent}</em>
+              )}
+              {headingTrail}
+            </h2>
+          </div>
+
+          {/* Elfsight LinkedIn Feed. Per the client, the real feed is worth
+              more here than the design match — see the note in
+              src/content/integrations.ts for what that costs.
+
+              `data-elfsight-app-lazy` defers their widget until it scrolls into
+              view, so it does not compete with the hero for bandwidth. The
+              wrapper reserves height to stop the page jumping when it loads. */}
+          <div class="min-h-[420px]">
+            <div class={`elfsight-app-${elfsight.appId}`} data-elfsight-app-lazy></div>
+          </div>
+        </div>
+      </Container>
+
+      <script is:inline src={elfsight.platformScript} async></script>
+    </section>
+  )
+}
+
