@@ -10,22 +10,19 @@
  * Structure notes
  * ---------------
  * • The heading accent sits mid-string ("Buy *Gold* and Precious Metals"), which
- *   `SectionHeader` cannot express (it appends the accent), so the heading is
- *   composed here from header.heading / headingAccent / headingTail.
- * • Cards are a <ul>; each card's only tab stop is its "Learn more" link. The
- *   card is not a link surface — the design gives no signal that it is, and a
- *   nested/duplicated hit target would be worse than a single explicit one.
- * • The CTA is pinned with `mt-auto` so CTAs stay on a common baseline across a
- *   row when descriptions differ in length. The Figma assumes every description
- *   is exactly three lines; real copy will not be.
- * • The card CTA is written out here instead of using the ArrowLink primitive:
- *   the Figma mark is the 28x28 `Navigations/Arrow Go` circle-arrow, and the
- *   primitive hardcodes a 12x12 chevron. Everything else about the link (button
- *   text style, hover colour, reduced-motion guard) matches the primitive.
- * • Metal chip gradients are the exact Figma values but are NOT Tailwind theme
- *   tokens (global.css is owned elsewhere), so they live in the scoped style
- *   block below. Promote them to `--gradient-metal-*` when global.css is next
- *   touched.
+ *   is composed here from header.heading / headingAccent / headingTail (the
+ *   h2 is capped at the drawn 32/44 — see the note on it — which is why this
+ *   block does not delegate to <SectionHeader>).
+ * • `header` is optional: the Buy PM best-seller instance is cards only. With
+ *   `header.cta` of style "arrow" the link sits at the heading's right, on one
+ *   row ("Often held alongside" → Explore, 11127:23353); any other style
+ *   renders a Button under the header text.
+ * • Every card is the shared `partials/ProductCard.astro` (a <ul> of <li>s):
+ *   one tab stop per card, CTA pinned to the card's baseline, and the link
+ *   destination decided by `productHref()` — never a page that is not built.
+ * • Metal chip gradients are the `--background-image-metal-*` tokens in
+ *   global.css (`bg-metal-gold` etc.), shared with the listing tabs and the
+ *   metal cards on the other pages.
  *
  * Responsive (invented — the Figma is desktop-only)
  * -------------------------------------------------
@@ -49,6 +46,8 @@
 import Container from "@primitives/Container.astro";
 import Overline from "@primitives/Overline.astro";
 import Button from "@primitives/Button.astro";
+import ArrowGo from "@primitives/ArrowGo.astro";
+import ProductCard from "./partials/ProductCard.astro";
 import type { ProductGridSection } from "@content/homepage/products";
 
 interface Props {
@@ -58,16 +57,33 @@ interface Props {
 
 const { block, class: className = "" } = Astro.props;
 const { header, promo, products, badgeLabel, ctaLabel, specLabels, metalLabels } = block;
+
+/* `header.body` may be one paragraph or several (SectionHeading widening). */
+const bodyParagraphs =
+  header?.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
+
+const arrowCta = header?.cta?.style === "arrow" ? header.cta : undefined;
+const buttonCta = header?.cta && header.cta.style !== "arrow" ? header.cta : undefined;
+const hasIntro = Boolean(header || promo);
 ---
 
 <section
   id={block.anchorId}
+  data-block
+  data-theme="light"
+  data-seam={block.seam}
   class:list={["bg-bg-secondary py-xl md:py-3xl", className]}
 >
   <Container>
     {/* ---- Intro row: text column + seasonal promo banner ---- */}
+    {hasIntro && (
     <div class="flex flex-col gap-lg lg:flex-row lg:items-center lg:gap-3xl">
-      <div class="flex flex-col gap-sm lg:flex-1">
+      {header && (
+      <div class:list={["flex flex-col gap-sm lg:flex-1", arrowCta && "md:flex-row md:items-center md:justify-between md:gap-md"]}>
+        {/* With an arrow CTA the header text and the link share one row
+            (11127:23353: heading left, Explore right); the text keeps its own
+            stack inside. REVIEW: below md the link drops under the heading. */}
+        <div class="flex flex-col gap-sm">
         {header.overline && <Overline tone="red">{header.overline}</Overline>}
 
         {/* Figma: Playfair Medium on the H2 32/44 token. MEASURED from the
@@ -78,24 +94,60 @@ const { header, promo, products, badgeLabel, ctaLabel, specLabels, metalLabels }
             and the 44px line box pinned with it. Below md the fluid step (28px
             floor) still runs, since nothing smaller than 1366 is drawn. */}
         <h2 class="text-[length:var(--step-h2)] leading-[1.25] text-text-primary md:text-[2rem] md:leading-[44px]">
-          {header.heading}{" "}{
-            header.headingAccent && (
-              <em class="font-medium italic text-text-tertiary">{header.headingAccent}</em>
-            )
-          }{" "}{header.headingTail}
+          {header.headingRuns
+            ? header.headingRuns.map((run) =>
+                run.accent ? (
+                  <em class="font-medium italic text-text-tertiary">{run.text}</em>
+                ) : (
+                  run.text
+                ),
+              )
+            : (
+              <Fragment>
+                {header.heading}{" "}{
+                  header.headingAccent && (
+                    <em class="font-medium italic text-text-tertiary">{header.headingAccent}</em>
+                  )
+                }{" "}{header.headingTail}
+              </Fragment>
+            )}
         </h2>
 
         {
-          header.body && (
+          bodyParagraphs.map((paragraph) => (
             /* Figma sets the body to the full 632px column (2 lines). The
                65ch cap is only there to stop an over-long measure once the
                intro stacks below lg. */
             <p class="text-base leading-6 text-text-secondary max-lg:max-w-[65ch]">
-              {header.body}
+              {paragraph}
             </p>
-          )
+          ))
         }
+
+        {buttonCta && (
+          <Button
+            href={buttonCta.href}
+            variant={buttonCta.style === "arrow" ? "solid" : (buttonCta.style ?? "solid")}
+            external={buttonCta.external}
+            class="self-start"
+          >
+            {buttonCta.label}
+          </Button>
+        )}
+        </div>
+
+        {arrowCta && (
+          <a
+            href={arrowCta.href}
+            class="group/cta button-text inline-flex shrink-0 items-center gap-2xs self-start text-brand-red transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none md:self-center"
+            {...arrowCta.external ? { rel: "noopener noreferrer", target: "_blank" } : {}}
+          >
+            <span>{arrowCta.label}</span>
+            <ArrowGo class="transition-transform duration-150 group-hover/cta:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/cta:translate-x-0" />
+          </a>
+        )}
       </div>
+      )}
 
       {
         promo && (
@@ -166,154 +218,24 @@ const { header, promo, products, badgeLabel, ctaLabel, specLabels, metalLabels }
         )
       }
     </div>
+    )}
 
-    {/* ---- Six-card best-seller grid ---- */}
+    {/* ---- The card grid (six best sellers on the homepage) ---- */}
     <ul
       role="list"
-      class="mt-lg grid grid-cols-1 gap-x-md gap-y-lg sm:grid-cols-2 lg:grid-cols-3 lg:gap-y-xl"
+      class:list={[hasIntro && "mt-lg", "grid grid-cols-1 gap-x-md gap-y-lg sm:grid-cols-2 lg:grid-cols-3 lg:gap-y-xl"]}
     >
       {
         products.map((product) => (
-          <li class="group flex flex-col gap-sm">
-            {/* Image slot: square matte with the best-seller ribbon across the top. */}
-            <div class="relative aspect-square overflow-hidden bg-bg-primary">
-              {product.bestSeller && badgeLabel && (
-                /* Ribbon: full-bleed across the top of the image. Figma draws
-                   the bar 24px tall — it pads 8px around a CAP-HEIGHT box (9px
-                   for 14px type), not around a line box. A CSS line box is 20px,
-                   so keeping the drawn 8px padding renders a 36px bar: half again
-                   as deep, and the red band starts competing with the product
-                   photo instead of sitting on it. The block padding is therefore
-                   2px (2 + 20 + 2 = 24), which lands the cap exactly where the
-                   frame does. The label keeps its full 20px line box, so it never
-                   clips if the string is translated or a descender appears.
-                   Uses the Overline primitive rather than the raw `.overline`
-                   class — see the note in the report about the Tailwind name
-                   collision. */
-                <Overline
-                  tone="white"
-                  class="absolute inset-x-0 top-0 z-10 bg-brand-red px-3 py-0.5 text-center"
-                >
-                  {badgeLabel}
-                </Overline>
-              )}
-              <img
-                src={product.image.src}
-                alt={product.image.decorative ? "" : product.image.alt}
-                aria-hidden={product.image.decorative ? "true" : undefined}
-                width={product.image.width}
-                height={product.image.height}
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-contain p-[13%] transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-              />
-            </div>
-
-            <div class="flex flex-col gap-2xs">
-              {/* Title row: name left, metal chip right. */}
-              <div class="flex items-center justify-between gap-2xs">
-                <h3 class="min-w-0 flex-1 text-[length:var(--step-h3)] leading-7 text-text-primary">
-                  {product.name}
-                </h3>
-                <p class="flex shrink-0 items-center gap-2xs">
-                  <span class:list={["metal-chip", `metal-${product.metal}`]} aria-hidden="true" />
-                  <span class="text-base leading-6 font-semibold text-text-primary">
-                    {metalLabels[product.metal]}
-                  </span>
-                </p>
-              </div>
-
-              {/* Spec block: three rows between hairlines. */}
-              <dl class="flex flex-col gap-2xs border-y border-border-primary py-2xs text-base leading-6 text-text-secondary">
-                <div class="flex gap-1">
-                  <dt class="shrink-0 font-semibold">{specLabels.mint}</dt>
-                  <dd class="min-w-0">{product.mint}</dd>
-                </div>
-                <div class="flex gap-1">
-                  <dt class="shrink-0 font-semibold">{specLabels.purity}</dt>
-                  <dd class="min-w-0">{product.purity}</dd>
-                </div>
-                <div class="flex gap-1">
-                  <dt class="shrink-0 font-semibold">{specLabels.variants}</dt>
-                  <dd class="min-w-0 md:truncate" title={product.variants}>
-                    {product.variants}
-                  </dd>
-                </div>
-              </dl>
-
-              <p class="text-base leading-6 text-text-secondary">{product.description}</p>
-            </div>
-
-            {/* Pinned to the bottom so CTAs align across a row of uneven cards. */}
-            <div class="mt-auto">
-              {/* Figma `Button Text` instance: 137x28, 8px gap, BUTTON TEXT in
-                  brand-red + the 28x28 `Navigations/Arrow Go/Default` icon (a
-                  thin circle outline around a right arrow). The ArrowLink
-                  primitive ships a bare 12x12 chevron instead, so the mark is
-                  drawn here. TODO(client): promote this icon into ArrowLink once
-                  we know whether the other sections use the same `Arrow Go`
-                  component — the primitive is owned outside this section. */}
-              <a
-                href={product.href ?? "#contact"}
-                class="group/cta button-text inline-flex items-center gap-2xs text-brand-red transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none"
-              >
-                <span>{product.ctaLabel ?? ctaLabel}</span>
-                <svg
-                  class="h-7 w-7 shrink-0 transition-transform duration-150 group-hover/cta:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/cta:translate-x-0"
-                  viewBox="0 0 28 28"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  {/* The RING is the hairline border colour, NOT the link red.
-                      In the frame the red is carried by the label and the arrow
-                      only; the circle is a faint 10%-black outline. Drawn in
-                      currentColor it reads as a small red button and pulls the
-                      eye off the label, so it is stroked with the border token
-                      and stays grey through the hover colour change. r=13.5 with
-                      a 1px stroke puts the ring on the pixel grid (outer edge
-                      exactly on the 28px box), which is what keeps it a crisp
-                      hairline instead of a smeared two-pixel grey. */}
-                  <circle cx="14" cy="14" r="13.5" class="stroke-border-primary" stroke-width="1" />
-                  <path
-                    d="M9 14h10M14.75 9.75 19 14l-4.25 4.25"
-                    stroke="currentColor"
-                    stroke-width="1"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </a>
-            </div>
-          </li>
+          <ProductCard
+            product={product}
+            badgeLabel={badgeLabel}
+            ctaLabel={ctaLabel}
+            specLabels={specLabels}
+            metalLabels={metalLabels}
+          />
         ))
       }
     </ul>
   </Container>
 </section>
-
-<style>
-  /*
-    Metal chip — 18x18, square (no radius), 135deg gradient.
-    Values are exact from Figma. They are not Tailwind theme tokens because
-    src/styles/global.css is owned by another process; move them to
-    --gradient-metal-* there when it is next edited.
-  */
-  .metal-chip {
-    display: block;
-    flex: none;
-    width: 18px;
-    height: 18px;
-  }
-  .metal-gold {
-    background-image: linear-gradient(135deg, #e8c861 0%, #caa44a 100%);
-  }
-  .metal-silver {
-    background-image: linear-gradient(135deg, #e6e6e6 0%, #b8b8b8 100%);
-  }
-  .metal-platinum {
-    background-image: linear-gradient(135deg, #e8e9eb 0%, #9aa0a8 100%);
-  }
-  .metal-palladium {
-    background-image: linear-gradient(135deg, #cdd0d4 0%, #7d8089 100%);
-  }
-</style>

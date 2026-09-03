@@ -5,6 +5,7 @@ import type {
   SectionHeading,
 } from "@content/types";
 import { offices } from "@content/offices";
+import { vaults } from "@content/vaults";
 
 /**
  * Homepage — Block A (About + statistics) and Block C (Office locations).
@@ -125,7 +126,9 @@ export const aboutStats: AboutStatsSection = {
     },
     {
       icon: "safebox",
-      value: "16",
+      // Derived from the vault list so the number has one source — see the
+      // count conflict documented in src/content/vaults.ts.
+      value: String(vaults.length),
       suffix: "Vaults",
       label: "Storage Locations Worldwide",
       caption:

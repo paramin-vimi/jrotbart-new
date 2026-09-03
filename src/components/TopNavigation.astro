@@ -4,6 +4,7 @@ import Container from "@primitives/Container.astro";
 import MegaPanel from "./MegaPanel.astro";
 import NavIcon from "./NavIcon.astro";
 import { navigation } from "@content/navigation";
+import type { NavSection } from "@content/types";
 
 /**
  * Global header — black utility bar (ticker + utility links) over a transparent
@@ -26,9 +27,28 @@ import { navigation } from "@content/navigation";
  *
  * 3. DROPDOWNS. Carets are drawn but no panels are. We use accessible
  *    disclosure menus populated from the current site's mega menu.
+ *
+ * PROPS (added for the non-homepage pages, which render through SiteLayout):
+ *   `solid`   — the navbar paints its scrolled look (bg-bg-secondary + shadow)
+ *               from the first paint, because those frames start their content
+ *               at y=132 on a solid bar rather than under a transparent one.
+ *               The scroll handler keeps it solid instead of toggling it off at
+ *               the top of the page.
+ *   `current` — the menu item whose `section` matches gets the red "current"
+ *               state drawn on 11083:20102 ("Products" on a product page) and
+ *               `aria-current="page"`. `section` is set on the items in
+ *               src/content/navigation.ts.
  */
+interface Props {
+  solid?: boolean;
+  current?: NavSection;
+}
+
+const { solid = false, current } = Astro.props;
 
 const { menu, utilityLinks, languages, showPriceTicker } = navigation;
+
+const isCurrent = (section: NavSection | undefined) => section !== undefined && section === current;
 
 /* 20x20 stroke icons, traced off the Figma nav render at 1366.
    `account` is a KEY inside a ring, not the person glyph a generic icon set
@@ -149,7 +169,11 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
   <!-- ── Navbar ──────────────────────────────────────────────────── -->
   <div
     data-navbar
-    class="h-[88px] border-b border-border-primary transition-colors duration-200 motion-reduce:transition-none"
+    {...solid ? { "data-solid": "" } : {}}
+    class:list={[
+      "h-[88px] border-b border-border-primary transition-colors duration-200 motion-reduce:transition-none",
+      solid && "bg-bg-secondary shadow-sm",
+    ]}
   >
     {/* The 88px is the Figma navbar height *including* its 1px bottom rule
         (Figma strokes are drawn inside the frame), so the height sits on the
@@ -185,9 +209,13 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
               <li data-dropdown>
                 <button
                   type="button"
-                  class="flex items-center gap-0 font-display text-base leading-6 font-medium text-text-primary transition-colors hover:text-brand-red aria-expanded:text-brand-red motion-reduce:transition-none"
+                  class:list={[
+                    "flex items-center gap-0 font-display text-base leading-6 font-medium transition-colors hover:text-brand-red aria-expanded:text-brand-red motion-reduce:transition-none",
+                    isCurrent(item.section) ? "text-brand-red" : "text-text-primary",
+                  ]}
                   aria-expanded="false"
                   aria-controls={`mega-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                  {...isCurrent(item.section) ? { "aria-current": "page" } : {}}
                 >
                   {item.label}
                   {/* Figma: filled down-triangle in a 24×24 box, flush against
@@ -199,7 +227,11 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
               <li>
                 <a
                   href={item.href}
-                  class="font-display text-base leading-6 font-medium text-text-primary transition-colors hover:text-brand-red motion-reduce:transition-none"
+                  class:list={[
+                    "font-display text-base leading-6 font-medium transition-colors hover:text-brand-red motion-reduce:transition-none",
+                    isCurrent(item.section) ? "text-brand-red" : "text-text-primary",
+                  ]}
+                  {...isCurrent(item.section) ? { "aria-current": "page" } : {}}
                 >
                   {item.label}
                 </a>
@@ -303,7 +335,14 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
                   </ul>
                 </details>
               ) : (
-                <a href={item.href} class="block py-3.5 font-display text-lg font-medium text-text-primary">{item.label}</a>
+                <a
+                  href={item.href}
+                  class:list={[
+                    "block py-3.5 font-display text-lg font-medium",
+                    isCurrent(item.section) ? "text-brand-red" : "text-text-primary",
+                  ]}
+                  {...isCurrent(item.section) ? { "aria-current": "page" } : {}}
+                >{item.label}</a>
               )}
             </li>
           ))}
@@ -337,12 +376,15 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
     let ticking = false;
     const THRESHOLD = 24;
 
+    // A `solid` navbar (every page but the homepage) paints its scrolled look
+    // from the first paint and never toggles it off at the top of the page.
+    const solid = navbar.hasAttribute("data-solid");
     const sync = () => {
       const scrolled = window.scrollY > THRESHOLD;
       const lift = utility?.offsetHeight ?? 44;
       header.style.transform = scrolled ? `translateY(-${lift}px)` : "";
-      navbar.classList.toggle("bg-bg-secondary", scrolled);
-      navbar.classList.toggle("shadow-sm", scrolled);
+      navbar.classList.toggle("bg-bg-secondary", scrolled || solid);
+      navbar.classList.toggle("shadow-sm", scrolled || solid);
       ticking = false;
     };
 

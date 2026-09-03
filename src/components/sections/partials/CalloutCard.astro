@@ -1,0 +1,124 @@
+---
+/**
+ * The contained callout: an 8px brand-red bar, one heading, one action.
+ *
+ * Drawn as a component (`CTA`) in three forms, all 24px block / 32px inline
+ * padding on a light (#fdfcfc) or tinted (#efece8) surface, heading Playfair
+ * 500 20/28, and the 8px accent drawn as a rectangle that OVERFLOWS the card
+ * by 8-40px top and bottom in every instance — implemented as a left border,
+ * which is what the overflow was approximating:
+ *   (a) button    — I10770:11997 (1174x104): heading (max 833 wide) left,
+ *                   solid/dark Button right, gap 48, items centred.
+ *   (b) inline    — I10770:12141 (648x80, hug width): heading + a 32px
+ *                   `Navigations/Arrow Go` at the right, gap 16; the WHOLE
+ *                   card is the link.
+ *   (c) stacked   — I10765:11507 (410x140): heading, 8px, then a "Button
+ *                   Text" link with the 28px arrow beneath it.
+ * `bordered` adds the 1px border-primary box the news callout draws on the
+ * light surface (I11009:15467).
+ *
+ * This partial is the `aside` of featureGrid / proseSection and the body of
+ * the standalone calloutBand block (which adds the section, the "display"
+ * variant and the seam). It renders a <div>, never a <section>.
+ *
+ * REVIEW (no mobile design): (a) puts the button UNDER the heading and full
+ * width below md — a 229px button beside a wrapped heading on a 375px screen
+ * reads as two competing columns; (b) lets the arrow wrap under the text
+ * below 600 rather than squeezing a two-line heading against a 32px ring.
+ */
+import Button from "@primitives/Button.astro";
+import ArrowGo from "@primitives/ArrowGo.astro";
+import type { CalloutCard, CtaStyle } from "@content/types";
+
+interface Props {
+  card: CalloutCard;
+  /** Surface the card paints. Light = bg-secondary, tinted = bg-primary. */
+  theme?: "light" | "tinted";
+  /** Arrow CTAs only: "inline" (b) or "stacked" (c). Ignored for button CTAs. */
+  ctaLayout?: "inline" | "stacked";
+  /** "hug" wraps the content (b, Buy PM steps/comparison callouts); "full" spans the container. */
+  width?: "full" | "hug";
+  /** 1px border-primary box on a light surface. */
+  bordered?: boolean;
+  /** Heading element. h3 under a section h2; "p" where a heading level would be wrong. */
+  as?: "h2" | "h3" | "p";
+  class?: string;
+}
+
+// Cast: Astro cannot infer `Astro.props` in a component that renders a dynamic
+// `<Tag>`, which would leave every destructured value implicitly `any`.
+const {
+  card,
+  theme = "tinted",
+  ctaLayout = "inline",
+  width = "full",
+  bordered = false,
+  as: Tag = "h3",
+  class: className = "",
+} = Astro.props as Props;
+
+const { heading, cta } = card;
+const isArrow = cta.style === "arrow";
+/* The comparison must be inline: TS narrows `cta.style` through a direct
+   `=== "arrow"` test, but not through the `isArrow` boolean above, so the
+   else branch would still be typed as the full CtaStyle union. */
+const buttonVariant: Exclude<CtaStyle, "arrow"> =
+  cta.style === "arrow" ? "solid" : (cta.style ?? "solid");
+
+const surface = theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+/* The accent bar is a border, so it can never outgrow the card the way the
+   drawn 8x120-240 rectangle does. `bordered` draws the box first and the bar
+   overrides its left edge. */
+const frame = [
+  bordered && "border border-border-primary",
+  "border-l-8 border-l-brand-red",
+  surface,
+  "py-sm px-md",
+];
+const headingClass = "font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary";
+const hug = width === "hug" ? "w-fit max-w-full" : "w-full";
+const external = cta.external ? { rel: "noopener noreferrer", target: "_blank" } : {};
+---
+
+{isArrow && ctaLayout === "inline" ? (
+  /* (b) The whole card is the link; the arrow is decorative and the heading is
+     the accessible name. `group/cta` drives the arrow's hover nudge. */
+  <a
+    href={cta.href}
+    class:list={[
+      "group/cta flex flex-wrap items-center justify-between gap-xs text-text-primary transition-colors duration-150 hover:text-brand-red motion-reduce:transition-none",
+      width === "hug" ? "inline-flex w-fit max-w-full" : "w-full",
+      ...frame,
+      className,
+    ]}
+    {...external}
+  >
+    <Tag class:list={[headingClass, "text-inherit min-w-0 flex-1 basis-[240px]"]}>{heading}</Tag>
+    <span class="sr-only">: {cta.label}</span>
+    <ArrowGo
+      size={32}
+      class="text-brand-red transition-transform duration-150 group-hover/cta:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/cta:translate-x-0"
+    />
+  </a>
+) : isArrow ? (
+  /* (c) Heading, 8px, then the Button Text link. */
+  <div class:list={["flex flex-col gap-2xs", hug, ...frame, className]}>
+    <Tag class={headingClass}>{heading}</Tag>
+    <a
+      href={cta.href}
+      class="group/cta button-text inline-flex items-center gap-2xs self-start text-brand-red transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none"
+      {...external}
+    >
+      <span>{cta.label}</span>
+      <ArrowGo class="transition-transform duration-150 group-hover/cta:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/cta:translate-x-0" />
+    </a>
+  </div>
+) : (
+  /* (a) Heading left, Button right. */
+  <div class:list={["flex flex-col gap-sm md:flex-row md:items-center md:justify-between md:gap-lg", hug, ...frame, className]}>
+    <Tag class:list={[headingClass, "max-w-[833px]"]}>{heading}</Tag>
+    <Button href={cta.href} variant={buttonVariant} external={cta.external} class="w-full shrink-0 md:w-auto">
+      {cta.label}
+    </Button>
+  </div>
+)}

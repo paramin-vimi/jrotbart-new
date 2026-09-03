@@ -22,9 +22,12 @@ const {
 } = Astro.props;
 
 /* Figma: square corners globally (radius 0), padding 20px inline,
-   10px top / 12px bottom, label = Button token (Playfair 500 16/24). */
+   10px top / 12px bottom, label = Button token (Playfair 500 16/24).
+   The DARK button (10976:21596 "Open an Account", the contact Submit, Load
+   More) is the one exception: fill #1a1a1a and 32px inline padding. */
+const inline = variant === "dark" ? "px-8" : "px-5";
 const base =
-  "inline-flex items-center justify-center px-5 pt-2.5 pb-3 font-display text-base leading-6 font-medium " +
+  `inline-flex items-center justify-center ${inline} pt-2.5 pb-3 font-display text-base leading-6 font-medium ` +
   "transition-colors duration-150 motion-reduce:transition-none";
 
 const variants = {
@@ -32,6 +35,7 @@ const variants = {
   outline:
     "border border-border-primary bg-always-white text-text-primary hover:border-brand-red hover:text-brand-red",
   ghost: "text-text-primary hover:text-brand-red",
+  dark: "bg-text-primary text-always-white hover:bg-always-black",
 } as const;
 
 const cls = [base, variants[variant], fullWidth && "w-full", className];

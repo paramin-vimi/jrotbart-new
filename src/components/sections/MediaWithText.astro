@@ -4,11 +4,14 @@ import Overline from "@primitives/Overline.astro";
 import Button from "@primitives/Button.astro";
 import ArrowLink from "@primitives/ArrowLink.astro";
 import VideoFacade from "@primitives/VideoFacade.astro";
+import Paragraph from "@primitives/Paragraph.astro";
 import type { MediaWithTextBlock, VideoRef } from "@content/types";
 
 /**
  * Generic media + text block. Used by the homepage "Expertise" block
- * (Figma `10229:7600`): copy column beside a YouTube facade.
+ * (Figma `10229:7600`): copy column beside a YouTube facade — and by the
+ * Buy PM, product and office pages, which draw the same block with a photo,
+ * a 32/44 heading, richer paragraphs and (Buy PM) a definition list.
  *
  * Media may be a `VideoRef` (rendered through VideoFacade — click-to-load, no
  * third-party JS until asked) or a plain `ImageRef`.
@@ -17,21 +20,51 @@ import type { MediaWithTextBlock, VideoRef } from "@content/types";
  * second paragraphs. `MediaWithTextBlock` has no way to interleave them, so the
  * rule here is: teasers render after the FIRST paragraph, remaining paragraphs
  * follow. Documented so content editors can predict it.
+ *
+ * HEADING: `header.headingRuns` (a leading or mid-string accent — "*Storing
+ * Precious Metal* in Hong Kong") wins when present; otherwise the original
+ * `heading` + trailing `headingAccent`. The homepage instance draws its
+ * heading at the H4 size (16/24); the other pages draw 32/44, selected with
+ * `headingSize="h2"` — the size is a per-instance drawing, not a level.
+ *
+ * MEDIA RATIO: `block.ratio` (content) beats the `ratio` prop, which beats the
+ * homepage's 668/392.
  */
 interface Props {
   block: MediaWithTextBlock;
   /** h2 when the block is its own section; h3 when nested under another h2. */
   as?: "h2" | "h3";
-  /** Media aspect ratio. Figma: 668/392. */
+  /** Media aspect ratio fallback. Figma homepage: 668/392. */
   ratio?: string;
+  /** "h4" = 16/24 (homepage Expertise); "h2" = 32/44 (product and office pages). */
+  headingSize?: "h4" | "h2";
+  /**
+   * REVIEW: below lg the media stacks ABOVE the copy regardless of `mediaSide`
+   * for the product and office instances — a product photo or the office
+   * reception is what the section is about, and it reads as a header there;
+   * the homepage video keeps copy-first. DOM order never changes (copy first).
+   */
+  mobileMediaFirst?: boolean;
   class?: string;
 }
 
 // Cast: Astro cannot infer `Astro.props` in a component that renders a dynamic
 // `<Tag>`, which would leave every destructured value implicitly `any`.
-const { block, as: Tag = "h2", ratio = "668/392", class: className = "" } =
-  Astro.props as Props;
-const { header, body, media, mediaSide, faqTeasers, cta } = block;
+const {
+  block,
+  as: Tag = "h2",
+  ratio: ratioProp = "668/392",
+  headingSize = "h4",
+  mobileMediaFirst = false,
+  class: className = "",
+} = Astro.props as Props;
+const { header, body, media, mediaSide, faqTeasers, definitions, cta } = block;
+const ratio = block.ratio ?? ratioProp;
+
+const headingClass =
+  headingSize === "h2"
+    ? "text-[length:var(--step-h2)] leading-[var(--line-h2)] text-text-primary"
+    : "text-base leading-6 text-text-primary";
 
 /** See AboutStats.astro. Blocks A/B/C of Figma frame `10229:7543` sit 96px
     apart; three sibling sections each padded 96 would seam at 192. A marked
@@ -57,6 +90,9 @@ const [firstParagraph, ...restParagraphs] = body;
 
 <section
   id={block.anchorId}
+  data-block
+  data-theme={block.theme === "tinted" ? "tinted" : "light"}
+  data-seam={block.seam}
   class:list={[
     "media-with-text py-lg md:py-xl lg:py-3xl",
     FRAME_SEAM,
@@ -71,13 +107,21 @@ const [firstParagraph, ...restParagraphs] = body;
       <div class="flex flex-col gap-sm lg:min-w-0 lg:flex-1">
         {header.overline && <Overline tone="red">{header.overline}</Overline>}
 
-        <Tag class="text-base leading-6 text-text-primary">{headingLead}{header.headingAccent && (
-          <em class="font-medium italic text-text-tertiary">{header.headingAccent}</em>
-        )}</Tag>
+        <Tag class={headingClass}>{header.headingRuns
+          ? header.headingRuns.map((run) =>
+              run.accent ? (
+                <em class="font-medium italic text-text-tertiary">{run.text}</em>
+              ) : (
+                run.text
+              ),
+            )
+          : (
+            <Fragment>{headingLead}{header.headingAccent && (
+              <em class="font-medium italic text-text-tertiary">{header.headingAccent}</em>
+            )}</Fragment>
+          )}</Tag>
 
-        {firstParagraph && (
-          <p class="text-base leading-6 text-text-secondary">{firstParagraph}</p>
-        )}
+        {firstParagraph !== undefined && <Paragraph paragraph={firstParagraph} />}
 
         {faqTeasers && faqTeasers.length > 0 && (
           <ul class="ps-sm list-disc marker:text-brand-red">
@@ -96,8 +140,23 @@ const [firstParagraph, ...restParagraphs] = body;
         )}
 
         {restParagraphs.map((paragraph) => (
-          <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+          <Paragraph paragraph={paragraph} />
         ))}
+
+        {/* Definition rows (Buy PM "Value" / "Liquidity", 10726:13310): term
+            column 90 + 24 gap, hairline above each row and one closing rule. */}
+        {definitions && definitions.length > 0 && (
+          <dl class="flex flex-col">
+            {definitions.map((item) => (
+              <div class="flex gap-sm border-t border-border-primary py-xs last:border-b">
+                <dt class="w-[90px] shrink-0 font-display text-base leading-6 font-medium text-text-primary">
+                  {item.term}
+                </dt>
+                <dd class="min-w-0 text-base leading-6 text-text-secondary">{item.description}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
 
         {cta && (
           cta.style === "arrow" ? (
@@ -127,6 +186,7 @@ const [firstParagraph, ...restParagraphs] = body;
         class:list={[
           "w-full lg:w-[42.4%] lg:shrink-0",
           mediaSide === "left" && "lg:order-first",
+          mobileMediaFirst && "max-lg:order-first",
         ]}
       >
         {isVideo(media) ? (

@@ -7,6 +7,7 @@ import type {
   ProductGridBlock,
   SectionHeading,
 } from "@content/types";
+import { argorHeraeus, heraeus, royalCanadianMint } from "@content/mints";
 
 /**
  * Homepage content — press/endorsement logo strip (Figma `Featured` 10563:13076)
@@ -25,41 +26,27 @@ import type {
  *
  * Local type extensions
  * ---------------------
- * `src/content/types.ts` is owned by another process and must not be edited, so
- * the three fields this design needs that the shared model does not carry
- * (`headingTail`, `variants`, the two-line promo banner) are added here as
- * interfaces that EXTEND the shared block types. Every value below is still a
- * valid `LogoStripBlock` / `ProductGridBlock`. See the report for the list.
+ * The shared model now carries `LogoStripBlock.label`, `SectionHeading.headingTail`
+ * and `Product.variants`, so the interfaces below are thin aliases kept for the
+ * consumers that import them; the card labels (`badgeLabel`, `ctaLabel`,
+ * `specLabels`, `metalLabels`) are still a section-level widening and are also
+ * exported as `productCardLabels` for the other pages that draw product cards.
  */
 
 // ---------------------------------------------------------------------------
 // Local type extensions
 // ---------------------------------------------------------------------------
 
-/**
- * The logo strip is not a landmark without a name. `LogoStripBlock` has no
- * label field, so it is added here rather than hardcoded in the component.
- * Never rendered visually — it is the `aria-label` on the <section>.
- */
+/** Kept for compatibility: `label` is now on `LogoStripBlock` itself. */
 export interface LogoStripSection extends LogoStripBlock {
   label: string;
 }
 
-/**
- * `SectionHeading` renders its accent at the END of the heading. This section's
- * heading puts it in the MIDDLE — "Buy *Gold* and Precious Metals" — so a
- * trailing fragment is needed.
- */
-export interface ProductGridHeading extends SectionHeading {
-  /** Upright text rendered after the italic accent. */
-  headingTail?: string;
-}
+/** Kept for compatibility: `headingTail` is now on `SectionHeading` itself. */
+export type ProductGridHeading = SectionHeading;
 
-/** `Product` has no `variants` field; the card's third spec row needs one. */
+/** A card may override the section-level CTA label. Rarely needed. */
 export interface ProductCard extends Product {
-  /** Single-line weight list, e.g. "100g, 250g, 500g and 1000g". */
-  variants: string;
-  /** Overrides the section-level CTA label. Rarely needed. */
   ctaLabel?: string;
 }
 
@@ -83,10 +70,8 @@ export interface PromoBanner {
   cta: Cta;
 }
 
-export interface ProductGridSection extends ProductGridBlock {
-  header: ProductGridHeading;
-  promo?: PromoBanner;
-  products: ProductCard[];
+/** The strings every product card needs beside the product itself. */
+export interface ProductCardLabels {
   /** Ribbon text drawn across the top of a best-seller card image. */
   badgeLabel: string;
   /** Default per-card CTA label. */
@@ -95,6 +80,12 @@ export interface ProductGridSection extends ProductGridBlock {
   specLabels: { mint: string; purity: string; variants: string };
   /** Display label for each metal enum value; drives the chip caption. */
   metalLabels: Record<Metal, string>;
+}
+
+export interface ProductGridSection extends ProductGridBlock, ProductCardLabels {
+  header?: ProductGridHeading;
+  promo?: PromoBanner;
+  products: ProductCard[];
 }
 
 // ---------------------------------------------------------------------------
@@ -214,15 +205,32 @@ export const logoStrip: LogoStripSection = {
 // Section 2 — best-seller product grid (Figma 9813:5533)
 // ---------------------------------------------------------------------------
 
+/**
+ * Card labels, shared with every other page that draws product cards (Buy PM
+ * best sellers, the metal listings, "Often held alongside").
+ */
+export const productCardLabels: ProductCardLabels = {
+  badgeLabel: "Best seller",
+  ctaLabel: "Learn more",
+  specLabels: { mint: "Mint:", purity: "Purity:", variants: "Variants:" },
+  metalLabels: {
+    gold: "Gold",
+    silver: "Silver",
+    platinum: "Platinum",
+    palladium: "Palladium",
+  },
+};
+
 /*
  * TODO(client): the Figma card copy is placeholder throughout — all six mints
  * read "Mint: Lorem", all six descriptions are lorem ipsum, and the Silver,
  * Platinum and Palladium cards all incorrectly say "Purity: 999.9 fine gold".
  * Every string below is therefore taken from the live site's product tabs, with
  * the purity corrected to the right metal. Two consequences to review:
- *   1. `mint` values are our best reading of each refiner's home (Heraeus is
- *      German, Argor-Heraeus Swiss, the Royal Canadian Mint Canadian). The
- *      design supplies none. Confirm or replace.
+ *   1. `mint` references are our best reading of each refiner (Heraeus is
+ *      German, Argor-Heraeus Swiss, the Royal Canadian Mint Canadian) — see the
+ *      TODO(client) on each location in src/content/mints.ts. The design
+ *      supplies none. Confirm or replace.
  *   2. The live descriptions repeat the purity and variants that now have their
  *      own spec rows. They should be rewritten as genuine editorial copy —
  *      roughly three lines at a 370px column.
@@ -243,8 +251,27 @@ export const logoStrip: LogoStripSection = {
  * string) and made the description metal-neutral, but real gold copy and a gold
  * product photo are required.
  *
- * TODO(client): every card links to "#contact", matching the live site. Supply
- * real product-page URLs if these should be deep links.
+ * TODO(client): `slug` on each card is the URL segment a future detail page
+ * would take (/buy-<metal>/<slug>/). None of these six has a detail document
+ * yet, so every card CTA still resolves to "#contact" — the same destination
+ * the live site uses — through `productHref()` in src/lib/products.ts. Confirm
+ * the slug pattern before the pages are built.
+ *
+ * TODO(assets): BLOCKER — the six card exports are the wrong NODE, not the
+ * wrong picture. Each one is the composed 370x370 image TILE: the beige matte,
+ * the red "Best seller" ribbon and the product, flattened together. The
+ * component composes those itself — it draws the matte, overlays the ribbon
+ * from `badgeLabel`, and insets the product 13% — so wiring the tiles renders
+ * the ribbon TWICE (the live full-bleed one, and a second inset one baked into
+ * the bitmap) and shrinks every bar to ~74% of the size the design draws.
+ *
+ * The pictures below are correct and are kept: they are what Figma draws, at
+ * 2x, and they fix the "gold card showing a silver bar" the client raised.
+ * What is needed is a re-export of the PRODUCT BITMAP inside each tile —
+ * transparent background, no matte, no ribbon — at the same six nodes' image
+ * fills. The export pipeline re-exports product-1..6.webp from the image fills
+ * (imageRefs 8103d70d / 7f26f853 / 2fddf0cb / 3b3d6635 / 00373349 / 1844f1dc);
+ * `width`/`height` stay 370/370. Do not ship until the six files are re-exported.
  */
 export const productGrid: ProductGridSection = {
   _key: "home-product-grid",
@@ -310,38 +337,16 @@ export const productGrid: ProductGridSection = {
     },
   },
 
-  badgeLabel: "Best seller",
-  ctaLabel: "Learn more",
-  specLabels: { mint: "Mint:", purity: "Purity:", variants: "Variants:" },
-  metalLabels: {
-    gold: "Gold",
-    silver: "Silver",
-    platinum: "Platinum",
-    palladium: "Palladium",
-  },
+  ...productCardLabels,
 
-  /*
-   * TODO(assets): BLOCKER — the six card exports are the wrong NODE, not the
-   * wrong picture. Each one is the composed 370x370 image TILE: the beige matte,
-   * the red "Best seller" ribbon and the product, flattened together. The
-   * component composes those itself — it draws the matte, overlays the ribbon
-   * from `badgeLabel`, and insets the product 13% — so wiring the tiles renders
-   * the ribbon TWICE (the live full-bleed one, and a second inset one baked into
-   * the bitmap) and shrinks every bar to ~74% of the size the design draws.
-   *
-   * The pictures below are correct and are kept: they are what Figma draws, at
-   * 2x, and they fix the "gold card showing a silver bar" the client raised.
-   * What is needed is a re-export of the PRODUCT BITMAP inside each tile —
-   * transparent background, no matte, no ribbon — at the same six nodes' image
-   * fills. Not fixable from this file; the component and the export pipeline are
-   * both owned elsewhere. Do not ship until the six files are re-exported.
-   */
   products: [
     {
       _id: "heraeus-gold",
       name: "Heraeus",
       metal: "gold",
-      mint: "Heraeus, Germany", // TODO(client): confirm — Figma showed "Lorem"
+      slug: "heraeus-gold-bar",
+      form: "bar",
+      mint: heraeus, // "Heraeus, Germany" — TODO(client): confirm, Figma showed "Lorem"
       purity: "999.9 fine gold",
       variants: "100g, 250g, 500g and 1000g",
       description:
@@ -360,13 +365,14 @@ export const productGrid: ProductGridSection = {
         height: 370,
       },
       bestSeller: true,
-      href: "#contact",
     },
     {
       _id: "argor-heraeus-gold",
       name: "Argor-Heraeus",
       metal: "gold",
-      mint: "Argor-Heraeus, Switzerland", // TODO(client): confirm
+      slug: "argor-heraeus-gold-bar",
+      form: "bar",
+      mint: argorHeraeus, // TODO(client): confirm
       purity: "999.9 fine gold",
       variants: "1g to 1kg",
       description:
@@ -384,13 +390,14 @@ export const productGrid: ProductGridSection = {
         height: 370,
       },
       bestSeller: true,
-      href: "#contact",
     },
     {
       _id: "royal-canadian-mint-gold",
       name: "Royal Canadian Mint",
       metal: "gold",
-      mint: "Royal Canadian Mint, Canada", // TODO(client): confirm
+      slug: "royal-canadian-mint-gold-bar",
+      form: "bar",
+      mint: royalCanadianMint, // TODO(client): confirm
       purity: "999.9 fine gold",
       variants: "1oz, 10oz and 1kg",
       // TODO(client): rewritten to be metal-neutral because the live equivalent
@@ -416,13 +423,14 @@ export const productGrid: ProductGridSection = {
         height: 370,
       },
       bestSeller: true,
-      href: "#contact",
     },
     {
       _id: "heraeus-silver",
       name: "Heraeus",
       metal: "silver",
-      mint: "Heraeus, Germany", // TODO(client): confirm
+      slug: "heraeus-silver-bar",
+      form: "bar",
+      mint: heraeus, // TODO(client): confirm
       // Figma reads "999.9 fine gold" on this card — a copy/paste error. Corrected
       // against the live site, which states a 999.9 silver composition.
       purity: "999.9 fine silver",
@@ -441,13 +449,14 @@ export const productGrid: ProductGridSection = {
         height: 370,
       },
       bestSeller: true,
-      href: "#contact",
     },
     {
       _id: "heraeus-platinum",
       name: "Heraeus",
       metal: "platinum",
-      mint: "Heraeus, Germany", // TODO(client): confirm
+      slug: "heraeus-platinum-bar",
+      form: "bar",
+      mint: heraeus, // TODO(client): confirm
       purity: "999.5 fine platinum", // Figma read "999.9 fine gold" — corrected
       variants: "Four sizes, from 1oz to 1kg",
       description:
@@ -461,13 +470,14 @@ export const productGrid: ProductGridSection = {
         height: 370,
       },
       bestSeller: true,
-      href: "#contact",
     },
     {
       _id: "heraeus-palladium",
       name: "Heraeus",
       metal: "palladium",
-      mint: "Heraeus, Germany", // TODO(client): confirm
+      slug: "heraeus-palladium-bar",
+      form: "bar",
+      mint: heraeus, // TODO(client): confirm
       purity: "999.5 fine palladium", // Figma read "999.9 fine gold" — corrected
       variants: "Four sizes, from 1oz to 1000g",
       description:
@@ -484,7 +494,6 @@ export const productGrid: ProductGridSection = {
         height: 370,
       },
       bestSeller: true,
-      href: "#contact",
     },
   ],
 };

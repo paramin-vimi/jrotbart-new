@@ -8,9 +8,16 @@ interface Props {
   seo: Seo;
   /** JSON-LD graph for this page, built with lib/schema.ts */
   schema?: object;
+  /**
+   * Classes for <main>. SiteLayout uses it for the fixed-header clearance so
+   * page blocks stay direct children of <main> (`main > section` is what
+   * scripts/shoot.mjs captures and what the seam CSS's sibling selectors see).
+   * Absent = no class attribute, exactly as before.
+   */
+  mainClass?: string;
 }
 
-const { seo, schema } = Astro.props;
+const { seo, schema, mainClass } = Astro.props;
 
 // Preview builds (GitHub Pages) are never indexable, whatever an individual
 // page asked for. PREVIEW_BUILD is a compile-time boolean injected by
@@ -106,7 +113,7 @@ const ogImage = withBase(seo.ogImage?.src ?? "/og-default.jpg");
 
     <slot name="header" />
 
-    <main id="main">
+    <main id="main" {...(mainClass ? { class: mainClass } : {})}>
       <slot />
     </main>
 

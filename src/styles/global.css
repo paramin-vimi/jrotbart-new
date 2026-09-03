@@ -47,10 +47,25 @@
   --color-bg-secondary: #fdfcfc;
 
   --color-border-primary: #0000001a;
+  /* Figma variable 9602:5686 (#000000 @5%): price-panel rows, office-card
+     detail rows, the product terms card. Half the weight of border-primary. */
+  --color-border-secondary: #0000000d;
   --color-border-white-opacity: #ffffff4d;
 
   --color-always-white: #ffffff;
   --color-always-black: #0a0a0a;
+
+  /* ---- Metal gradients ----
+     The 135° two-stop fills Figma draws on every metal marker: the 18px chip on
+     a product card (9813:5533), the listing tabs and metal heading tile
+     (9922:2914) and the 36px square on the Buy PM metal cards (10726:9202).
+     Exact Figma values. They are gradient FILLS in the file, not Variables, so
+     they carry the node ids instead of a variable id. Utilities: bg-metal-gold
+     etc. (Tailwind maps --background-image-* to bg-*). */
+  --background-image-metal-gold: linear-gradient(135deg, #e8c861 0%, #caa44a 100%);
+  --background-image-metal-silver: linear-gradient(135deg, #e6e6e6 0%, #b8b8b8 100%);
+  --background-image-metal-platinum: linear-gradient(135deg, #e8e9eb 0%, #9aa0a8 100%);
+  --background-image-metal-palladium: linear-gradient(135deg, #cdd0d4 0%, #7d8089 100%);
 
   /* ---- Type families ---- */
   --font-display: "Playfair Display Variable", "Playfair Display", Georgia, serif;
@@ -77,8 +92,12 @@
 */
 @layer base {
   :root {
-    /* Hero H1 only. Figma draws the hero headline at 40/52 — the 44px in the
-       original spec read was a measurement error corrected against the render. */
+    /* Page H1 (every pageHero / productHero / listing H1, and the homepage
+       hero). Figma draws them at 40/52 — the 44px in the original spec read
+       was a measurement error corrected against the render. Italic accent
+       runs inside an H1 are set at this same roman size (the seven page frames
+       override the accent to 44/52; the homepage precedent renders it at 40,
+       and that is the accepted deviation — no per-run sizing). */
     --step-h1: clamp(2rem, 1.55rem + 1.8vw, 2.5rem); /* 32 → 40px */
 
     /* Section headings. Figma "Header/H2" is 32 on a 44 line box. This capped at
@@ -193,5 +212,55 @@
     margin: 0;
     clip-path: none;
     z-index: 100;
+  }
+}
+
+/*
+  BLOCK SEAMS — see `BlockBase.seam` in src/content/types.ts.
+
+  Every section block renders `data-block`, `data-theme` and — only when its
+  content sets `seam` — `data-seam="default" | "tight"`. A seamed block sits on
+  the same surface as the block before it, so the pair must meet with ONE gap
+  rather than 96 + 96: the seamed block drops its top padding, and the previous
+  block's bottom padding becomes the gap (96 / 64 / 48 at lg / md / base for
+  "default"; 64 / 48 / 32 for "tight"). Nothing happens unless the content
+  asks for it, so the homepage — where no block sets `seam` — is untouched.
+
+  CASCADE LAYER, and why this is not in `@layer components`: Tailwind 4 builds
+  `theme, base, components, utilities` in that order, so a components-layer
+  rule loses to every block's own `py-lg md:py-xl lg:py-3xl` utility. These
+  rules are appended to the native `utilities` layer AFTER the generated
+  utilities (source order), where `[data-seam]` — equal specificity to a class —
+  wins on order and `:has(+ [data-seam])` wins on specificity. It is the same
+  layer the FRAME_SEAM arbitrary variants in AboutStats.astro compile into;
+  this writes the rule once instead of on every block. `@utility` itself only
+  emits class selectors, and the blocks are keyed by attribute, so the rules
+  are declared directly in the layer.
+*/
+@layer utilities {
+  [data-block]:has(+ [data-seam]) {
+    padding-block-end: var(--seam-gap, var(--spacing-lg));
+  }
+  [data-block]:has(+ [data-seam="tight"]) {
+    --seam-gap: var(--spacing-md);
+  }
+  [data-seam] {
+    padding-block-start: 0;
+  }
+  @media (width >= 768px) {
+    [data-block]:has(+ [data-seam]) {
+      --seam-gap: var(--spacing-xl);
+    }
+    [data-block]:has(+ [data-seam="tight"]) {
+      --seam-gap: var(--spacing-lg);
+    }
+  }
+  @media (width >= 1024px) {
+    [data-block]:has(+ [data-seam]) {
+      --seam-gap: var(--spacing-3xl);
+    }
+    [data-block]:has(+ [data-seam="tight"]) {
+      --seam-gap: var(--spacing-xl);
+    }
   }
 }

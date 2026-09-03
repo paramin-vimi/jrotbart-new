@@ -23,7 +23,7 @@
  *    `#b2blead_q=<question text>` scheme.
  *
  * Copy — including the footer paragraph and every TODO(client) placeholder —
- * comes from `src/content/homepage/faq.ts`. Nothing is hardcoded here.
+ * comes from the page's content module. Nothing is hardcoded here.
  */
 import Container from "@primitives/Container.astro";
 import Overline from "@primitives/Overline.astro";
@@ -34,14 +34,21 @@ interface Props {
   block: FaqAccordionBlock;
   class?: string;
   /**
-   * Paragraph under the footer heading. `FaqAccordionBlock["footer"]` has no
-   * body field and types.ts is owned by another workstream, so the string is
-   * passed in beside the block — see the TODO(types) note in faq.ts.
+   * Paragraph under the footer heading. `footer.body` on the block is read
+   * first; this prop is the fallback for content that still passes it beside
+   * the block (homepage faq.ts).
    */
   footerBody?: string;
   /**
-   * Zero-based index of the row that starts open. Figma draws row 1 open.
-   * Pass -1 to start fully collapsed.
+   * Which rows start open. "first" = the homepage (Figma draws row 1 open);
+   * "all" = the product, office and Buy PM frames, which draw every row open
+   * (pair it with `exclusiveGroup=""`, or the native exclusive group closes
+   * all but one); "none" = fully collapsed.
+   */
+  initiallyOpen?: "first" | "all" | "none";
+  /**
+   * Zero-based index of the row `initiallyOpen="first"` opens. Figma draws
+   * row 1 open.
    */
   openIndex?: number;
   /**
@@ -55,12 +62,16 @@ const {
   block,
   class: className = "",
   footerBody,
+  initiallyOpen = "first",
   openIndex = 0,
   exclusiveGroup = "home-faq",
 } = Astro.props;
 
 const { header, faqs, footer } = block;
 const headingId = `${block._key}-heading`;
+const footerText = footer?.body ?? footerBody;
+const isOpen = (index: number) =>
+  initiallyOpen === "all" || (initiallyOpen === "first" && index === openIndex);
 
 /**
  * `headingAccent` is read as "the run WITHIN `heading` that is set in Playfair
@@ -92,6 +103,9 @@ const headingAfter =
 <section
   id={block.anchorId}
   aria-labelledby={headingId}
+  data-block
+  data-theme="tinted"
+  data-seam={block.seam}
   class:list={["bg-bg-primary py-lg md:py-xl lg:py-3xl", className]}
 >
   <Container>
@@ -140,7 +154,7 @@ const headingAfter =
               <details
                 id={faq._id}
                 class="group -mb-px border-b border-border-primary last:mb-0 last:border-b-0"
-                open={index === openIndex}
+                open={isOpen(index)}
                 {...exclusiveGroup ? { name: exclusiveGroup } : {}}
               >
                 {/*
@@ -227,8 +241,8 @@ const headingAfter =
               <h3 class="font-display text-base leading-6 font-medium text-text-primary">
                 {footer.heading}
               </h3>
-              {footerBody && (
-                <p class="text-base leading-6 text-text-secondary">{footerBody}</p>
+              {footerText && (
+                <p class="text-base leading-6 text-text-secondary">{footerText}</p>
               )}
             </div>
 

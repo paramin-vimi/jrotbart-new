@@ -2,22 +2,66 @@
 import Overline from "./Overline.astro";
 import Button from "./Button.astro";
 import ArrowLink from "./ArrowLink.astro";
-import type { SectionHeading } from "@content/types";
+import type { HeadingRun, SectionHeading } from "@content/types";
 
+/**
+ * Overline → heading → body → CTA, stacked 24px apart.
+ *
+ * HEADING FORMS, in priority order:
+ *   1. `headingRuns` — any number of roman / accent runs, spaces baked into the
+ *      strings ("Protect your wealth with " + *LBMA certified* + " gold…").
+ *   2. `heading` + `headingAccent` (+ `headingTail`) — the original contract:
+ *      a trailing italic run, or a mid-string one when `headingTail` follows.
+ * The accent run is Playfair italic at the SAME size as the roman text: the
+ * seven page frames draw their H1 accents 4px larger, but the homepage
+ * precedent (and `--step-h1`) renders them at the roman size, and that is the
+ * accepted deviation — no per-run sizing here.
+ *
+ * `as="h1"` is the page opener (40/52 at 1366 via `--step-h1`); h2/h3 use the
+ * shared `--step-h2` ramp. `accentTone` picks the accent colour on a light
+ * surface: "muted" (text-tertiary, every service page) or "brand" (brand red,
+ * the office hero's "*Hong Kong*").
+ */
 interface Props {
   header: SectionHeading;
-  /** h2 for top-level page sections, h3 when nested inside one. */
-  as?: "h2" | "h3";
+  /** h1 for the page opener, h2 for top-level page sections, h3 when nested inside one. */
+  as?: "h1" | "h2" | "h3";
   align?: "left" | "center";
   tone?: "dark" | "light";
+  accentTone?: "muted" | "brand";
   class?: string;
 }
 
-const { header, as: Tag = "h2", align = "left", tone = "dark", class: className = "" } = Astro.props;
+const {
+  header,
+  as: Tag = "h2",
+  align = "left",
+  tone = "dark",
+  accentTone = "muted",
+  class: className = "",
+} = Astro.props;
 
 const headingTone = tone === "light" ? "text-always-white" : "text-text-primary";
 const bodyTone = tone === "light" ? "text-always-white/80" : "text-text-secondary";
-const accentTone = tone === "light" ? "text-always-white/70" : "text-text-tertiary";
+const accentClass =
+  tone === "light"
+    ? "text-always-white/70"
+    : accentTone === "brand"
+      ? "text-brand-red"
+      : "text-text-tertiary";
+
+const headingSize =
+  Tag === "h1"
+    ? "text-[length:var(--step-h1)] leading-[1.3]"
+    : "text-[length:var(--step-h2)] leading-[1.375] md:leading-[var(--line-h2)]";
+
+/* A single string or several paragraphs; the 24px stack gap separates them. */
+const paragraphs =
+  header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
+
+/* Spaces are baked in rather than left as whitespace text nodes, so
+   `compressHTML` can never weld the runs together — see ServicesRows.astro. */
+const headingTail = header.headingTail ? ` ${header.headingTail}` : "";
 ---
 <div
   class:list={[
@@ -30,16 +74,28 @@ const accentTone = tone === "light" ? "text-always-white/70" : "text-text-tertia
     <Overline tone={tone === "light" ? "white" : "red"}>{header.overline}</Overline>
   )}
 
-  <Tag class:list={["text-[length:var(--step-h2)] leading-[1.375] md:leading-[var(--line-h2)]", headingTone]}>
-    {header.heading}
-    {header.headingAccent && (
-      <em class:list={["font-medium italic", accentTone]}> {header.headingAccent}</em>
-    )}
+  <Tag class:list={[headingSize, headingTone]}>
+    {header.headingRuns
+      ? header.headingRuns.map((run: HeadingRun) =>
+          run.accent ? (
+            <em class:list={["font-medium italic", accentClass]}>{run.text}</em>
+          ) : (
+            run.text
+          ),
+        )
+      : (
+          <Fragment>
+            {header.heading}
+            {header.headingAccent && (
+              <em class:list={["font-medium italic", accentClass]}> {header.headingAccent}</em>
+            )}{headingTail}
+          </Fragment>
+        )}
   </Tag>
 
-  {header.body && (
-    <p class:list={["max-w-[65ch] text-base leading-6", bodyTone]}>{header.body}</p>
-  )}
+  {paragraphs.map((paragraph: string) => (
+    <p class:list={["max-w-[65ch] text-base leading-6", bodyTone]}>{paragraph}</p>
+  ))}
 
   {header.cta && (
     header.cta.style === "arrow" ? (

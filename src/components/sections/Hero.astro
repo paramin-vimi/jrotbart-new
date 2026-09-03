@@ -3,6 +3,7 @@ import Container from "@primitives/Container.astro";
 import Button from "@primitives/Button.astro";
 import Overline from "@primitives/Overline.astro";
 import type { HeroBlock } from "@content/types";
+import { logoBox } from "@lib/logoBox";
 
 /**
  * Homepage hero — Figma node 9813:5485 (1366 × 700).
@@ -52,17 +53,9 @@ const ctaVariant = cta.style && cta.style !== "arrow" ? cta.style : "solid";
 const cutout = media.cutout;
 const chart = media.chart;
 
-/* Figma sizes the three accreditation marks individually: SBMA is a 60x40
-   landscape lockup, the two association seals are 44x44 circles. There is no
-   per-logo size field in the CMS contract, so the box is derived from the
-   asset's own aspect ratio — landscape gets the wide box, square gets the
-   circle box. (Figma says object-fit: cover for the SBMA lockup; the interim
-   live-site PNG is a different crop, so it is contained rather than cropped
-   until the export lands — TODO(assets).) */
-const logoBox = (img: { width?: number; height?: number }) =>
-  img.width && img.height && img.width / img.height > 1.1
-    ? "h-8 w-[54px] sm:h-10 sm:w-[60px]"
-    : "h-9 w-9 sm:h-11 sm:w-11";
+/* The accreditation-mark box sizes (60x40 SBMA lockup, 44x44 seals) are
+   derived from each asset's aspect ratio by `logoBox()` in src/lib/logoBox.ts,
+   shared with the page heroes so every "Member of" row draws the same tiles. */
 ---
 
 <section

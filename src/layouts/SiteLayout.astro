@@ -1,0 +1,58 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import TopNavigation from "@components/TopNavigation.astro";
+import SiteFooter from "@components/SiteFooter.astro";
+import ContactSection from "@sections/ContactSection.astro";
+import { contact, mintStrip } from "@content/contact";
+import type { NavSection, Seo } from "@content/types";
+
+/**
+ * The page shell every route except the homepage renders through: header,
+ * the page's blocks, the site-wide "tail" (mint strip + contact section) and
+ * the footer, inside BaseLayout's head / main / skip-link.
+ *
+ * HEADER CLEARANCE. TopNavigation is `position: fixed`. The homepage hero
+ * reserves its own headroom because the frame starts at y=0 under the nav; the
+ * other frames start their Main Content at y=132 (the Service listing at 148 —
+ * a file inconsistency, treated as 132). That clearance is
+ * `padding-top: var(--nav-height, 132px)` on <main>: TopNavigation publishes
+ * `--nav-height` from its measured height, so the padding follows the real
+ * header at every width (it is NOT 132 below lg once the ticker wraps), and
+ * the 132px fallback covers first paint and no-JS. `headerOverlay` opts a page
+ * OUT of the padding — only /buying-precious-metals/, whose hero (10726:9161)
+ * starts at y=0 under the fixed nav like the homepage.
+ *
+ * The padding sits on <main> (via BaseLayout's `mainClass`) rather than on a
+ * wrapper <div>, so every block stays a direct `main > section` — which is what
+ * scripts/shoot.mjs screenshots and what the seam CSS's sibling selectors see.
+ *
+ * `tail={false}` is for the one page type that renders ContactSection itself
+ * (the product template, to pass a prefilled message).
+ */
+interface Props {
+  seo: Seo;
+  /** JSON-LD graph for this page, built with lib/schema.ts. */
+  schema?: object;
+  /** Render the mint strip + contact section after the page's blocks. */
+  tail?: boolean;
+  /** The first block sits under the transparent header (no top clearance). */
+  headerOverlay?: boolean;
+  /** Which top-level menu item is current. */
+  currentSection?: NavSection;
+}
+
+const { seo, schema, tail = true, headerOverlay = false, currentSection } = Astro.props;
+---
+<BaseLayout
+  seo={seo}
+  schema={schema}
+  mainClass={headerOverlay ? undefined : "pt-[var(--nav-height,132px)]"}
+>
+  <TopNavigation slot="header" solid={!headerOverlay} current={currentSection} />
+
+  <slot />
+
+  {tail && <ContactSection block={contact} mintStrip={mintStrip} />}
+
+  <SiteFooter slot="footer" />
+</BaseLayout>

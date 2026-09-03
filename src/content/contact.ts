@@ -3,13 +3,19 @@ import type {
   ImageRef,
   Link,
   MintStripBlock,
-  Office,
 } from "@content/types";
 import { offices, primaryEmail } from "@content/offices";
+import { perthMint, royalCanadianMint, royalMint, saMint, usMint } from "@content/mints";
+import { mapHref } from "@lib/maps";
 
 /**
- * Homepage — the mint provenance strip (Figma `10369:9011`) and the Contact
- * section (Figma `10369:8261`).
+ * The mint provenance strip (Figma `10369:9011`) and the Contact section
+ * (Figma `10369:8261`).
+ *
+ * Site-wide, not homepage-scoped: every page frame ends with this pair (the
+ * "tail" that SiteLayout renders), so the module lives at the content root and
+ * keeps the `_key`s it had on the homepage — `ContactSection` namespaces every
+ * form id by `_key`, and one instance per page is fine.
  *
  * Source of truth for geometry: Figma `MkPRW1BKlldItk3pnHgcW3`, frame
  * `9813:5482`. Source of truth for COPY: the rendered Figma pixels, cross-checked
@@ -21,10 +27,9 @@ import { offices, primaryEmail } from "@content/offices";
  * ---------------------------------------------------------------------------
  * LOCAL TYPE EXTENSIONS
  * ---------------------------------------------------------------------------
- * `src/content/types.ts` is owned elsewhere and must not be edited, so every
- * field this section needs beyond `ContactFormBlock` is declared here. All of it
- * is additive and can be folded into types.ts (and the Sanity schema) in one
- * pass later — each extension carries the reason it exists.
+ * Every field this section needs beyond `ContactFormBlock` is declared here. All
+ * of it is additive and can be folded into types.ts (and the Sanity schema) in
+ * one pass later — each extension carries the reason it exists.
  */
 
 // ---------------------------------------------------------------------------
@@ -153,6 +158,8 @@ export interface MapPin {
    * The Figma places each pin at a hand-measured offset inside a 1174x560 frame
    * that itself crops a 1667x1060 SVG at (-567, -414); any scaling of that frame
    * desyncs every pin. Percentages scale with the frame as one unit.
+   * TODO: migrate to `projectMercator` (src/lib/geo.ts) once `Office.geo`
+   * carries real coordinates — the office-listing map already projects.
    */
   x: number;
   y: number;
@@ -180,6 +187,13 @@ export interface ContactFormSection extends Omit<ContactFormBlock, "attribution"
   feedback: FormFeedback;
   directory: Directory;
   map: MapBand;
+  /**
+   * Opening line written into the message field when a product page renders
+   * the form with `prefill={{ product }}`. "%s" is the product's short name.
+   * A line of text, not a hidden field — see the `prefill` prop note in
+   * ContactSection.astro.
+   */
+  prefillTemplate: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -220,15 +234,11 @@ export const CONTACT_ENDPOINT = "/api/contact";
 /**
  * Trust bar: the sovereign mints whose bullion J. Rotbart sells.
  *
- * All five are the Figma exports from node `10369:9011` (WebP, 4x). They are
- * opaque bitmaps with white backgrounds baked in — that is how the design itself
- * draws them, so each logo reads as a slightly lighter tile on the #fdfcfc
- * surface, matching the Figma render rather than diverging from it. The United
- * States Mint artwork is faint in the Figma source too; it is not a bad export.
- *
- * `width`/`height` are the FIGMA TILE boxes, not the bitmap dimensions. The
- * component centres each bitmap inside its tile with `object-contain`, so the
- * tile reserves layout space and nothing shifts as the images load.
+ * The five logos are the Mint documents' own (`src/content/mints.ts`), so the
+ * strip and the product hero eyebrows name the same institutions. Figma draws
+ * them opaque with white backgrounds baked in — the white is keyed out from the
+ * image EDGES only, a global "make white transparent" would punch holes in the
+ * Royal Mint crest and the Perth Mint swan.
  *
  * TODO(client): no logo links anywhere in the design. `LogoItem.href` is
  * supported if these should be outbound links to each mint.
@@ -236,80 +246,18 @@ export const CONTACT_ENDPOINT = "/api/contact";
 export const mintStrip: MintStripBlock = {
   _key: "home-mint-strip",
   _type: "mintStrip",
-  // These five are JPEGs in Figma, so their white background is baked in and
-  // showed as white boxes against the section's near-white ground. The white is
-  // keyed out by flood-filling from the image EDGES only — a global
-  // "make white transparent" would punch holes in the Royal Mint crest and the
-  // Perth Mint swan, both of which have white inside them.
-  // TODO(assets): Figma's own sources are only ~220-290px wide, so they are
-  // soft on a retina screen. Vector or 2x logos would fix that.
   theme: "light",
   label: "Product minted by",
-  logos: [
-    {
-      name: "The South African Mint",
-      image: {
-        src: "/figma/mint-samint.webp",
-        alt: "The South African Mint",
-        width: 120,
-        height: 44,
-      },
-    },
-    {
-      name: "The Royal Mint",
-      image: {
-        src: "/figma/mint-royalmint.webp",
-        alt: "The Royal Mint",
-        width: 120,
-        height: 54,
-      },
-    },
-    {
-      name: "The Perth Mint Australia",
-      image: {
-        src: "/figma/mint-perthmint.webp",
-        alt: "The Perth Mint Australia",
-        width: 120,
-        height: 42,
-      },
-    },
-    {
-      name: "Royal Canadian Mint",
-      image: {
-        src: "/figma/mint-canadianmint.webp",
-        alt: "Royal Canadian Mint / Monnaie royale canadienne",
-        width: 120,
-        height: 54,
-      },
-    },
-    {
-      name: "United States Mint",
-      image: {
-        src: "/figma/mint-unitedmint.webp",
-        alt: "United States Mint",
-        width: 120,
-        height: 54,
-      },
-    },
-  ],
+  // Drawn order, left to right.
+  logos: [saMint, royalMint, perthMint, royalCanadianMint, usMint].map((mint) => ({
+    name: mint.name,
+    image: mint.logo!,
+  })),
 };
 
 // ---------------------------------------------------------------------------
 // Section B — contact (Figma 10369:8261)
 // ---------------------------------------------------------------------------
-
-/**
- * Google Maps deep link derived from the published address.
- *
- * TODO(client): supply a canonical Google Maps place URL per office
- * (`Office.mapUrl`, currently unset for all four). A search URL always resolves
- * and never invents a location, which is why it is the fallback.
- */
-const mapHref = (office: Office): string =>
-  office.mapUrl ??
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    [office.city, ...office.address].join(", "),
-  )}`;
 
 /**
  * The directory heading uses the office's COUNTRY for Manila and Tel Aviv
@@ -517,6 +465,11 @@ export const contact: ContactFormSection = {
 
   submitLabel: "Submit",
 
+  // TODO(client): wording of the product-enquiry opener. Nothing is drawn for
+  // it — the product frames (11136:25475) only show the "Request a private
+  // quote" band, so this line is our draft.
+  prefillTemplate: "I would like to enquire about the %s.",
+
   captcha: {
     provider: "turnstile",
     label: "Human verification",
@@ -583,13 +536,6 @@ export const contact: ContactFormSection = {
    * percentages of the frame and the artwork is a single background image, so
    * frame and pins scale as one unit. Each pin is also a real link, so the map
    * carries no information that is only available by looking at it.
-   *
-   * TODO(assets): the world artwork has not been exported from Figma and no
-   * equivalent exists on the live site (which uses an interactive Google Maps
-   * embed). Export the clipped crop as ONE optimised SVG at exactly 1174x560,
-   * landmass #cac4bc on #efece8, no ocean detail, and set `image` here — the
-   * pins already sit at the right percentages and need no change. Until then the
-   * band renders as the flat #efece8 field with the four markers on it.
    */
   map: {
     label: "J. Rotbart & Co. office locations",

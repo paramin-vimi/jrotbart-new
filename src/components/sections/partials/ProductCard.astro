@@ -1,0 +1,145 @@
+---
+/**
+ * One product card — the `<li>` of every product grid on the site (homepage
+ * best sellers 9813:5533, Buy PM best sellers, the metal listings, "Often
+ * held alongside"). Extracted verbatim from ProductGrid.astro so the card
+ * renders pixel-identically wherever it is drawn.
+ *
+ * • The card's only tab stop is its "Learn more" link. The card is not a link
+ *   surface — the design gives no signal that it is, and a nested/duplicated
+ *   hit target would be worse than a single explicit one.
+ * • WHERE THE LINK GOES is decided by `productHref()` (src/lib/products.ts):
+ *   `/buy-<metal>/<slug>/` only when the product is a `ProductDetail` (a page
+ *   exists), otherwise the contact anchor — the live site's own destination
+ *   for every card. No card ever links to a page that is not built.
+ * • The mint row prints "name, location" when the mint document carries a
+ *   location ("Heraeus, Germany"), else the name alone.
+ * • The CTA is pinned with `mt-auto` so CTAs stay on a common baseline across
+ *   a row when descriptions differ in length. The Figma assumes every
+ *   description is exactly three lines; real copy will not be.
+ * • The "Variants" row truncates with an ellipsis only at >=768, as drawn.
+ *   Below that it wraps — truncating at a ~327px column would hide real
+ *   content. The full string is exposed as a `title` for the truncated case.
+ * • The metal chip is the 18x18 square with the Figma gradient fill; the
+ *   gradients are the `--background-image-metal-*` tokens in global.css.
+ */
+import Overline from "@primitives/Overline.astro";
+import ArrowGo from "@primitives/ArrowGo.astro";
+import type { Metal, Product } from "@content/types";
+import { productHref } from "@lib/products";
+
+interface Props {
+  /** A card may override the grid-level CTA label (rarely needed). */
+  product: Product & { ctaLabel?: string };
+  /** Ribbon text drawn across the top of a best-seller card image. */
+  badgeLabel: string;
+  /** Default per-card CTA label. */
+  ctaLabel: string;
+  /** Labels for the three spec rows. */
+  specLabels: { mint: string; purity: string; variants: string };
+  /** Display label for each metal, beside the chip. */
+  metalLabels: Record<Metal, string>;
+  class?: string;
+}
+
+const { product, badgeLabel, ctaLabel, specLabels, metalLabels, class: className = "" } =
+  Astro.props;
+
+const href = productHref(product);
+const mintLine = product.mint.location
+  ? `${product.mint.name}, ${product.mint.location}`
+  : product.mint.name;
+
+/* Static so Tailwind can see every class name; a template literal would not
+   generate them. */
+const METAL_CHIP: Record<Metal, string> = {
+  gold: "bg-metal-gold",
+  silver: "bg-metal-silver",
+  platinum: "bg-metal-platinum",
+  palladium: "bg-metal-palladium",
+};
+---
+
+<li class:list={["group flex flex-col gap-sm", className]}>
+  {/* Image slot: square matte with the best-seller ribbon across the top. */}
+  <div class="relative aspect-square overflow-hidden bg-bg-primary">
+    {product.bestSeller && badgeLabel && (
+      /* Ribbon: full-bleed across the top of the image. Figma draws the bar
+         24px tall — it pads 8px around a CAP-HEIGHT box (9px for 14px type),
+         not around a line box. A CSS line box is 20px, so keeping the drawn
+         8px padding renders a 36px bar: half again as deep, and the red band
+         starts competing with the product photo instead of sitting on it. The
+         block padding is therefore 2px (2 + 20 + 2 = 24), which lands the cap
+         exactly where the frame does. The label keeps its full 20px line box,
+         so it never clips if the string is translated or a descender appears. */
+      <Overline
+        tone="white"
+        class="absolute inset-x-0 top-0 z-10 bg-brand-red px-3 py-0.5 text-center"
+      >
+        {badgeLabel}
+      </Overline>
+    )}
+    <img
+      src={product.image.src}
+      alt={product.image.decorative ? "" : product.image.alt}
+      aria-hidden={product.image.decorative ? "true" : undefined}
+      width={product.image.width}
+      height={product.image.height}
+      loading="lazy"
+      decoding="async"
+      class="h-full w-full object-contain p-[13%] transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+    />
+  </div>
+
+  <div class="flex flex-col gap-2xs">
+    {/* Title row: name left, metal chip right. */}
+    <div class="flex items-center justify-between gap-2xs">
+      <h3 class="min-w-0 flex-1 text-[length:var(--step-h3)] leading-7 text-text-primary">
+        {product.name}
+      </h3>
+      <p class="flex shrink-0 items-center gap-2xs">
+        <span
+          class:list={["block h-[18px] w-[18px] flex-none", METAL_CHIP[product.metal]]}
+          aria-hidden="true"
+        />
+        <span class="text-base leading-6 font-semibold text-text-primary">
+          {metalLabels[product.metal]}
+        </span>
+      </p>
+    </div>
+
+    {/* Spec block: three rows between hairlines. */}
+    <dl class="flex flex-col gap-2xs border-y border-border-primary py-2xs text-base leading-6 text-text-secondary">
+      <div class="flex gap-1">
+        <dt class="shrink-0 font-semibold">{specLabels.mint}</dt>
+        <dd class="min-w-0">{mintLine}</dd>
+      </div>
+      <div class="flex gap-1">
+        <dt class="shrink-0 font-semibold">{specLabels.purity}</dt>
+        <dd class="min-w-0">{product.purity}</dd>
+      </div>
+      <div class="flex gap-1">
+        <dt class="shrink-0 font-semibold">{specLabels.variants}</dt>
+        <dd class="min-w-0 md:truncate" title={product.variants}>
+          {product.variants}
+        </dd>
+      </div>
+    </dl>
+
+    <p class="text-base leading-6 text-text-secondary">{product.description}</p>
+  </div>
+
+  {/* Pinned to the bottom so CTAs align across a row of uneven cards. */}
+  <div class="mt-auto">
+    {/* Figma `Button Text` instance: 137x28, 8px gap, BUTTON TEXT in
+        brand-red + the 28x28 `Navigations/Arrow Go/Default` ring-arrow
+        (the ArrowGo primitive). */}
+    <a
+      href={href}
+      class="group/cta button-text inline-flex items-center gap-2xs text-brand-red transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none"
+    >
+      <span>{product.ctaLabel ?? ctaLabel}</span>
+      <ArrowGo class="transition-transform duration-150 group-hover/cta:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/cta:translate-x-0" />
+    </a>
+  </div>
+</li>

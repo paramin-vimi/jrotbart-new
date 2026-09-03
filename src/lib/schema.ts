@@ -1,5 +1,6 @@
 import { offices, primaryEmail } from "@content/offices";
-import type { Faq, Seo, VideoRef } from "@content/types";
+import type { Faq, Office, ProductDetail, Seo, VideoRef } from "@content/types";
+import { paragraphText } from "./paragraph";
 
 // Derived from `site` + `base` in astro.config.mjs rather than duplicating the
 // origin here, so a preview build cannot assert production @ids from a host
@@ -10,6 +11,10 @@ import type { Faq, Seo, VideoRef } from "@content/types";
 const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 export const SITE = import.meta.env.SITE.replace(/\/+$/, "") + BASE;
 const ORG_ID = `${SITE}/#organization`;
+
+/** A root-relative asset path made absolute from SITE; absolute URLs pass through. */
+export const absoluteUrl = (path: string): string =>
+  /^https?:\/\//.test(path) ? path : `${SITE}${path.startsWith("/") ? "" : "/"}${path}`;
 
 /**
  * Structured data.
@@ -36,24 +41,79 @@ export function organizationNode() {
   };
 }
 
+/**
+ * Offices whose page (`/${office.slug}/`) is BUILT by this site. A LocalBusiness
+ * node's `url` points at its own page only when one exists; otherwise at the
+ * site root. Add a slug here in the same change that adds its route
+ * (src/pages/<slug>.astro) — the two must move together.
+ */
+const OFFICE_ROUTES: ReadonlySet<Office["slug"]> = new Set<string>([]);
+
+const DAY_NAMES: Record<string, string> = {
+  Mo: "Monday",
+  Tu: "Tuesday",
+  We: "Wednesday",
+  Th: "Thursday",
+  Fr: "Friday",
+  Sa: "Saturday",
+  Su: "Sunday",
+};
+const DAY_ORDER = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
+/**
+ * "Mo-Fr 09:30-17:30" → an OpeningHoursSpecification. The schema.org
+ * `openingHours` shorthand is itself valid, but the expanded form is what the
+ * rich-result tooling reads reliably, and the parse is trivial. Returns null
+ * for a string it cannot read, so a typo cannot emit half a specification.
+ */
+export function openingHoursSpecification(schema: string) {
+  const match = /^([A-Z][a-z])(?:-([A-Z][a-z]))?\s+(\d{2}:\d{2})-(\d{2}:\d{2})$/.exec(schema.trim());
+  if (!match) return null;
+  const [, from, to, opens, closes] = match;
+  const start = DAY_ORDER.indexOf(from!);
+  const end = to ? DAY_ORDER.indexOf(to) : start;
+  if (start < 0 || end < 0) return null;
+  // A range may wrap past the end of the ISO week: "Su-Th" is the Israeli
+  // working week (Sunday to Thursday), not a typo.
+  const days =
+    end >= start
+      ? DAY_ORDER.slice(start, end + 1)
+      : [...DAY_ORDER.slice(start), ...DAY_ORDER.slice(0, end + 1)];
+  return {
+    "@type": "OpeningHoursSpecification",
+    dayOfWeek: days.map((d) => DAY_NAMES[d]),
+    opens,
+    closes,
+  };
+}
+
 export function localBusinessNodes() {
-  return offices.map((office) => ({
-    "@type": "FinancialService",
-    "@id": `${SITE}/#office-${office._id}`,
-    name: `J. Rotbart & Co. — ${office.city}`,
-    parentOrganization: { "@id": ORG_ID },
-    url: SITE,
-    ...(office.phone ? { telephone: office.phone } : {}),
-    ...(office.email ? { email: office.email } : {}),
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: office.address.slice(0, -1).join(", ") || office.address[0],
-      addressLocality: office.city,
-      addressCountry: office.country,
-    },
-    // `geo` intentionally omitted until real per-office coordinates are supplied.
-    ...(office.openingHours ? { openingHours: office.openingHours } : {}),
-  }));
+  return offices.map((office) => {
+    const hours = office.openingHours ? openingHoursSpecification(office.openingHours.schema) : null;
+    return {
+      "@type": "FinancialService",
+      "@id": `${SITE}/#office-${office._id}`,
+      name: `J. Rotbart & Co. — ${office.city}`,
+      parentOrganization: { "@id": ORG_ID },
+      url: OFFICE_ROUTES.has(office.slug) ? `${SITE}/${office.slug}/` : SITE,
+      ...(office.phone ? { telephone: office.phone } : {}),
+      ...(office.email ? { email: office.email } : {}),
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: office.address.slice(0, -1).join(", ") || office.address[0],
+        addressLocality: office.city,
+        addressCountry: office.country,
+      },
+      // `geo` intentionally omitted until real per-office coordinates are supplied.
+      ...(office.mapUrl ? { hasMap: office.mapUrl } : {}),
+      ...(hours ? { openingHoursSpecification: [hours] } : {}),
+    };
+  });
+}
+
+/** The nodes every page carries: the organisation, its offices, the website. */
+export function siteGraph() {
+  return [organizationNode(), ...localBusinessNodes(), webSiteNode()];
 }
 
 export function faqPageNode(faqs: Faq[]) {
@@ -72,7 +132,8 @@ export function videoNodes(videos: VideoRef[]) {
   return videos.map((v) => ({
     "@type": "VideoObject",
     name: v.title,
-    thumbnailUrl: v.poster.src,
+    // Absolute: a root-relative thumbnailUrl is invalid in structured data.
+    thumbnailUrl: absoluteUrl(v.poster.src),
     embedUrl: `https://www.youtube.com/embed/${v.youtubeId}`,
     uploadDate: undefined, // TODO(client): publication dates per video
   }));
@@ -89,17 +150,96 @@ export function webSiteNode() {
   };
 }
 
-export function webPageNode(seo: Seo, url: string) {
+export function webPageNode(
+  seo: Seo,
+  url: string,
+  options: { type?: "WebPage" | "CollectionPage" | "ItemPage"; about?: { "@id": string } } = {},
+) {
   return {
-    "@type": "WebPage",
+    "@type": options.type ?? "WebPage",
     "@id": `${url}#webpage`,
     url,
     name: seo.title,
     description: seo.description,
     isPartOf: { "@id": `${SITE}/#website` },
-    about: { "@id": ORG_ID },
+    about: options.about ?? { "@id": ORG_ID },
   };
 }
+
+export function breadcrumbNode(items: { name: string; url: string }[]) {
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
+export function serviceNode(service: {
+  url: string;
+  name: string;
+  description: string;
+  serviceType: string;
+  areaServed: string[];
+}) {
+  return {
+    "@type": "Service",
+    "@id": `${service.url}#service`,
+    url: service.url,
+    name: service.name,
+    description: service.description,
+    serviceType: service.serviceType,
+    areaServed: service.areaServed,
+    provider: { "@id": ORG_ID },
+  };
+}
+
+export function itemListNode(url: string, items: { name: string; url: string }[]) {
+  return {
+    "@type": "ItemList",
+    "@id": `${url}#list`,
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      url: item.url,
+    })),
+  };
+}
+
+/**
+ * A Product node WITHOUT an Offer: the site quotes privately and shows no
+ * prices, and an Offer with no price is worse than none. `relatedUrls` are the
+ * absolute URLs of the "Often held alongside" products that have pages.
+ */
+export function productNode(product: ProductDetail, url: string, relatedUrls: string[] = []) {
+  return {
+    "@type": "Product",
+    "@id": `${url}#product`,
+    url,
+    name: product.name,
+    image: [product.image, ...product.gallery].map((img) => absoluteUrl(img.src)),
+    description: product.summary,
+    ...(product.sku ? { sku: product.sku } : {}),
+    brand: { "@type": "Organization", name: product.mint.name },
+    manufacturer: { "@type": "Organization", name: product.mint.name },
+    material: product.metal,
+    additionalProperty: product.specGroups.flatMap((group) =>
+      group.rows.map((row) => ({
+        "@type": "PropertyValue",
+        name: row.label,
+        value: row.value,
+      })),
+    ),
+    ...(relatedUrls.length ? { isRelatedTo: relatedUrls.map((u) => ({ "@id": `${u}#product` })) } : {}),
+  };
+}
+
+/** Plain-text body for descriptions built from Paragraph content. */
+export const plainText = paragraphText;
 
 export function buildGraph(nodes: Array<object | null>) {
   return {

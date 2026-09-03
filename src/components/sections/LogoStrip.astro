@@ -69,10 +69,11 @@
  */
 import Container from "@primitives/Container.astro";
 import Overline from "@primitives/Overline.astro";
-import type { LogoStripSection } from "@content/homepage/products";
+import type { LogoStripBlock } from "@content/types";
 
 interface Props {
-  block: LogoStripSection;
+  /** `label` (the landmark's accessible name) is on the block itself. */
+  block: LogoStripBlock;
   class?: string;
 }
 
@@ -82,6 +83,9 @@ const { block, class: className = "" } = Astro.props;
 <section
   id={block.anchorId}
   aria-label={block.label}
+  data-block
+  data-theme="light"
+  data-seam={block.seam}
   class:list={["border-y border-border-primary bg-bg-secondary", className]}
 >
   <Container class="py-md md:py-lg">

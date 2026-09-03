@@ -26,8 +26,14 @@ const { header, services } = block;
 /* The spaces around the italic run are baked into the strings rather than left
    as whitespace text nodes, so `compressHTML` can never weld the runs together
    ("We OfferComprehensive"). */
-const headingLead = header.headingAccent ? `${header.heading} ` : header.heading;
-const headingTail = header.headingTail ? ` ${header.headingTail}` : "";
+const headingLead = header?.headingAccent ? `${header.heading} ` : header?.heading;
+const headingTail = header?.headingTail ? ` ${header.headingTail}` : "";
+
+/* Headerless (the Service listing opens with a pageHero): the landmark is
+   named by `block.label` and the rows start at the top of the section. */
+const landmark = header
+  ? { "aria-labelledby": `${block._key}-heading` }
+  : { "aria-label": block.label };
 
 /**
  * MEDIA COMPOSITE — the interesting problem in this section.
@@ -93,7 +99,10 @@ function cutoutStyle(row: ServiceRowEntry): string {
 
 <section
   id={block.anchorId}
-  aria-labelledby={`${block._key}-heading`}
+  {...landmark}
+  data-block
+  data-theme="light"
+  data-seam={block.seam}
   class:list={["services-rows bg-bg-secondary py-lg md:py-xl lg:py-3xl", className]}
 >
   <Container>
@@ -102,6 +111,7 @@ function cutoutStyle(row: ServiceRowEntry): string {
           Rendered inline rather than via <SectionHeader> because this heading
           italicises a run in the MIDDLE of the sentence, which SectionHeading's
           trailing-accent model cannot express. */}
+      {header && (
       <div class="flex flex-col gap-md lg:flex-row lg:items-end lg:gap-3xl">
         <div class="flex flex-col gap-sm lg:flex-1">
           {header.overline && <Overline tone="red">{header.overline}</Overline>}
@@ -120,6 +130,7 @@ function cutoutStyle(row: ServiceRowEntry): string {
           <p class="text-base leading-6 text-text-secondary lg:flex-1">{header.body}</p>
         )}
       </div>
+      )}
 
       {/* The four rows. A list so assistive tech announces the count. */}
       <ul class="flex flex-col gap-md md:gap-xl">

@@ -1,0 +1,33 @@
+---
+import Icon from "./Icon.astro";
+import type { IconName } from "@content/types";
+
+/**
+ * The hairline disc every feature cell, tax card, team link, checklist row and
+ * directory row draws around its icon: a 1px border-primary circle with the
+ * glyph in brand red. Two drawn sizes — 48 (28px glyph) and 32 (20px glyph).
+ * Decorative: the title or label beside it is the accessible name.
+ */
+interface Props {
+  name: IconName;
+  size?: 32 | 48;
+  class?: string;
+}
+
+const { name, size = 48, class: className = "" } = Astro.props;
+
+const SIZES = {
+  48: { disc: "h-12 w-12", glyph: "h-7 w-7" },
+  32: { disc: "h-8 w-8", glyph: "h-5 w-5" },
+} as const;
+---
+<span
+  class:list={[
+    "grid shrink-0 place-items-center rounded-full border border-border-primary text-brand-red",
+    SIZES[size].disc,
+    className,
+  ]}
+  aria-hidden="true"
+>
+  <Icon name={name} class={SIZES[size].glyph} />
+</span>

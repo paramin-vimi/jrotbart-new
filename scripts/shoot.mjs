@@ -25,6 +25,17 @@ const page = await browser.newPage({
   deviceScaleFactor: 1,
 });
 
+// Third-party embeds render live data asynchronously, so a shot taken a second
+// earlier or later captures a different page: the Elfsight LinkedIn feed grows
+// "Latest Updates" by ~122px once it boots (which also moves every section
+// below it by a fraction of a pixel), and the b2blead script restyles the
+// contact form and floats a chat bubble over the bottom-right of every shot.
+// Block both so every run captures the same authored state. SHOOT_THIRD_PARTY=1
+// lets them load, for looking at the live embeds rather than the design.
+if (!process.env.SHOOT_THIRD_PARTY) {
+  await page.route(/elfsight|b2blead/i, (route) => route.abort());
+}
+
 await page.goto(url, { waitUntil: "networkidle", timeout: 60_000 });
 
 // Force every lazy image to load: walk the page, then wait for decode.
@@ -41,12 +52,17 @@ await page.evaluate(async () => {
       i.complete ? Promise.resolve() : new Promise((r) => { i.onload = i.onerror = r; })
     )
   );
+  // Loaded is not painted: an element shot taken right after scrolling can
+  // still catch a poster mid-decode as a black box. Decode everything up front.
+  await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
 });
-// Hide the sticky header and Astro's dev toolbar — both float over mid-page
-// sections and would otherwise appear as overlays in every section shot.
+// Hide the sticky header, Astro's dev toolbar and the back-to-top button — all
+// float over mid-page sections and would otherwise appear as overlays in every
+// section shot (the button mid-fade, since each element shot scrolls).
 await page.addStyleTag({
   content: `[data-site-header]{position:absolute!important}
-            astro-dev-toolbar{display:none!important}`,
+            astro-dev-toolbar{display:none!important}
+            [data-back-to-top]{display:none!important}`,
 });
 
 await page.evaluate(() => document.fonts.ready);

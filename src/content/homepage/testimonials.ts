@@ -1,115 +1,22 @@
-import type { Article, SocialFeedBlock, Testimonial, TestimonialBandBlock } from "../types";
+import type { Article, SocialFeedBlock } from "../types";
 
 /**
- * Homepage content — the two dark-red testimonial bands (Figma "Featured",
- * nodes 10369:8974 and 10369:8987) and the "Latest Updates" LinkedIn feed
- * (Figma "Product", node 9813:5910).
+ * Homepage content — the "Latest Updates" LinkedIn feed (Figma "Product",
+ * node 9813:5910).
  *
- * Sources
- *  - Testimonial quotes, names, organisations and video IDs are VERBATIM
- *    from the current live homepage (jrotbart.com, captured 2026-08-30). The
- *    Figma renders the same two quotes, so nothing here is invented and
- *    nothing is lorem. The two portraits are the Figma exports of the
- *    320x320 video cards (nodes I10369:8974 and I10369:8987).
- *  - The four feed cards in Figma are a flat screenshot of the live site's
- *    Elfsight LinkedIn widget (app 9468f01e-fe66-439f-89e9-5e7b7d0508f6) with
- *    zero text layers. The copy below was read out of that raster and tidied
- *    into title/excerpt pairs — it is seed content, not final copy.
+ * The two testimonial documents and their bands (Figma "Featured", nodes
+ * 10369:8974 and 10369:8987) used to live here. They are drawn on every page
+ * frame, so they moved to the site-wide module `src/content/testimonials.ts`;
+ * import `testimonialOne` / `testimonialTwo` from there.
+ *
+ * Source: the four feed cards in Figma are a flat screenshot of the live
+ * site's Elfsight LinkedIn widget (app 9468f01e-fe66-439f-89e9-5e7b7d0508f6)
+ * with zero text layers. The copy below was read out of that raster and
+ * tidied into title/excerpt pairs — it is seed content, not final copy.
  *
  * Everything that still needs a decision from the client is marked
  * TODO(client); every interim image URL is marked TODO(assets).
  */
-
-// ---------------------------------------------------------------------------
-// Testimonials (referenced documents — reused by the schema layer)
-// ---------------------------------------------------------------------------
-
-const albertCheng: Testimonial = {
-  _id: "albert-cheng-sbma",
-  // Live site renders three author line-breaks here; Figma renders one
-  // paragraph that wraps naturally to four lines at the 758px measure.
-  // Figma wins — hard breaks at authored positions do not survive a
-  // narrower measure.
-  quote:
-    "Since joining the Singapore Bullion Market Association in 2017, J. Rotbart & Co. has been an invaluable part of our community. Congratulations on your 10th anniversary. A remarkable milestone reflecting the trust you have built with high net worth clients worldwide.",
-  name: "Albert Cheng",
-  organisation: "SBMA",
-  portrait: {
-    src: "/figma/frame-1686562793--I10369-8974_10369-8854.webp",
-    alt: "Albert Cheng, CEO of the Singapore Bullion Market Association, photographed against a background of gold bars, beside the J. Rotbart & Co. 10 years lockup.",
-    width: 320,
-    height: 320,
-  },
-  video: {
-    youtubeId: "DskL_tMoXIk",
-    // Portrait Short — the lightbox sizes itself from this.
-    aspect: "9/16",
-    // TODO(client): confirm this against the real YouTube title — it is used
-    // verbatim in the VideoObject structured data.
-    title: "Albert Cheng, SBMA, on ten years of J. Rotbart & Co.",
-    poster: {
-      src: "/figma/frame-1686562793--I10369-8974_10369-8854.webp",
-      alt: "Albert Cheng, CEO of the Singapore Bullion Market Association, photographed against a background of gold bars.",
-      width: 320,
-      height: 320,
-    },
-  },
-};
-
-const euKim: Testimonial = {
-  _id: "eu-kim-alvarez-marsal",
-  // The newline is authored — Figma shows an explicit break after "years."
-  // TestimonialBand preserves it as a real <br>.
-  quote:
-    "Congratulations to J. Rotbart & Co. on 10 remarkable years.\nA testament to your excellence, integrity, and the incredible team; including Joshua, Lakh, Marco, and Elly.",
-  name: "Eu Kim",
-  // TODO(client): the Figma spec transcribes this band's attribution as
-  // "EU KIM, ALVAREZ AND MARSAL" (comma) while the SBMA band is
-  // "ALBERT CHENG - SBMA" (hyphen). TestimonialBand renders one separator for
-  // both — a hyphen, matching the band that was measured verbatim. Confirm
-  // whether the second band really uses a comma; if so the separator has to
-  // become a per-testimonial field in types.ts.
-  organisation: "Alvarez and Marsal",
-  portrait: {
-    src: "/figma/frame-1686562793--I10369-8987_10369-8854.webp",
-    alt: "Eu Kim of Alvarez and Marsal, photographed against a background of gold bars, beside the J. Rotbart & Co. 10 years lockup.",
-    width: 320,
-    height: 320,
-  },
-  video: {
-    youtubeId: "XLSnajMWpno",
-    // Portrait Short — the lightbox sizes itself from this.
-    aspect: "9/16",
-    // TODO(client): confirm against the real YouTube title.
-    title: "Eu Kim, Alvarez and Marsal, on ten years of J. Rotbart & Co.",
-    poster: {
-      src: "/figma/frame-1686562793--I10369-8987_10369-8854.webp",
-      alt: "Eu Kim of Alvarez and Marsal, photographed against a background of gold bars.",
-      width: 320,
-      height: 320,
-    },
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Testimonial bands — the same component, two instances, different content
-// ---------------------------------------------------------------------------
-
-/** First band. Figma 10369:8974, sits directly under the product grid. */
-export const testimonialOne: TestimonialBandBlock = {
-  _key: "testimonial-sbma",
-  _type: "testimonialBand",
-  theme: "dark",
-  testimonial: albertCheng,
-};
-
-/** Second band. Figma 10369:8987 — identical component, different content. */
-export const testimonialTwo: TestimonialBandBlock = {
-  _key: "testimonial-alvarez-marsal",
-  _type: "testimonialBand",
-  theme: "dark",
-  testimonial: euKim,
-};
 
 // ---------------------------------------------------------------------------
 // "Latest Updates" — LinkedIn feed

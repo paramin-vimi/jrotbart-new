@@ -1,0 +1,47 @@
+---
+/**
+ * Figma `Navigations/Arrow Go` — the ring-and-arrow mark that follows every
+ * "Button Text" link (Explore, Learn more, Map, callout arrows) and, mirrored,
+ * `Navigations/Arrow Back` on the product page. Drawn at 28px; the inline
+ * callout form uses the 32px instance.
+ *
+ * The RING is the hairline border colour, NOT the link red: in the frame the
+ * red is carried by the label and the arrow only; the circle is a faint
+ * 10%-black outline. Drawn in currentColor it reads as a small red button and
+ * pulls the eye off the label, so it is stroked with the border token and stays
+ * grey through the hover colour change. r = size/2 − 0.5 with a 1px stroke puts
+ * the ring on the pixel grid (outer edge exactly on the box), which keeps it a
+ * crisp hairline instead of a smeared two-pixel grey.
+ *
+ * Decorative: the label beside it names the link. `class` is appended to the
+ * size classes, so callers add hover motion (e.g. `group-hover/cta:translate-x-1`)
+ * without restating the size.
+ */
+interface Props {
+  size?: 28 | 32;
+  direction?: "forward" | "back";
+  class?: string;
+}
+
+const { size = 28, direction = "forward", class: className = "" } = Astro.props;
+
+const GEOMETRY = {
+  28: {
+    box: "h-7 w-7 shrink-0",
+    r: 13.5,
+    forward: "M9 14h10M14.75 9.75 19 14l-4.25 4.25",
+    back: "M19 14H9M13.25 9.75 9 14l4.25 4.25",
+  },
+  32: {
+    box: "h-8 w-8 shrink-0",
+    r: 15.5,
+    forward: "M10.5 16h11M16.5 11 21.5 16l-5 5",
+    back: "M21.5 16h-11M15.5 11 10.5 16l5 5",
+  },
+} as const;
+
+const g = GEOMETRY[size];
+const cls = className ? `${g.box} ${className}` : g.box;
+const centre = size / 2;
+---
+<svg class={cls} viewBox={`0 0 ${size} ${size}`} fill="none" aria-hidden="true"><circle cx={centre} cy={centre} r={g.r} class="stroke-border-primary" stroke-width="1" /><path d={g[direction]} stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" /></svg>

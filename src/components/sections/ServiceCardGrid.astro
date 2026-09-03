@@ -17,6 +17,12 @@ interface Props {
 
 const { block, class: className = "" } = Astro.props;
 const { header, services } = block;
+
+/* Headerless (the Service listing has no "More Services" sub-header): the
+   landmark is named by `block.label` and the cards start at the top. */
+const landmark = header
+  ? { "aria-labelledby": `${block._key}-heading` }
+  : { "aria-label": block.label };
 ---
 
 <style>
@@ -39,13 +45,17 @@ const { header, services } = block;
 
 <section
   id={block.anchorId}
-  aria-labelledby={`${block._key}-heading`}
+  {...landmark}
+  data-block
+  data-theme="light"
+  data-seam={block.seam}
   class:list={["service-card-grid bg-bg-secondary py-lg md:py-xl lg:py-3xl", className]}
 >
   <Container>
     <div class="flex flex-col gap-lg">
       {/* Intro is a fixed 720px measure in Figma — kept as a max-width so it
           collapses cleanly rather than overflowing narrow viewports. */}
+      {header && (
       <div class="flex max-w-[720px] flex-col gap-xs">
         {/*
           Figma types this heading as Header/H4 (16/24) while the card titles
@@ -61,6 +71,7 @@ const { header, services } = block;
           <p class="text-base leading-6 text-text-secondary">{header.body}</p>
         )}
       </div>
+      )}
 
       <ul
         class="grid grid-cols-1 gap-lg md:grid-cols-2 md:gap-x-md md:gap-y-xl lg:grid-cols-4"

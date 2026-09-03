@@ -1,12 +1,27 @@
 ---
 /**
- * Open-an-Account CTA band — Figma 9813:6123.
+ * CTA band. Two drawn variants, one block type:
  *
- * A compact utility conversion band, not a hero CTA: the heading is set at the
- * H4 size (16/24) even though it is semantically the section's <h2>.
+ * "band" (default) — Figma 9813:6123, the homepage "Open An Account" band.
+ *   A compact utility conversion band on the tinted surface, not a hero CTA:
+ *   the heading is set at the H4 size (16/24) even though it is semantically
+ *   the section's <h2>. Desktop is two columns split by a 1px rule at x=909 —
+ *   a border-right on the left column so it can never outlive an empty badge
+ *   list. Optional `overline` (16px above the heading) and `secondaryCta`
+ *   (stacked under the primary, 16px gap, both sized to the widest label).
  *
- * Desktop is two columns split by a 1px rule at x=909 — implemented as a
- * border-right on the left column so it can never outlive an empty badge list.
+ * "card" — Figma 10976:21597, the Service listing "Free initial consultation"
+ *   card: on the light surface, a 1px border-primary box with an 8px brand-red
+ *   accent bar, 48px padding, 48px column gap. Left column overline → heading
+ *   → body (16px apart) with a right rule (pr-48); right column the primary
+ *   button, the dark secondary and the helper line, 16px apart, the buttons
+ *   filling the column so both are as wide as the widest content (269px as
+ *   drawn — the helper line). The accent bar is a border, not the drawn
+ *   8x259 child rectangle that overflows the 246px card. Badges are not drawn
+ *   on this variant and are ignored. (Variant A, 10976:21589, is not built.)
+ *
+ * REVIEW (no mobile design): the card stacks below lg with the right rule
+ * dropped, 32px padding, and both buttons full width.
  */
 import Container from "@primitives/Container.astro";
 import Button from "@primitives/Button.astro";
@@ -19,127 +34,214 @@ interface Props {
 }
 
 const { block, class: className = "" } = Astro.props;
-const { heading, body, cta, helperLinks = [], badgeLabel, badges = [] } = block;
+const {
+  overline,
+  heading,
+  body,
+  cta,
+  secondaryCta,
+  helperLinks = [],
+  badgeLabel,
+  badges = [],
+} = block;
 
 /** `Cta.style` allows "arrow", which the Button primitive does not render. */
-const buttonVariant: Exclude<CtaStyle, "arrow"> =
-  cta.style && cta.style !== "arrow" ? cta.style : "solid";
+const buttonVariant = (style?: CtaStyle): Exclude<CtaStyle, "arrow"> =>
+  style && style !== "arrow" ? style : "solid";
 
-const hasBadges = badges.length > 0;
+const isCard = block.variant === "card";
+const hasBadges = !isCard && badges.length > 0;
 
-/* Shared inline-link treatment for the two helper sentences. The underline is
+/* Shared inline-link treatment for the helper sentences. The underline is
    already on at rest in the comp, so hover needs a second signal — a shift to
    brand-950, per the spec's own proposal. */
 const inlineLink =
   "text-brand-red underline underline-offset-2 transition-colors duration-150 " +
   "hover:text-brand-950 motion-reduce:transition-none";
+
+const rel = (external?: boolean) =>
+  external ? { rel: "noopener noreferrer", target: "_blank" } : {};
 ---
 
-<section
-  id={block.anchorId}
-  class:list={["bg-bg-primary py-lg md:py-xl lg:py-3xl", className]}
->
-  <Container>
-    <div class="flex flex-col gap-md lg:flex-row lg:items-center lg:gap-0">
-      <!-- Left column: heading, body, CTA, helper links -->
-      <div
-        class:list={[
-          "flex flex-col",
-          hasBadges && "lg:flex-1 lg:border-r lg:border-border-primary lg:pr-lg",
-        ]}
-      >
-        <h2 class="font-display text-base leading-6 font-medium text-text-primary">
-          {heading}
-        </h2>
+{isCard ? (
+  <section
+    id={block.anchorId}
+    data-block
+    data-theme="light"
+    data-seam={block.seam}
+    class:list={["bg-bg-secondary py-lg md:py-xl lg:py-3xl", className]}
+  >
+    <Container>
+      <div class="flex flex-col gap-md border border-border-primary border-l-8 border-l-brand-red p-md lg:flex-row lg:items-center lg:gap-lg lg:p-lg">
+        <!-- Left column: overline, heading, body; right rule from lg -->
+        <div class="flex flex-col gap-xs lg:min-w-0 lg:flex-1 lg:border-r lg:border-border-primary lg:pr-lg">
+          {overline && <Overline tone="red">{overline}</Overline>}
+          <h2 class="font-display text-base leading-6 font-medium text-text-primary">
+            {heading}
+          </h2>
+          {body && <p class="text-base leading-6 text-text-secondary">{body}</p>}
+        </div>
 
-        {
-          body && (
-            <p class="mt-xs max-w-[766px] text-base leading-6 text-text-secondary">
-              {body}
+        <!-- Right column: the stacked buttons and the helper line. `shrink-0`
+             with no set width lets the column hug its widest child, and the
+             buttons fill it — which is how the drawn pair come out 269 wide. -->
+        <div class="flex flex-col gap-xs lg:shrink-0">
+          <Button href={cta.href} variant={buttonVariant(cta.style)} external={cta.external} class="w-full">
+            {cta.label}
+          </Button>
+          {secondaryCta && (
+            <Button
+              href={secondaryCta.href}
+              variant={buttonVariant(secondaryCta.style)}
+              external={secondaryCta.external}
+              class="w-full"
+            >
+              {secondaryCta.label}
+            </Button>
+          )}
+          {helperLinks.map((item) => (
+            /* Drawn 16/24 in plain black (#000000 has no token; text-primary
+               is the nearest) — a sentence, not the band's bulleted list. */
+            <p class="text-base leading-6 text-text-primary">
+              {item.prefix}{" "}
+              <a href={item.link.href} class={inlineLink} {...rel(item.link.external)}>
+                {item.link.label}
+              </a>
             </p>
-          )
-        }
-
-        {/* Figma: 200 × 46 fixed. Below `sm` it goes full-width — a 200px
-            button stranded on a 375px screen reads as an afterthought. Centred
-            from sm to lg for the same reason in the other direction: a 200px
-            button pinned left in a ~900px stacked column reads as a mistake. */}
-        <Button
-          href={cta.href}
-          variant={buttonVariant}
-          external={cta.external}
-          class="mt-md mx-auto w-full sm:w-[200px] lg:mx-0"
+          ))}
+        </div>
+      </div>
+    </Container>
+  </section>
+) : (
+  <section
+    id={block.anchorId}
+    data-block
+    data-theme="tinted"
+    data-seam={block.seam}
+    class:list={["bg-bg-primary py-lg md:py-xl lg:py-3xl", className]}
+  >
+    <Container>
+      <div class="flex flex-col gap-md lg:flex-row lg:items-center lg:gap-0">
+        <!-- Left column: heading, body, CTA, helper links -->
+        <div
+          class:list={[
+            "flex flex-col",
+            hasBadges && "lg:flex-1 lg:border-r lg:border-border-primary lg:pr-lg",
+          ]}
         >
-          {cta.label}
-        </Button>
+          {overline && <Overline tone="red">{overline}</Overline>}
 
+          <h2
+            class:list={[
+              "font-display text-base leading-6 font-medium text-text-primary",
+              overline && "mt-xs",
+            ]}
+          >
+            {heading}
+          </h2>
+
+          {
+            body && (
+              <p class="mt-xs max-w-[766px] text-base leading-6 text-text-secondary">
+                {body}
+              </p>
+            )
+          }
+
+          {/* Figma: 200 × 46 fixed. Below `sm` it goes full-width — a 200px
+              button stranded on a 375px screen reads as an afterthought. Centred
+              from sm to lg for the same reason in the other direction: a 200px
+              button pinned left in a ~900px stacked column reads as a mistake.
+              With a secondary CTA the two stack 16px apart in a column that
+              hugs the widest label, and both fill that column. */}
+          {secondaryCta ? (
+            <div class="mt-md mx-auto flex w-full flex-col gap-xs sm:w-fit lg:mx-0">
+              <Button href={cta.href} variant={buttonVariant(cta.style)} external={cta.external} class="w-full">
+                {cta.label}
+              </Button>
+              <Button
+                href={secondaryCta.href}
+                variant={buttonVariant(secondaryCta.style)}
+                external={secondaryCta.external}
+                class="w-full"
+              >
+                {secondaryCta.label}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              href={cta.href}
+              variant={buttonVariant(cta.style)}
+              external={cta.external}
+              class="mt-md mx-auto w-full sm:w-[200px] lg:mx-0"
+            >
+              {cta.label}
+            </Button>
+          )}
+
+          {
+            helperLinks.length > 0 && (
+              /* A real UL: disc markers sitting in the 24px indent, 24px line
+                 rhythm, markers in text-secondary — as drawn. Deliberately not a
+                 flex column: `display:flex` blockifies the items and, while the
+                 markers survive it in current engines, there is nothing here for
+                 flex to do. */
+              <ul class="mt-md list-disc pl-sm text-base leading-6 text-text-secondary marker:text-text-secondary">
+                {helperLinks.map((item) => (
+                  <li>
+                    {item.prefix}{" "}
+                    <a href={item.link.href} class={inlineLink} {...rel(item.link.external)}>
+                      {item.link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </div>
+
+        <!--
+          Badge column. On desktop it is inset 48px past the rule and optically
+          centred against the left column. On mobile the vertical rule becomes a
+          horizontal one above the block, the 48px inset is dropped, and the
+          badges are allowed to wrap.
+        -->
         {
-          helperLinks.length > 0 && (
-            /* A real UL: disc markers sitting in the 24px indent, 24px line
-               rhythm, markers in text-secondary — as drawn. Deliberately not a
-               flex column: `display:flex` blockifies the items and, while the
-               markers survive it in current engines, there is nothing here for
-               flex to do. */
-            <ul class="mt-md list-disc pl-sm text-base leading-6 text-text-secondary marker:text-text-secondary">
-              {helperLinks.map((item) => (
-                <li>
-                  {item.prefix}{" "}
-                  <a
-                    href={item.link.href}
-                    class={inlineLink}
-                    {...item.link.external
-                      ? { rel: "noopener noreferrer", target: "_blank" }
-                      : {}}
-                  >
-                    {item.link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+          hasBadges && (
+            <div class="border-t border-border-primary pt-md lg:w-[360px] lg:shrink-0 lg:border-t-0 lg:pt-0 lg:pl-lg">
+              {badgeLabel && <Overline tone="tertiary">{badgeLabel}</Overline>}
+
+              <ul role="list" class="mt-sm flex flex-wrap items-center gap-sm md:gap-md">
+                {badges.map((badge) => (
+                  <li>
+                    {/* The display box comes from the data, so adding a fourth
+                        badge needs no CSS. BOTH axes are honoured — the comp
+                        draws SBMA in a 120×80 slot and the two seals in 64×64,
+                        which is what makes the row measure exactly 312 and puts
+                        the seals where the comp puts them. Sizing on height alone
+                        let the interim 109×89 SBMA PNG collapse its slot to 98px
+                        and drag both seals ~22px left. `object-contain` keeps any
+                        artwork letterboxed inside its designed box.
+                        Below `md` every badge renders at 72% of that box. */}
+                    <img
+                      src={badge.image.src}
+                      alt={badge.image.decorative ? "" : badge.image.alt}
+                      aria-hidden={badge.image.decorative ? "true" : undefined}
+                      width={badge.image.width}
+                      height={badge.image.height}
+                      loading="lazy"
+                      decoding="async"
+                      style={`--badge-w:${badge.image.width ?? 64}px;--badge-h:${badge.image.height ?? 64}px`}
+                      class="h-[calc(var(--badge-h)*0.72)] w-[calc(var(--badge-w)*0.72)] object-contain md:h-[var(--badge-h)] md:w-[var(--badge-w)]"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
           )
         }
       </div>
-
-      <!--
-        Badge column. On desktop it is inset 48px past the rule and optically
-        centred against the left column. On mobile the vertical rule becomes a
-        horizontal one above the block, the 48px inset is dropped, and the
-        badges are allowed to wrap.
-      -->
-      {
-        hasBadges && (
-          <div class="border-t border-border-primary pt-md lg:w-[360px] lg:shrink-0 lg:border-t-0 lg:pt-0 lg:pl-lg">
-            {badgeLabel && <Overline tone="tertiary">{badgeLabel}</Overline>}
-
-            <ul role="list" class="mt-sm flex flex-wrap items-center gap-sm md:gap-md">
-              {badges.map((badge) => (
-                <li>
-                  {/* The display box comes from the data, so adding a fourth
-                      badge needs no CSS. BOTH axes are honoured — the comp
-                      draws SBMA in a 120×80 slot and the two seals in 64×64,
-                      which is what makes the row measure exactly 312 and puts
-                      the seals where the comp puts them. Sizing on height alone
-                      let the interim 109×89 SBMA PNG collapse its slot to 98px
-                      and drag both seals ~22px left. `object-contain` keeps any
-                      artwork letterboxed inside its designed box.
-                      Below `md` every badge renders at 72% of that box. */}
-                  <img
-                    src={badge.image.src}
-                    alt={badge.image.decorative ? "" : badge.image.alt}
-                    aria-hidden={badge.image.decorative ? "true" : undefined}
-                    width={badge.image.width}
-                    height={badge.image.height}
-                    loading="lazy"
-                    decoding="async"
-                    style={`--badge-w:${badge.image.width ?? 64}px;--badge-h:${badge.image.height ?? 64}px`}
-                    class="h-[calc(var(--badge-h)*0.72)] w-[calc(var(--badge-w)*0.72)] object-contain md:h-[var(--badge-h)] md:w-[var(--badge-w)]"
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
-        )
-      }
-    </div>
-  </Container>
-</section>
+    </Container>
+  </section>
+)}

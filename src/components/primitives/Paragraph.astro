@@ -1,0 +1,50 @@
+---
+import type { Paragraph } from "@content/types";
+import { paragraphRuns, paragraphTone } from "@lib/paragraph";
+
+/**
+ * One body paragraph from the `Paragraph` content type.
+ *
+ * A plain string renders exactly as `<p class={class}>text</p>`; the object
+ * form renders its runs as <strong> / <em> / <a> — the only three marks the
+ * model permits, so nothing here ever reaches for `set:html`. `tone: "accent"`
+ * (the brand-red registration paragraph on the office page) swaps the text
+ * colour: pass the paragraph's normal classes in `class` and the accent in
+ * `accentClass`; the accent replaces the LAST class in `class` only when it
+ * is a text colour — simpler: give `class` without a colour and let `toneClass`
+ * pick between `defaultClass` and `accentClass`.
+ */
+interface Props {
+  paragraph: Paragraph;
+  /** Classes shared by both tones (size, leading…). */
+  class?: string;
+  /** Text colour for `tone: "default"`. */
+  defaultClass?: string;
+  /** Text colour for `tone: "accent"`. */
+  accentClass?: string;
+}
+
+const {
+  paragraph,
+  class: className = "text-base leading-6",
+  defaultClass = "text-text-secondary",
+  accentClass = "text-brand-red",
+} = Astro.props;
+
+const runs = paragraphRuns(paragraph);
+const cls = `${className} ${paragraphTone(paragraph) === "accent" ? accentClass : defaultClass}`;
+
+/* Inline-link treatment shared with CtaBand's helper links. */
+const linkClass =
+  "text-brand-red underline underline-offset-2 transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none";
+---
+<p class={cls}>{runs.map((run) => {
+  const text = run.strong && run.em
+    ? <strong class="font-semibold text-text-primary"><em>{run.text}</em></strong>
+    : run.strong
+      ? <strong class="font-semibold text-text-primary">{run.text}</strong>
+      : run.em
+        ? <em>{run.text}</em>
+        : run.text;
+  return run.href ? <a href={run.href} class={linkClass}>{text}</a> : text;
+})}</p>

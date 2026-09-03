@@ -4,7 +4,7 @@ import Overline from "@primitives/Overline.astro";
 import SectionHeader from "@primitives/SectionHeader.astro";
 import Button from "@primitives/Button.astro";
 import type { MintStripBlock } from "@content/types";
-import type { ContactFormSection, DirectoryLine } from "@content/homepage/contact";
+import type { ContactFormSection, DirectoryLine } from "@content/contact";
 import { b2blead } from "@content/integrations";
 
 /**
@@ -21,7 +21,7 @@ import { b2blead } from "@content/integrations";
  * • It is an ordinary <form method="post"> pointing at CONTACT_ENDPOINT. There
  *   is NO fetch() wrapper and NO simulated success — the backend Worker has not
  *   been written yet (see the block comment on CONTACT_ENDPOINT in
- *   src/content/homepage/contact.ts for what it must do). Submitting today will
+ *   src/content/contact.ts for what it must do). Submitting today will
  *   404, which is the honest behaviour; it will start working the moment the
  *   Worker exists, with no change to this component.
  * • It works with JavaScript disabled: real <label for>, real input types,
@@ -77,10 +77,18 @@ interface Props {
   block: ContactFormSection;
   /** Optional provenance strip rendered directly above it. */
   mintStrip?: MintStripBlock;
+  /**
+   * Product pages open the enquiry with the product already named. The name is
+   * written as a LINE OF TEXT into the message textarea (`prefillTemplate` in
+   * the content module) — never posted as a separate field, because the
+   * b2blead endpoint's accepted field names are unverified and an unknown
+   * field could reject the whole submission.
+   */
+  prefill?: { product: string };
   class?: string;
 }
 
-const { block, mintStrip, class: className = "" } = Astro.props;
+const { block, mintStrip, prefill, class: className = "" } = Astro.props;
 const {
   header,
   fieldRows,
@@ -92,7 +100,10 @@ const {
   feedback,
   directory,
   map,
+  prefillTemplate,
 } = block;
+
+const prefillText = prefill ? prefillTemplate.replace("%s", prefill.product) : undefined;
 
 /** `<section>` is only a landmark when it is named. */
 const sectionLabel = [header.heading, header.headingAccent].filter(Boolean).join(" ");
@@ -147,6 +158,9 @@ const fieldClass =
     <section
       id={mintStrip.anchorId}
       aria-labelledby={`${mintStrip._key}-label`}
+      data-block
+      data-theme="light"
+      data-seam={mintStrip.seam}
       class="bg-bg-secondary"
     >
       <Container class="py-lg md:py-xl">
@@ -211,6 +225,9 @@ const fieldClass =
 <section
   id={block.anchorId}
   aria-label={sectionLabel}
+  data-block
+  data-theme="light"
+  data-seam={block.seam}
   class:list={["bg-bg-secondary pb-lg pt-lg md:pb-xl md:pt-xl lg:pb-3xl lg:pt-3xl", className]}
 >
   <Container>
@@ -298,7 +315,7 @@ const fieldClass =
                             {...shared}
                             rows={field.rows ?? 3}
                             class:list={[fieldClass, "min-h-[51px] resize-y"]}
-                          ></textarea>
+                          >{prefillText}</textarea>
                         ) : (
                           <input
                             {...shared}
@@ -414,13 +431,14 @@ const fieldClass =
               </a>
             </p>
 
-            {/* Figma fills this button #1a1a1a, not brand red — the only dark
-                button in the design. Overridden with `!` because Button's own
-                variant class would otherwise win on source order alone. */}
+            {/* Figma fills this button #1a1a1a, not brand red — the Button
+                primitive's "dark" variant (also "Open an Account" and "Load
+                More" on the other pages). The fixed 200px width makes its
+                32px inline padding invisible here. */}
             <Button
               type="submit"
-              variant="solid"
-              class="w-full shrink-0 bg-text-primary! hover:bg-always-black! sm:w-[200px]"
+              variant="dark"
+              class="w-full shrink-0 sm:w-[200px]"
             >
               {submitLabel}
             </Button>
