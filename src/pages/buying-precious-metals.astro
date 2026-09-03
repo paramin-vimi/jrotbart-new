@@ -1,0 +1,134 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import PageHero from "@sections/PageHero.astro";
+import LogoStrip from "@sections/LogoStrip.astro";
+import ProseSection from "@sections/ProseSection.astro";
+import FeatureGrid from "@sections/FeatureGrid.astro";
+import TestimonialBand from "@sections/TestimonialBand.astro";
+import CalloutBand from "@sections/CalloutBand.astro";
+import ProductGrid from "@sections/ProductGrid.astro";
+import MediaWithText from "@sections/MediaWithText.astro";
+import ProcessSteps from "@sections/ProcessSteps.astro";
+import ComparisonTable from "@sections/ComparisonTable.astro";
+import FaqAccordion from "@sections/FaqAccordion.astro";
+import NewsGrid from "@sections/NewsGrid.astro";
+
+import {
+  path,
+  seo as pageSeo,
+  breadcrumb,
+  service,
+  pageHero,
+  intro,
+  whyClients,
+  testimonialFirst,
+  testimonialSecond,
+  testimonialThird,
+  metals,
+  metalsCallout,
+  barsAndCoins,
+  bestSellers,
+  exploreCallout,
+  lbmaStandards,
+  origin,
+  steps,
+  stepsCallout,
+  comparison,
+  comparisonCallout,
+  faqs,
+  faq,
+  news,
+  storageCallout,
+  relatedServices,
+  packageCallout,
+} from "@content/pages/buying-precious-metals";
+
+import { logoStrip } from "@content/homepage/products";
+import { newsCardCtaLabel } from "@content/homepage/news";
+import { getAllPosts, toArticle } from "@lib/posts";
+import {
+  buildGraph,
+  siteGraph,
+  webPageNode,
+  breadcrumbNode,
+  serviceNode,
+  faqPageNode,
+  SITE,
+} from "@lib/schema";
+
+/**
+ * Buy Precious Metals — /buying-precious-metals/.
+ *
+ * Section order follows the Figma frame `Service - Buy Precious Metals`
+ * (10726:9159) top to bottom; the per-block node ids and the full placeholder
+ * register live in the header of src/content/pages/buying-precious-metals.ts.
+ * Every section is a block from the fixed union in src/content/types.ts and is
+ * authored in that module — this page composes, it holds no copy and no layout
+ * of its own. The tail (mint strip + contact) comes from SiteLayout.
+ *
+ * The seven blocks from `metals` to `origin` are one light compound frame in
+ * the design (10726:9195) whose internal gap is 96 rather than the 96 + 96 two
+ * surfaces would meet with, so each one after the first carries
+ * `seam: "default"` in the content module and the seam rules in global.css
+ * collapse the pair. Nothing about that is expressed here.
+ */
+
+const url = `${SITE}${path}`;
+const seo = { ...pageSeo, canonical: url };
+
+/* Latest three posts, NOT getHomepagePosts: that helper honours the "feature on
+   the homepage" pin, which is a homepage editorial decision and would make this
+   page show a pinned older piece ahead of newer ones. */
+const latestPosts = (await getAllPosts()).slice(0, news.limit ?? 3);
+const newsWithPosts = { ...news, articles: latestPosts.map(toArticle) };
+
+const schema = buildGraph([
+  ...siteGraph(),
+  webPageNode(seo, url, { about: { "@id": `${url}#service` } }),
+  breadcrumbNode(breadcrumb.map((crumb) => ({ name: crumb.name, url: `${SITE}${crumb.path}` }))),
+  serviceNode({ url, description: seo.description, ...service }),
+  faqPageNode(faqs),
+]);
+---
+
+<SiteLayout seo={seo} schema={schema} currentSection="services" headerOverlay>
+  <PageHero block={pageHero} />
+
+  {/* The homepage's press / endorsement strip, by reference — the frame draws
+      the same node (10726:9170). */}
+  <LogoStrip block={logoStrip} />
+
+  <ProseSection block={intro} />
+
+  <FeatureGrid block={whyClients} />
+
+  <TestimonialBand block={testimonialFirst} />
+
+  {/* Light compound frame 10726:9195 — see the note above on seams. */}
+  <FeatureGrid block={metals} />
+  <CalloutBand block={metalsCallout} />
+  <FeatureGrid block={barsAndCoins} />
+  <ProductGrid block={bestSellers} />
+  <CalloutBand block={exploreCallout} />
+  <MediaWithText block={lbmaStandards} />
+  <ProseSection block={origin} />
+
+  <TestimonialBand block={testimonialSecond} />
+
+  <ProcessSteps block={steps} />
+  <CalloutBand block={stepsCallout} />
+
+  <ComparisonTable block={comparison} />
+  <CalloutBand block={comparisonCallout} />
+
+  <TestimonialBand block={testimonialThird} />
+
+  <FaqAccordion block={faq} />
+
+  <NewsGrid block={newsWithPosts} cardCtaLabel={newsCardCtaLabel} />
+  <CalloutBand block={storageCallout} />
+
+  {/* Figma types these four cells at 16/24, smaller than the metal cards. */}
+  <FeatureGrid block={relatedServices} titleSize="h4" />
+  <CalloutBand block={packageCallout} />
+</SiteLayout>

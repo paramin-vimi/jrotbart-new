@@ -1,0 +1,134 @@
+---
+/**
+ * Process steps — five numbered columns under a red rule.
+ *
+ * Drawn twice, identically apart from the header: Buy PM 10726:9257 (split
+ * header: overline + H2 in a 539px left column, body top-aligned in the
+ * right, 96 gap) and Office HK 11039:18655 (stacked header, then a Button
+ * 64 below the steps). Steps are 209 wide with a 32 gap (5 × 209 + 4 × 32 =
+ * 1173); each is a rule row (12×12 brand-red square + 1px hairline, 12 tall)
+ * → 24 → number → 16 → title Playfair 20/28 → 16 → body 16/24, with 16px of
+ * right padding on the text. Header → steps is 64, steps → button 64.
+ *
+ * NUMBERS are rendered ("01"…), never authored — the HK frame's duplicated
+ * "04" cannot recur. The <ol> already carries the order for assistive tech,
+ * so the visible number is aria-hidden rather than read twice.
+ *
+ * REVIEW (no mobile design). The drawn 5-up only fits from ~1200px, and a
+ * wrapping grid strands 3 + 2 with orphans, so:
+ *   • ≥ 1200: five columns as drawn.
+ *   • 768–1199: a horizontal rail — `overflow-x-auto snap-x`, each step a
+ *     fixed 260 wide (a minimum would let a paragraph's max-content width
+ *     stretch the step across the whole rail) and snap-start — which keeps
+ *     the left-to-right sequence the numbers imply. The rail scrolls inside
+ *     itself; the page never does.
+ *   • < 768: a vertical timeline. The list gets a hairline left rail with 48
+ *     of padding; each step's red square is absolutely positioned on that
+ *     rail (centred on the 1px line) and its horizontal hairline is dropped.
+ *     The rule row keeps its 12px height so the 24px rhythm below it holds.
+ *
+ * `theme: "dark"` is not drawn for this block; it renders the tinted surface.
+ * Landmark name: `aria-label` = the plain heading (SectionHeader exposes no
+ * heading id for `aria-labelledby`).
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import Button from "@primitives/Button.astro";
+import Paragraph from "@primitives/Paragraph.astro";
+import type { CtaStyle, ProcessStepsBlock } from "@content/types";
+
+interface Props {
+  block: ProcessStepsBlock;
+  class?: string;
+}
+
+// Cast: as in partials/CalloutCard.astro, Astro does not attach `Props` to
+// `Astro.props` in this file, which would leave every destructured value `any`.
+const { block, class: className = "" } = Astro.props as Props;
+const { header, headerLayout = "stacked", steps, cta } = block;
+
+const theme = block.theme === "tinted" || block.theme === "dark" ? "tinted" : "light";
+const surface = theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+
+/* Split header: SectionHeader takes overline + heading; the body moves to
+   the right column. `body` may be one string or several paragraphs. */
+const isSplit = headerLayout === "split";
+const bodyParagraphs =
+  header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
+const splitHeader = { ...header, body: undefined };
+
+/** `Cta.style` allows "arrow", which the Button primitive does not render. */
+const buttonVariant = (style?: CtaStyle): Exclude<CtaStyle, "arrow"> =>
+  style && style !== "arrow" ? style : "solid";
+
+/* Stacked headers are capped at 887 (the frames' header container) and
+   their body runs the full 887 — SectionHeader's own 65ch measure is the
+   homepage's, and the seven frames draw these bodies three lines wide. */
+const STACKED_HEADER = "max-w-[887px] [&>p]:max-w-none";
+const number = (index: number) => String(index + 1).padStart(2, "0");
+---
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={theme}
+  data-seam={block.seam}
+  aria-label={header.heading}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container class="flex flex-col gap-xl">
+    {isSplit ? (
+      <div class="grid gap-sm lg:grid-cols-2 lg:gap-3xl">
+        <SectionHeader header={splitHeader} />
+        {bodyParagraphs.length > 0 && (
+          <div class="flex flex-col gap-sm">
+            {bodyParagraphs.map((paragraph) => (
+              <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    ) : (
+      <SectionHeader header={header} class={STACKED_HEADER} />
+    )}
+
+    {/* The three responsive forms live on the list and its items; see the
+        REVIEW note in the file header. The rail's properties are scoped to
+        md–1199 with stacked variants rather than set at md and undone at
+        1200, so the 5-up never inherits a 260px minimum into a 209px track. */}
+    <ol
+      class:list={[
+        "flex flex-col gap-lg",
+        "max-md:border-l max-md:border-border-primary max-md:pl-lg",
+        "md:max-[1199px]:snap-x md:max-[1199px]:snap-mandatory md:max-[1199px]:flex-row md:max-[1199px]:gap-md md:max-[1199px]:overflow-x-auto md:max-[1199px]:pb-2xs",
+        "min-[1200px]:grid min-[1200px]:grid-cols-5 min-[1200px]:gap-md",
+      ]}
+    >
+      {steps.map((step, index) => (
+        <li class="relative flex min-w-0 flex-col gap-sm md:max-[1199px]:w-[260px] md:max-[1199px]:shrink-0 md:max-[1199px]:snap-start">
+          <span class="flex h-3 items-center" aria-hidden="true">
+            <span class="h-3 w-3 shrink-0 bg-brand-red max-md:absolute max-md:top-0 max-md:-left-[calc(var(--spacing-lg)+6px)]" />
+            <span class="h-px flex-1 bg-border-primary max-md:hidden" />
+          </span>
+
+          <div class="flex flex-col gap-xs pr-xs">
+            <p class="eyebrow text-text-tertiary" aria-hidden="true">{number(index)}</p>
+            <h3 class="font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary">
+              {step.title}
+            </h3>
+            <div class="flex flex-col gap-sm">
+              {step.body.map((paragraph) => (
+                <Paragraph paragraph={paragraph} />
+              ))}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+
+    {cta && (
+      <Button href={cta.href} variant={buttonVariant(cta.style)} external={cta.external} class="self-start">
+        {cta.label}
+      </Button>
+    )}
+  </Container>
+</section>

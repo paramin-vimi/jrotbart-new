@@ -127,6 +127,19 @@ export const footer: SiteFooter = {
         // Live site keeps press, blog and events on one index; the design's
         // single "News & Events" link maps straight onto it.
         { label: "News & Events", href: "/blogs-events-press/" },
+        /*
+         * NOT in the Figma footer, which draws eight links. Added because
+         * /offices/ is otherwise ORPHANED: the design gives the office listing
+         * no entry in either the header nav or the footer, so a finished page
+         * would be reachable only by typing the URL. The footer already acts as
+         * the site's link-of-last-resort for top-level pages, so this is the
+         * least invasive place to reach it.
+         * TODO(client): where should Offices sit in the main navigation? It is a
+         * new page with no live-site equivalent, so this is a placement
+         * decision, not a build one — see also `currentSection` in
+         * src/pages/offices.astro, which guesses "about".
+         */
+        { label: "Offices", href: "/offices/" },
       ],
     },
     {

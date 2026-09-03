@@ -1,0 +1,267 @@
+---
+/**
+ * Location map — Figma 10980:13178 (the office listing "Where you'll find
+ * us"). Header row: overline → 24 → H2 on the left, the 320×64 legend on the
+ * right, bottom-aligned; 48px below, the 1174×660 map band with a crown pin
+ * per office and a 12px disc per vault; and, always, a list of every location.
+ *
+ * THE HEADING is hand-built rather than <SectionHeader>: the frame breaks it
+ * HARD between the two sentences ("Five Offices." roman, "Fifteen Vaults."
+ * italic tertiary on the next line, 10980:13182 is a 201×88 box), which the
+ * primitive's soft-wrapped runs would set on one line at 1366. Each run is a
+ * block-level span, so the heading is still announced as one string — the
+ * same treatment the homepage OfficeGrid gives its hard break.
+ *
+ * THE MAP. The artwork is the homepage's `/figma/world-map.webp` (the same
+ * 256-country vector group, 10980:13192). In the frame it is drawn 1292×822
+ * and offset −123 / −162 inside the 1174×660 band (inventory-data.json;
+ * Amendment 11), i.e. width 110.05% of the band, left −10.48%, top −24.55%.
+ * Those percentages are the crop, so it survives the band scaling. Pins are
+ * placed by `projectOfficeMap` (src/lib/geo.ts) from real coordinates, as a
+ * percentage of the band, never a pixel. The office pin's ANCHOR is its
+ * bottom-centre tip (the projection was fitted on that point), the vault
+ * dot's is its centre.
+ *
+ * An office pin needs coordinates: `Office.geo` when it exists (none does
+ * today — offices.ts explains), else the geo of the vault that names the
+ * office in `officeId`, since every office city also hosts a vault. Such a
+ * vault is then represented by the crown (caption "Office · Vault") and not
+ * drawn twice. An office with neither draws no pin but is still listed.
+ *
+ * PINS ARE DISCLOSURES, NOT LINKS. Each is a <button> whose caption card
+ * (10980:13465: city + "Office · Vault") appears on hover, keyboard focus and
+ * tap; the map's job is orientation, and the desk links live on the cards
+ * above it. (The survey's `<a href="/<slug>/">` would 404 for the two offices
+ * without a page — the block does not know which offices have routes.)
+ *
+ * `control: "filter"` is accepted by the type but renders the same static key
+ * as "legend": the frame draws no selected state to build from.
+ * TODO(client): should the Office / Vault control filter the pins?
+ *
+ * REVIEW (no mobile design): below md the band keeps its 1174px drawing width
+ * inside a horizontal scroller — shrinking a world map to 342px makes the
+ * 24px hit targets overlap on Europe — and the list underneath carries the
+ * information without scrolling. The header row stacks below lg. The list is
+ * VISIBLE at every width (recorded deviation, Amendment 11): a map alone is
+ * not accessible, and the list costs nothing.
+ */
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import Icon from "@primitives/Icon.astro";
+import { projectOfficeMap } from "@lib/geo";
+import type { HeadingRun, LocationMapBlock } from "@content/types";
+
+interface Props {
+  block: LocationMapBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, legend, offices, vaults, captions } = block;
+
+const surface = block.theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+const headingId = `${block._key}-heading`;
+
+/* Heading runs: `headingRuns` when present, else the heading / accent pair. */
+const runs: HeadingRun[] = header.headingRuns ?? [
+  { text: header.heading },
+  ...(header.headingAccent ? [{ text: header.headingAccent, accent: true }] : []),
+  ...(header.headingTail ? [{ text: header.headingTail }] : []),
+];
+
+interface Pin {
+  id: string;
+  city: string;
+  country: string;
+  caption: string;
+  xPct: number;
+  yPct: number;
+}
+
+/* Office pins, and the ids of the vaults the crowns already stand for. */
+const officePins: Pin[] = [];
+const vaultsUnderCrowns = new Set<string>();
+for (const office of offices) {
+  const twin = vaults.find((vault) => vault.officeId === office._id);
+  const geo = office.geo ?? twin?.geo;
+  if (!geo) continue;
+  if (twin) vaultsUnderCrowns.add(twin._id);
+  const point = projectOfficeMap(geo.lat, geo.lng);
+  officePins.push({
+    id: office._id,
+    city: office.city,
+    country: office.country,
+    caption: twin ? captions.officeAndVault : captions.office,
+    xPct: point.xPct,
+    yPct: point.yPct,
+  });
+}
+
+const vaultPins: Pin[] = vaults
+  .filter((vault) => !vaultsUnderCrowns.has(vault._id))
+  .map((vault) => {
+    const point = projectOfficeMap(vault.geo.lat, vault.geo.lng);
+    return {
+      id: vault._id,
+      city: vault.city,
+      country: vault.country,
+      caption: captions.vault,
+      xPct: point.xPct,
+      yPct: point.yPct,
+    };
+  });
+
+/* The list names every location, pinned or not: offices first, then the
+   vault-only cities. */
+const listed = [
+  ...offices.map((office) => ({
+    id: office._id,
+    city: office.city,
+    country: office.country,
+    caption: vaults.some((vault) => vault.officeId === office._id)
+      ? captions.officeAndVault
+      : captions.office,
+  })),
+  ...vaults
+    .filter((vault) => !vault.officeId || !offices.some((o) => o._id === vault.officeId))
+    .map((vault) => ({
+      id: vault._id,
+      city: vault.city,
+      country: vault.country,
+      caption: captions.vault,
+    })),
+];
+
+const position = (pin: Pin) => `left:${pin.xPct.toFixed(2)}%;top:${pin.yPct.toFixed(2)}%`;
+
+/* "Singapore, Singapore" / "Philippines, Philippines": two office documents
+   carry the country as their city (offices.ts explains), so a place is named
+   once when both fields agree. */
+const placeName = (place: { city: string; country: string }) =>
+  place.city === place.country ? place.city : `${place.city}, ${place.country}`;
+
+const legendText =
+  "font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary";
+const tooltipClass =
+  "pointer-events-none invisible absolute left-0 z-10 flex w-max max-w-[220px] -translate-x-1/2 " +
+  "flex-col bg-bg-secondary px-xs py-2xs text-left opacity-0 shadow-sm transition-opacity duration-150 " +
+  "group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 " +
+  "motion-reduce:transition-none";
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={block.theme ?? "light"}
+  data-seam={block.seam}
+  aria-labelledby={headingId}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div class="flex flex-col gap-lg">
+      <!-- Header row: heading left, legend right, bottom-aligned from lg -->
+      <div class="flex flex-col gap-md lg:flex-row lg:items-end lg:justify-between lg:gap-3xl">
+        <div class="flex flex-col gap-sm">
+          {header.overline && <Overline tone="red">{header.overline}</Overline>}
+          <h2
+            id={headingId}
+            class="text-[length:var(--step-h2)] leading-[1.375] text-text-primary md:leading-[var(--line-h2)]"
+          >
+            {runs.map((run) =>
+              run.accent ? (
+                <em class="block font-medium italic text-text-tertiary">{run.text}</em>
+              ) : (
+                <span class="block">{run.text}</span>
+              ),
+            )}
+          </h2>
+        </div>
+
+        {/* 320px key: two 160px cells. Fluid below that width (a 320px phone
+            has 272px of column) so it never widens the page. */}
+        <ul role="list" class="flex w-full max-w-[320px] shrink-0 self-start border border-border-primary lg:self-end">
+          <li class="flex h-16 min-w-0 flex-1 items-center gap-2xs border-r border-border-primary px-xs">
+            <Icon name="pin-office" class="h-8 w-8 shrink-0 text-brand-red" />
+            <span class={legendText}>{legend.office}</span>
+          </li>
+          <li class="flex h-16 min-w-0 flex-1 items-center gap-xs px-sm">
+            <span class="h-3 w-3 shrink-0 rounded-full bg-brand-red" aria-hidden="true"></span>
+            <span class={legendText}>{legend.vault}</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Map band. Scrolls sideways below md; see the header comment. -->
+      <div class="max-md:-mx-sm max-md:overflow-x-auto max-md:px-sm">
+        <div class="relative aspect-[1174/660] overflow-hidden bg-bg-primary max-md:w-[1174px]">
+          <img
+            src="/figma/world-map.webp"
+            alt=""
+            aria-hidden="true"
+            width="1800"
+            height="1145"
+            loading="lazy"
+            decoding="async"
+            class="pointer-events-none absolute top-[-24.55%] left-[-10.48%] w-[110.05%] max-w-none select-none"
+          />
+
+          {officePins.map((pin) => {
+            const tipId = `${block._key}-tip-${pin.id}`;
+            return (
+              <div class="group absolute" style={position(pin)}>
+                <button
+                  type="button"
+                  class="block h-12 w-12 -translate-x-1/2 -translate-y-full text-brand-red"
+                  aria-describedby={tipId}
+                >
+                  <span class="sr-only">{placeName(pin)}</span>
+                  <Icon name="pin-office" class="h-12 w-12" />
+                </button>
+                <span id={tipId} role="tooltip" class:list={[tooltipClass, "bottom-14"]}>
+                  <span class={legendText}>{placeName(pin)}</span>
+                  <span class="text-base leading-6 text-text-tertiary">{pin.caption}</span>
+                </span>
+              </div>
+            );
+          })}
+
+          {vaultPins.map((pin) => {
+            const tipId = `${block._key}-tip-${pin.id}`;
+            return (
+              <div class="group absolute" style={position(pin)}>
+                <button
+                  type="button"
+                  class="grid h-6 w-6 -translate-x-1/2 -translate-y-1/2 place-items-center"
+                  aria-describedby={tipId}
+                >
+                  <span class="sr-only">{placeName(pin)}</span>
+                  <span class="h-3 w-3 rounded-full bg-brand-red" aria-hidden="true"></span>
+                </button>
+                <span id={tipId} role="tooltip" class:list={[tooltipClass, "bottom-3.5"]}>
+                  <span class={legendText}>{placeName(pin)}</span>
+                  <span class="text-base leading-6 text-text-tertiary">{pin.caption}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <!-- Every location, pinned or not. Named by the section heading. -->
+      <ul
+        role="list"
+        aria-labelledby={headingId}
+        class="grid grid-cols-1 gap-x-md gap-y-xs sm:grid-cols-2 lg:grid-cols-4"
+      >
+        {listed.map((entry) => (
+          <li class="flex flex-col border-t border-border-secondary pt-3">
+            <span class="font-display text-base leading-6 font-medium text-text-primary">
+              {placeName(entry)}
+            </span>
+            <span class="text-base leading-6 text-text-tertiary">{entry.caption}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </Container>
+</section>

@@ -1,0 +1,171 @@
+---
+/**
+ * Prose section — the `proseSection` block: a header and running text.
+ * Absorbs the Buy PM intro (sectionIntro), the Office HK "Why Hong Kong"
+ * opener and "Why Product Origin Matters" (splitIntro) and the Coin/Bar
+ * "Why investors hold this" columns (proseColumns).
+ *
+ * Three drawn forms:
+ *
+ *   header-only (+cta)   Buy PM 10726:9171, light: overline → 24 → H2 32/44
+ *                        → 24 → body (two paragraphs 24 apart) in an 887-wide
+ *                        measure → 32 → solid button. `layout: "stacked"`,
+ *                        no columns.
+ *
+ *   split                Header in the left column, text and/or the callout
+ *                        aside in the right. Two drawn geometries, derived
+ *                        from `aside`: without one (HK 11041:15386 top) the
+ *                        header column is 431 and the text column 679 with a
+ *                        64 gap; with one (Buy PM 10726:13476) both columns
+ *                        are 539 with the 96 gap — the aside is a 539-wide
+ *                        card, and the heading/body sit under it at the same
+ *                        width. `header.body` renders 16 under the heading in
+ *                        the LEFT column (10726:13477 draws gap 16, not the
+ *                        header stack's 24); `columns` are the right column,
+ *                        top-aligned with the overline.
+ *
+ *   stacked + columns    Coin/Bar 11083:19927, tinted: overline → 20 → H2 →
+ *                        20 → two 555-wide columns 64 apart, paragraphs 16/24
+ *                        text-secondary 24 apart. The page passes the frame's
+ *                        `border-b border-border-primary` through `class`.
+ *                        The overline→H2 gap is SectionHeader's 24 (drawn 20;
+ *                        4px, recorded), the columns follow at the drawn 20.
+ *
+ * Headings go through SectionHeader (overline, H2, runs); `header.body` and
+ * `columns` are rendered here through the Paragraph primitive so the marked
+ * runs (the HK "The tax position is clean." semibold lead-ins) render as
+ * <strong>, and so the body takes the frame's own measure — SectionHeader
+ * caps its paragraphs at 65ch (~527px), narrower than the drawn 887.
+ *
+ * REVIEW (no mobile design): one column below lg — header, then the columns
+ * in DOM order (32 apart), then the aside; the aside sits after the text in
+ * both layouts. Paragraph gap stays 24 at every width.
+ */
+import Container from "@primitives/Container.astro";
+import Button from "@primitives/Button.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import Paragraph from "@primitives/Paragraph.astro";
+import CalloutCard from "./partials/CalloutCard.astro";
+import type { ProseSectionBlock } from "@content/types";
+
+interface Props {
+  block: ProseSectionBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, layout, columns = [], cta, aside, theme = "light", seam } = block;
+
+const surface = theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+/* The aside card paints the other surface (I11012:14216 is tinted on the
+   light Buy PM surface). */
+const asideTheme = theme === "tinted" ? "light" : "tinted";
+
+/* SectionHeader renders overline + heading; the body is laid out here at the
+   frame's measure (see the header comment). */
+const headerNoBody = { ...header, body: undefined };
+const bodyParagraphs =
+  header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
+
+const ctaVariant = cta?.style && cta.style !== "arrow" ? cta.style : "solid";
+
+const isSplit = layout === "split";
+const columnCount = columns.filter((column) => column.length > 0).length;
+
+/* Split column template, derived from `aside` (see header comment). */
+const splitGrid = aside
+  ? "lg:grid-cols-[539px_minmax(0,1fr)] lg:gap-3xl"
+  : "lg:grid-cols-[431px_minmax(0,1fr)] lg:gap-xl";
+
+/* Stacked columns: the drawn pair is 555 + 64 + 555; a third would follow the
+   same rhythm. One column stays single at every width. */
+const stackedGrid =
+  columnCount >= 3 ? "lg:grid-cols-3" : columnCount === 2 ? "lg:grid-cols-2" : "";
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={theme}
+  data-seam={seam}
+  aria-label={header.heading}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    {isSplit ? (
+      <div class:list={["flex flex-col gap-md lg:grid lg:items-start", splitGrid]}>
+        <div class="flex flex-col">
+          <SectionHeader header={headerNoBody} />
+          {bodyParagraphs.length > 0 && (
+            <div class="mt-xs flex flex-col gap-sm">
+              {bodyParagraphs.map((paragraph) => (
+                <Paragraph paragraph={paragraph} />
+              ))}
+            </div>
+          )}
+          {cta && (
+            <div class="mt-md">
+              <Button href={cta.href} variant={ctaVariant} external={cta.external} class="w-full sm:w-auto">
+                {cta.label}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {(columnCount > 0 || aside) && (
+          <div class="flex flex-col gap-md">
+            {columns.map((column) => (
+              column.length > 0 && (
+                <div class="flex flex-col gap-sm">
+                  {column.map((paragraph) => (
+                    <Paragraph paragraph={paragraph} />
+                  ))}
+                </div>
+              )
+            ))}
+            {aside && <CalloutCard card={aside} theme={asideTheme} ctaLayout="inline" as="h3" />}
+          </div>
+        )}
+      </div>
+    ) : (
+      <div class="flex flex-col">
+        <SectionHeader header={headerNoBody} class="max-w-[887px]" />
+        {bodyParagraphs.length > 0 && (
+          <div class="mt-sm flex max-w-[887px] flex-col gap-sm">
+            {bodyParagraphs.map((paragraph) => (
+              <Paragraph paragraph={paragraph} />
+            ))}
+          </div>
+        )}
+
+        {columnCount > 0 && (
+          <div class:list={["mt-5 grid gap-md lg:gap-xl", stackedGrid]}>
+            {columns.map((column) => (
+              column.length > 0 && (
+                <div class="flex flex-col gap-sm">
+                  {column.map((paragraph) => (
+                    <Paragraph paragraph={paragraph} />
+                  ))}
+                </div>
+              )
+            ))}
+          </div>
+        )}
+
+        {aside && (
+          <div class="mt-md">
+            <CalloutCard card={aside} theme={asideTheme} ctaLayout="stacked" as="h3" />
+          </div>
+        )}
+
+        {cta && (
+          <div class="mt-md">
+            <Button href={cta.href} variant={ctaVariant} external={cta.external} class="w-full sm:w-auto">
+              {cta.label}
+            </Button>
+          </div>
+        )}
+      </div>
+    )}
+  </Container>
+</section>

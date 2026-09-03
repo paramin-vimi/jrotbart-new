@@ -1,0 +1,175 @@
+---
+/**
+ * "Visit us" — Figma 11041:16507 (the office page, light). Two columns from
+ * lg, 679 / gap 64 / 431, vertically centred: on the left overline → 16 → H2
+ * → 20 → body → 24 → the address card → 32 → button; on the right a 431×574
+ * map panel with the marker card and pin, and (not drawn) a directions link.
+ *
+ * THE HEADER is hand-built rather than <SectionHeader>: the frame sets this
+ * one on 16 / 20 gaps (11120:15929 / 15931) where the primitive stacks on 24,
+ * and the address card that follows is part of the same column. The classes
+ * are the primitive's own so the type ramp stays shared.
+ *
+ * THE ADDRESS CARD is built from the Office document only: city as the
+ * title, the address lines as one flowing paragraph with the phone as a
+ * `tel:` link on its own line, the opening hours, then the appointment note
+ * (Source Sans 600, brand red). The frame prefixes "Tel:" and "Office
+ * hours:" and titles the card "Sheung Wan, Hong Kong"; none of those strings
+ * exists on the Office document or the block, and a component carries no
+ * copy — recorded deviation (the block owner can add labels to the type).
+ *
+ * THE MAP PANEL ships WITHOUT artwork until an office has its own static map
+ * (`map.image` is optional — Amendment 6): a flat bg-primary surface, the
+ * marker card (crown pin + city + first address line) at the drawn 6% / 36%,
+ * the 34×56 marker below it, and the directions link to `mapHref(office)`
+ * under the panel. The frame's panel is a drawing of the Malay peninsula on
+ * the Hong Kong page and is never shipped. No third-party embed.
+ *
+ * REVIEW (no mobile design): the text sits above the panel below lg; the
+ * panel keeps a 320px minimum so the marker card has somewhere to sit.
+ */
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import Button from "@primitives/Button.astro";
+import ArrowLink from "@primitives/ArrowLink.astro";
+import IconDisc from "@primitives/IconDisc.astro";
+import Icon from "@primitives/Icon.astro";
+import { mapHref } from "@lib/maps";
+import type { CtaStyle, HeadingRun, OfficeVisitBlock } from "@content/types";
+
+interface Props {
+  block: OfficeVisitBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, office, appointmentNote, cta, map } = block;
+
+const surface = block.theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+const headingId = `${block._key}-heading`;
+
+const runs: HeadingRun[] = header.headingRuns ?? [
+  { text: header.heading },
+  ...(header.headingAccent ? [{ text: header.headingAccent, accent: true }] : []),
+  ...(header.headingTail ? [{ text: header.headingTail }] : []),
+];
+
+const paragraphs =
+  header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
+
+/** `Cta.style` allows "arrow", which the Button primitive does not render. */
+const buttonVariant: Exclude<CtaStyle, "arrow"> =
+  cta.style && cta.style !== "arrow" ? cta.style : "solid";
+
+const telHref = `tel:${office.phoneHref ?? office.phone?.replace(/[^+\d]/g, "")}`;
+
+const titleClass = "font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary";
+const bodyClass = "text-base leading-6 text-text-secondary";
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={block.theme ?? "light"}
+  data-seam={block.seam}
+  aria-labelledby={headingId}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    {/* 679 / 431 as fr units: the drawn proportion at 1366, and no fixed
+        1174px track to widen the page between lg and the full frame. */}
+    <div class="flex flex-col gap-lg lg:grid lg:grid-cols-[minmax(0,679fr)_minmax(0,431fr)] lg:items-center lg:gap-xl">
+      <!-- Intro, address card, CTA -->
+      <div class="flex flex-col">
+        {header.overline && <Overline tone="red">{header.overline}</Overline>}
+        <h2
+          id={headingId}
+          class="mt-xs text-[length:var(--step-h2)] leading-[1.375] text-text-primary md:leading-[var(--line-h2)]"
+        >
+          {runs.map((run) =>
+            run.accent ? (
+              <em class="font-medium italic text-text-tertiary">{run.text}</em>
+            ) : (
+              run.text
+            ),
+          )}
+        </h2>
+        {paragraphs.length > 0 && (
+          <div class="mt-5 flex flex-col gap-xs">
+            {paragraphs.map((paragraph) => (
+              <p class={bodyClass}>{paragraph}</p>
+            ))}
+          </div>
+        )}
+
+        <div class="mt-sm flex gap-sm">
+          <IconDisc name="pin" size={32} />
+          <div class="flex min-w-0 flex-col gap-2xs">
+            <h3 class={titleClass}>{office.city}</h3>
+            <address class:list={["not-italic", bodyClass]}>
+              {office.address.join(", ")}
+              {office.phone && (
+                <a
+                  href={telHref}
+                  class="block transition-colors duration-150 hover:text-brand-red motion-reduce:transition-none"
+                >
+                  {office.phone}
+                </a>
+              )}
+            </address>
+            {office.openingHours && <p class={bodyClass}>{office.openingHours.display}</p>}
+            {appointmentNote && (
+              <p class="text-base leading-6 font-semibold text-brand-red">{appointmentNote}</p>
+            )}
+          </div>
+        </div>
+
+        <Button href={cta.href} variant={buttonVariant} external={cta.external} class="mt-md self-start">
+          {cta.label}
+        </Button>
+      </div>
+
+      <!-- Map panel: artwork when it exists, always the marker card, pin and directions link -->
+      <div class="flex flex-col gap-xs">
+        <div class="relative min-h-[320px] overflow-hidden bg-bg-primary lg:min-h-[574px]">
+          {map.image && (
+            <img
+              src={map.image.src}
+              alt={map.image.decorative ? "" : map.image.alt}
+              aria-hidden={map.image.decorative ? "true" : undefined}
+              width={map.image.width}
+              height={map.image.height}
+              loading="lazy"
+              decoding="async"
+              class="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div class="absolute top-[36%] left-[6%] flex max-w-[calc(100%-32px)] items-center gap-2xs bg-bg-secondary p-xs">
+            <Icon name="pin-office" class="h-12 w-12 shrink-0 text-brand-red" />
+            <div class="flex min-w-0 flex-col">
+              <p class={titleClass}>{office.city}</p>
+              <p class="text-base leading-6 text-text-tertiary">{office.address[0]}</p>
+            </div>
+          </div>
+          {/* The 34×56 marker (11120:15974): a brand-red disc on a stem with a
+              white centre. Placed 100px under the card's top edge (drawn: card
+              at 207, pin at 310) rather than at its own 54%, so it never rides
+              up into the card when the panel is at its 320px minimum. */}
+          <svg
+            class="absolute top-[calc(36%+100px)] left-[46%] h-14 w-[34px] -translate-x-1/2 text-brand-red"
+            viewBox="0 0 34 56"
+            aria-hidden="true"
+          >
+            <circle cx="17" cy="17" r="17" fill="currentColor" />
+            <rect x="15" y="30" width="4" height="26" fill="currentColor" />
+            <circle cx="17" cy="17" r="8" class="fill-always-white" />
+          </svg>
+        </div>
+
+        <ArrowLink href={mapHref(office)} external class="self-start text-brand-red! hover:text-brand-950!">
+          {map.directionsLabel}
+        </ArrowLink>
+      </div>
+    </div>
+  </Container>
+</section>

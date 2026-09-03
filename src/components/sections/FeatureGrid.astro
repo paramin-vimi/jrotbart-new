@@ -1,0 +1,209 @@
+---
+/**
+ * Feature grid — marker + title + body (+ link) cells in one of three frames.
+ *
+ * One block type absorbs six drawn instances, which differ only in layout,
+ * frame and marker kind:
+ *   split / 1 / none    10726:10448 (Buy PM "Why clients", tinted, aside) and
+ *                       11008:15326 (bars & coins, light, afterBody): header
+ *                       in a 410px left column, rows 32 apart on the right
+ *                       (IconDisc 48 + 24 gap + text), the aside pinned to the
+ *                       bottom of the left column.
+ *   stacked / 2 / boxed 10726:9202 (metals, light): 587×361 cells, 32 padding,
+ *                       36px metal-gradient square beside the text; title →
+ *                       16 → eyebrow → 24 → body → 24 → link.
+ *                       10726:9457 (related services, tinted, `titleSize h4`):
+ *                       IconDisc above the text, title → 8 → body → 16 → link.
+ *   stacked / 2 / rules 11036:17622 (Office HK services, light): hairline
+ *                       above every row and one closing the grid, py-32,
+ *                       IconDisc + 16 gap, title → 8 → body → 16 → link.
+ *   stacked / 4 / boxed 11083:19993 (coin/bar tax treatment, tinted): 294×268
+ *                       cells, IconDisc above, no links.
+ * Header for the stacked forms is a SectionHeader capped at 887px with 64px
+ * to the grid (the tax frame draws 48 — accepted, one rule for all).
+ *
+ * BOX DIVIDERS. The boxed frame is a 1px outer border around a grid with a
+ * 1px gap whose background is the border colour, each cell painting the
+ * section surface over it. Dividers therefore appear between cells at every
+ * column count and never double up or vanish when the grid reflows — the
+ * per-side `indiv` strokes the frame draws would need a rule per breakpoint.
+ *
+ * CELL RHYTHM. Two rhythms exist, keyed on the marker: the metal cards are
+ * roomier (16 / 24 / 24) than every icon cell (title → 8 → body → 16 → link).
+ * The tax frame's 16 between title and body is the one exception and is not
+ * modelled (8px deviation, recorded). Links sit on `mt-auto` so a row's links
+ * align across cells of different body length, as the HK frame draws them.
+ *
+ * REVIEW (no mobile design):
+ *   • columns 4 → 2 at sm (640) → 1; columns 2 → 1 below md (768).
+ *   • split: one column below lg, DOM order header → rows → aside (the aside
+ *     is a grid child, not nested in the header column, so it can move).
+ *   • a marker beside its text stays beside it down to 480px, then moves
+ *     above — a 48px disc next to a 5-line paragraph on a 360px screen
+ *     leaves 270px of measure.
+ *   • cell heights are content-driven, never the drawn fixed boxes.
+ *
+ * `theme: "dark"` is not drawn for this block; it renders the tinted surface.
+ * Landmark name: `aria-label` = the plain heading (SectionHeader exposes no
+ * heading id to point `aria-labelledby` at). `FeatureCell.ref` is for the
+ * page module (hrefs, schema); this component does not read it.
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import IconDisc from "@primitives/IconDisc.astro";
+import ArrowGo from "@primitives/ArrowGo.astro";
+import Paragraph from "@primitives/Paragraph.astro";
+import CalloutCard from "./partials/CalloutCard.astro";
+import type { FeatureCell, FeatureGridBlock, Metal } from "@content/types";
+
+interface Props {
+  block: FeatureGridBlock;
+  /** Cell title size. "h3" = Playfair 20/28 (metals, tax, HK, split rows); "h4" = 16/24 (related services). Always an <h3>. */
+  titleSize?: "h3" | "h4";
+  class?: string;
+}
+
+const { block, titleSize = "h3", class: className = "" } = Astro.props;
+const { header, layout, columns, frame, cells, afterBody, aside } = block;
+
+const theme = block.theme === "tinted" || block.theme === "dark" ? "tinted" : "light";
+const surface = theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+/* The aside card contrasts with the section: light card on the tinted
+   surface (I10765:11507 is #fdfcfc on #efece8), tinted on light. */
+const asideTheme = theme === "tinted" ? "light" : "tinted";
+
+/* Stacked headers are capped at 887 (the frames' header container) and
+   their body runs the full 887 — SectionHeader's own 65ch measure is the
+   homepage's, and the seven frames draw these bodies three lines wide. */
+const STACKED_HEADER = "max-w-[887px] [&>p]:max-w-none";
+const TITLE = {
+  h3: "font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary",
+  h4: "font-display text-base leading-6 font-medium text-text-primary",
+} as const;
+
+const METAL_MARK: Record<Metal, string> = {
+  gold: "bg-metal-gold",
+  silver: "bg-metal-silver",
+  platinum: "bg-metal-platinum",
+  palladium: "bg-metal-palladium",
+};
+
+const isSplit = layout === "split";
+const isMetal = (cell: FeatureCell) => cell.marker?.kind === "metal";
+/* Boxed icon cells stack the disc above the text (related services, tax);
+   every other marker sits beside it. */
+const markerAbove = (cell: FeatureCell) => frame === "boxed" && cell.marker?.kind === "icon";
+/* Marker-to-text gap: 16 in the rules frame, 24 elsewhere. */
+const markerGap = frame === "rules" ? "min-[480px]:gap-xs" : "min-[480px]:gap-sm";
+
+const COLUMNS = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 md:grid-cols-2",
+  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+} as const;
+
+const listClass = isSplit
+  ? "flex flex-col gap-md"
+  : frame === "boxed"
+    ? ["grid gap-px bg-border-primary", COLUMNS[columns]]
+    : frame === "rules"
+      ? ["grid gap-x-md border-b border-border-primary", COLUMNS[columns]]
+      : ["grid gap-md", COLUMNS[columns]];
+
+const cellFrame =
+  frame === "boxed" ? [surface, "p-md"] : frame === "rules" ? "border-t border-border-primary py-md" : "";
+
+const linkClass =
+  "group/cta button-text inline-flex items-center gap-2xs text-brand-red transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none";
+const arrowClass =
+  "transition-transform duration-150 group-hover/cta:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/cta:translate-x-0";
+const rel = (external?: boolean) => (external ? { rel: "noopener noreferrer", target: "_blank" } : {});
+---
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={theme}
+  data-seam={block.seam}
+  aria-label={header?.heading}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div
+      class:list={[
+        isSplit
+          ? "grid gap-lg lg:grid-cols-[410px_1fr] lg:grid-rows-[1fr_auto] lg:gap-x-3xl lg:gap-y-lg"
+          : "flex flex-col gap-xl",
+      ]}
+    >
+      {header && (
+        <SectionHeader header={header} class={isSplit ? "lg:col-start-1 lg:row-start-1" : STACKED_HEADER} />
+      )}
+
+      <div class:list={["flex flex-col gap-md", isSplit && "lg:col-start-2 lg:row-span-2 lg:row-start-1"]}>
+        {/* The boxed frame's outer border wraps the list; the list itself
+            carries the divider trick described above. */}
+        <div class:list={[frame === "boxed" && "border border-border-primary"]}>
+          <ul role="list" class:list={listClass}>
+            {cells.map((cell) => (
+              <li
+                class:list={[
+                  "flex",
+                  cellFrame,
+                  markerAbove(cell)
+                    ? "flex-col gap-xs"
+                    : ["flex-col gap-xs min-[480px]:flex-row", markerGap],
+                ]}
+              >
+                {cell.marker?.kind === "icon" && <IconDisc name={cell.marker.icon} />}
+                {cell.marker?.kind === "metal" && (
+                  <span
+                    class:list={["block h-9 w-9 shrink-0", METAL_MARK[cell.marker.metal]]}
+                    aria-hidden="true"
+                  />
+                )}
+
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <h3 class={TITLE[titleSize]}>{cell.title}</h3>
+                  {cell.eyebrow && <p class="eyebrow mt-xs text-text-tertiary">{cell.eyebrow}</p>}
+
+                  <div class:list={["flex flex-col gap-sm", isMetal(cell) ? "mt-sm" : "mt-2xs"]}>
+                    {cell.body.map((paragraph) => (
+                      <Paragraph paragraph={paragraph} />
+                    ))}
+                  </div>
+
+                  {cell.link && (
+                    <div class:list={["mt-auto", isMetal(cell) ? "pt-sm" : "pt-xs"]}>
+                      <a href={cell.link.href} class={linkClass} {...rel(cell.link.external)}>
+                        <span>{cell.link.label}</span>
+                        <ArrowGo class={arrowClass} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {afterBody && afterBody.length > 0 && (
+          <div class="flex flex-col gap-sm">
+            {afterBody.map((paragraph) => (
+              <Paragraph paragraph={paragraph} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {aside && (
+        <CalloutCard
+          card={aside}
+          theme={asideTheme}
+          ctaLayout="stacked"
+          as="h3"
+          class={isSplit ? "lg:col-start-1 lg:row-start-2 lg:self-end" : undefined}
+        />
+      )}
+    </div>
+  </Container>
+</section>

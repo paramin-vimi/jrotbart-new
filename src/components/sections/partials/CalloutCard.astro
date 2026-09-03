@@ -69,11 +69,15 @@ const surface = theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
 /* The accent bar is a border, so it can never outgrow the card the way the
    drawn 8x120-240 rectangle does. `bordered` draws the box first and the bar
    overrides its left edge. */
+/* The drawn 32px inline padding is measured from the card's outer edge and
+   the accent rectangle overlaps its first 8px (text at x=128 on a card at 96,
+   e.g. I11041:15557). With the bar as a border the left padding is 24 so the
+   text still lands at 128; the right padding stays 32. */
 const frame = [
   bordered && "border border-border-primary",
   "border-l-8 border-l-brand-red",
   surface,
-  "py-sm px-md",
+  "py-sm pr-md pl-sm",
 ];
 const headingClass = "font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary";
 const hug = width === "hug" ? "w-fit max-w-full" : "w-full";

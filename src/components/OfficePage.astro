@@ -1,0 +1,167 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import PageHero from "@sections/PageHero.astro";
+import LogoStrip from "@sections/LogoStrip.astro";
+import FeatureGrid from "@sections/FeatureGrid.astro";
+import TestimonialBand from "@sections/TestimonialBand.astro";
+import ProcessSteps from "@sections/ProcessSteps.astro";
+import ProseSection from "@sections/ProseSection.astro";
+import CalloutBand from "@sections/CalloutBand.astro";
+import MediaWithText from "@sections/MediaWithText.astro";
+import TeamGrid from "@sections/TeamGrid.astro";
+import OfficeVisit from "@sections/OfficeVisit.astro";
+import FaqAccordion from "@sections/FaqAccordion.astro";
+import {
+  SITE,
+  absoluteUrl,
+  breadcrumbNode,
+  buildGraph,
+  faqPageNode,
+  siteGraph,
+  webPageNode,
+} from "@lib/schema";
+import type {
+  CalloutBandBlock,
+  FaqAccordionBlock,
+  FeatureGridBlock,
+  Link,
+  LogoStripBlock,
+  MediaWithTextBlock,
+  NavSection,
+  Office,
+  OfficeVisitBlock,
+  PageHeroBlock,
+  ProcessStepsBlock,
+  ProseSectionBlock,
+  Seo,
+  TeamGridBlock,
+  TestimonialBandBlock,
+} from "@content/types";
+
+/**
+ * The office page template — one body for every `/<office.slug>/` route
+ * (Figma "Office - Hong Kong", frame 10784:11826; the only office drawn).
+ *
+ * Follows the PostArchive pattern: the route file is a dozen lines that look
+ * up the Office document and the office's page module and hand both here.
+ * This component owns the block ORDER (the frame's, top to bottom) and the
+ * per-instance rendering choices the office frame draws — the 32/44
+ * mediaWithText heading, every FAQ row open — and nothing else: every string
+ * comes from `src/content/officePages/<office>.ts` and the shared labels in
+ * `src/content/pages/office.ts`; the office facts (address, phone, hours)
+ * come from the Office document the blocks were built from.
+ *
+ * `OfficePageContent` is the page module's contract: `seo` plus the blocks
+ * in slot order. Only the hero and the "Visit us" block are required — an
+ * office with no roster, no steps or no prose simply omits those slots and
+ * the template skips them, which is what the (undesigned, not yet built)
+ * Singapore page will do. Seams between blocks are content — each block's
+ * `seam` field — so the module, not this file, decides where two blocks on
+ * one surface meet.
+ *
+ * JSON-LD: the site graph (whose LocalBusiness node for this office is the
+ * `about` of the WebPage), a BreadcrumbList from the module's crumbs, and a
+ * FAQPage when the FAQ block is present.
+ */
+export interface OfficePageContent {
+  seo: Seo;
+  /** Home → Offices → this office. Root-relative hrefs; absolutised here. */
+  breadcrumbs: Link[];
+  /** Which top-level menu item is current. */
+  currentSection?: NavSection;
+  /** 11043:18243 — split hero, the <h1>. */
+  hero: PageHeroBlock;
+  /** 11034:16530 — the press / endorsement strip (the homepage instance). */
+  logoStrip?: LogoStripBlock;
+  /** 11036:17622 — the six-cell services checklist. */
+  services?: FeatureGridBlock;
+  /** 11041:15467 */
+  testimonialAfterServices?: TestimonialBandBlock;
+  /** 11039:18655 — "How a First Transaction Works". */
+  steps?: ProcessStepsBlock;
+  /** 11041:15386 top — "Why Hong Kong Works for Gold Owners". */
+  why?: ProseSectionBlock;
+  /** I11041:15557 — the guide link strip. */
+  guide?: CalloutBandBlock;
+  /** 11120:15989 — "Storing Precious Metal in …", photo left. */
+  storage?: MediaWithTextBlock;
+  /** 11120:15907 — "Registered and Accountable in …", photo right. */
+  regulation?: MediaWithTextBlock;
+  /** I11120:15916 — the consultation strip. */
+  consult?: CalloutBandBlock;
+  /** 11041:15863 — the office roster. */
+  team?: TeamGridBlock;
+  /** 11041:16391 */
+  testimonialAfterTeam?: TestimonialBandBlock;
+  /** 11041:16507 — address card, appointment note, map panel. */
+  visit: OfficeVisitBlock;
+  /** 11041:16430 */
+  faq?: FaqAccordionBlock;
+  /**
+   * Which FAQ rows start open. The office frame draws every row open, so the
+   * default is "all"; the module can pass "first" to match the homepage.
+   */
+  faqInitiallyOpen?: "first" | "all" | "none";
+}
+
+interface Props {
+  office: Office;
+  page: OfficePageContent;
+}
+
+const { office, page } = Astro.props;
+
+const url = `${SITE}/${office.slug}/`;
+const seo: Seo = { ...page.seo, canonical: page.seo.canonical ?? url };
+
+const schema = buildGraph([
+  ...siteGraph(),
+  webPageNode(seo, url, { about: { "@id": `${SITE}/#office-${office._id}` } }),
+  breadcrumbNode(page.breadcrumbs.map((crumb) => ({ name: crumb.label, url: absoluteUrl(crumb.href) }))),
+  page.faq ? faqPageNode(page.faq.faqs) : null,
+]);
+
+const faqInitiallyOpen = page.faqInitiallyOpen ?? "all";
+/* An exclusive group would close every row but one, so it is only set when
+   the rows are NOT all drawn open. */
+const faqGroup = faqInitiallyOpen === "all" ? "" : `${office._id}-faq`;
+---
+
+<SiteLayout seo={seo} schema={schema} currentSection={page.currentSection}>
+  <PageHero block={page.hero} />
+
+  {page.logoStrip && <LogoStrip block={page.logoStrip} />}
+
+  {page.services && <FeatureGrid block={page.services} />}
+
+  {page.testimonialAfterServices && <TestimonialBand block={page.testimonialAfterServices} />}
+
+  {page.steps && <ProcessSteps block={page.steps} />}
+
+  {/* The 11041:15386 frame: prose → guide strip → two photo blocks → consult
+      strip, all on one light surface 96 apart. The gaps are the blocks' own
+      `seam` fields (content), not padding overrides here. */}
+  {page.why && <ProseSection block={page.why} />}
+
+  {page.guide && <CalloutBand block={page.guide} />}
+
+  {/* The office frame draws these two headings at 32/44 (11120:15998,
+      11120:15987), not the homepage's 16/24; and below lg the photograph
+      leads — the reception and the vault viewing room are what each block
+      is about. */}
+  {page.storage && <MediaWithText block={page.storage} headingSize="h2" mobileMediaFirst />}
+
+  {page.regulation && <MediaWithText block={page.regulation} headingSize="h2" mobileMediaFirst />}
+
+  {page.consult && <CalloutBand block={page.consult} />}
+
+  {page.team && <TeamGrid block={page.team} />}
+
+  {page.testimonialAfterTeam && <TestimonialBand block={page.testimonialAfterTeam} />}
+
+  <OfficeVisit block={page.visit} />
+
+  {page.faq && (
+    <FaqAccordion block={page.faq} initiallyOpen={faqInitiallyOpen} exclusiveGroup={faqGroup} />
+  )}
+</SiteLayout>

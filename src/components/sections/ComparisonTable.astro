@@ -1,0 +1,174 @@
+---
+/**
+ * Comparison table — Bank / Gold shops / J. Rotbart & Co. (Figma 10726:9306).
+ *
+ * A real <table>, because it is one: six labelled rows across three options.
+ * Split header as processSteps draws it, except the body is BOTTOM-aligned
+ * against the heading (gap=96/MAX on 10726:13547). 64 → table: columns
+ * 238 / 312 / 312 / 312 of 1174, header cells Playfair 20/28 with 24 padding
+ * (the row-label column's header cell is empty), row labels in the eyebrow
+ * style, values 16/24 secondary with 24 padding, hairline under every row but
+ * the last. The highlighted column paints brand-950 with always-white text
+ * and its own white-opacity hairlines, header cell included.
+ *
+ * VERTICAL ALIGNMENT. The frame centres the bank / gold-shop values and
+ * top-aligns the highlighted ones. Those coincide whenever the highlighted
+ * cell is the tallest in its row — true of all six drawn rows — so one rule,
+ * `align-middle`, reproduces the frame and stays sane if a row's tallest
+ * cell ever moves.
+ *
+ * RESPONSIVE (Amendment 16, the one rule): at ≥ 768 the table is visible
+ * and the cards are not rendered (display: none); below 768 the table is
+ * `sr-only` — still in the accessibility tree, still the one source read by
+ * assistive tech — and the same data renders as three stacked cards, one per
+ * column, marked `aria-hidden="true"` so nothing is announced twice. Between
+ * 768 and lg the table scrolls inside its own `overflow-x-auto` wrapper with
+ * the row-label column sticky at the left; the page never scrolls sideways.
+ * The wrapper uses `border-separate` because sticky cells lose their borders
+ * under `border-collapse` in Chromium.
+ *
+ * `theme: "dark"` is not drawn for this block; it renders the tinted surface.
+ * Landmark name: `aria-label` = the plain heading (SectionHeader exposes no
+ * heading id for `aria-labelledby`); the <caption> repeats it for the table.
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import type { ComparisonTableBlock } from "@content/types";
+
+interface Props {
+  block: ComparisonTableBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, headerLayout = "split", columns, rows } = block;
+
+const theme = block.theme === "tinted" || block.theme === "dark" ? "tinted" : "light";
+const surface = theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+
+const isSplit = headerLayout === "split";
+const bodyParagraphs =
+  header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
+const splitHeader = { ...header, body: undefined };
+
+/* Stacked headers are capped at 887 (the frames' header container) and
+   their body runs the full 887 — SectionHeader's own 65ch measure is the
+   homepage's, and the seven frames draw these bodies three lines wide. */
+const STACKED_HEADER = "max-w-[887px] [&>p]:max-w-none";
+const headingClass = "font-display text-[length:var(--step-h3)] leading-7 font-medium";
+
+/* Per-column paint. The highlighted column's hairlines are white at 30%
+   (border-white-opacity) so they read on brand-950. */
+const columnClass = (highlighted?: boolean) =>
+  highlighted
+    ? "bg-brand-950 text-always-white border-border-white-opacity"
+    : "text-text-secondary border-border-primary";
+const headClass = (highlighted?: boolean) =>
+  highlighted ? "bg-brand-950 text-always-white border-border-white-opacity" : "text-text-primary border-border-primary";
+---
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={theme}
+  data-seam={block.seam}
+  aria-label={header.heading}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container class="flex flex-col gap-xl">
+    {isSplit ? (
+      <div class="grid gap-sm lg:grid-cols-2 lg:items-end lg:gap-3xl">
+        <SectionHeader header={splitHeader} />
+        {bodyParagraphs.length > 0 && (
+          <div class="flex flex-col gap-sm">
+            {bodyParagraphs.map((paragraph) => (
+              <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    ) : (
+      <SectionHeader header={header} class={STACKED_HEADER} />
+    )}
+
+    {/* The table: visible from md, screen-reader-only below. */}
+    <div class="max-md:sr-only md:overflow-x-auto">
+      <table class="w-full min-w-[720px] border-separate border-spacing-0 text-left">
+        <caption class="sr-only">{header.heading}</caption>
+        <colgroup>
+          <col class="w-[20.3%]" />
+          {columns.map(() => (
+            <col class="w-[26.567%]" />
+          ))}
+        </colgroup>
+        <thead>
+          <tr>
+            <td class:list={["border-b border-border-primary", surface, "md:sticky md:left-0"]} />
+            {columns.map((column) => (
+              <th scope="col" class:list={[headingClass, "border-b p-sm align-top", headClass(column.highlighted)]}>
+                {column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => {
+            const last = rowIndex === rows.length - 1;
+            return (
+              <tr>
+                <th
+                  scope="row"
+                  class:list={[
+                    "eyebrow py-sm pr-sm align-middle font-medium text-text-tertiary",
+                    !last && "border-b border-border-primary",
+                    surface,
+                    "md:sticky md:left-0",
+                  ]}
+                >
+                  {row.label}
+                </th>
+                {row.cells.map((cell, columnIndex) => (
+                  <td
+                    class:list={[
+                      "p-sm align-middle text-base leading-6",
+                      !last && "border-b",
+                      columnClass(columns[columnIndex]?.highlighted),
+                    ]}
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+
+    {/* The cards: the same data for narrow screens, decorative to assistive
+        tech because the table above is the accessible source. */}
+    <div class="flex flex-col gap-md md:hidden" aria-hidden="true">
+      {columns.map((column, columnIndex) => (
+        <div
+          class:list={[
+            "flex flex-col gap-sm border p-sm",
+            column.highlighted
+              ? "border-brand-950 bg-brand-950 text-always-white"
+              : "border-border-primary text-text-secondary",
+          ]}
+        >
+          <p class:list={[headingClass, !column.highlighted && "text-text-primary"]}>{column.label}</p>
+          <dl class="flex flex-col gap-xs">
+            {rows.map((row) => (
+              <div class="flex flex-col gap-2xs">
+                <dt class:list={["eyebrow", column.highlighted ? "text-always-white/70" : "text-text-tertiary"]}>
+                  {row.label}
+                </dt>
+                <dd class="text-base leading-6">{row.cells[columnIndex]}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </div>
+  </Container>
+</section>

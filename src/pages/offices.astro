@@ -1,0 +1,75 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import PageHero from "@sections/PageHero.astro";
+import OfficeCardGrid from "@sections/OfficeCardGrid.astro";
+import LocationMap from "@sections/LocationMap.astro";
+import CalloutBand from "@sections/CalloutBand.astro";
+import TestimonialBand from "@sections/TestimonialBand.astro";
+
+import { seo, blocks, breadcrumb, officesPath } from "@content/pages/offices";
+import { offices } from "@content/offices";
+import { siteGraph, webPageNode, breadcrumbNode, buildGraph, SITE } from "@lib/schema";
+
+/**
+ * Office listing — /offices/.
+ *
+ * Figma frame `Office - Listing` 10980:11772. The page module
+ * (src/content/pages/offices.ts) owns the copy and the block order; this
+ * route composes, it does not contain content or layout of its own. Every
+ * block is rendered from the module's `blocks` list by `_type`, so the order
+ * on the page IS the order in the module, and a block type the module adds
+ * without a renderer here fails the build (the `never` check) rather than
+ * silently disappearing.
+ *
+ * NAV: "about" is a GUESS (Amendment 19). No menu item stands for the offices
+ * today — the live site has no /offices/ page — and the About-us panel is
+ * where the Phase 4 integrator files the new link. TODO(client): nav placement.
+ */
+const url = `${SITE}${officesPath}`;
+
+/* The four office LocalBusiness nodes already exist in `siteGraph()` with the
+   ids `${SITE}/#office-<id>` (schema.ts, organizationNode.subOrganization).
+   This list references those entities rather than repeating them, which is
+   why it is built here instead of through `itemListNode()` — that helper
+   takes name + url items, and two of the four offices have no page URL. The
+   id pattern is duplicated from schema.ts; see the integrator request to
+   expose it as a helper. */
+const officeList = {
+  "@type": "ItemList",
+  "@id": `${url}#list`,
+  itemListElement: offices.map((office, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    name: `J. Rotbart & Co. — ${office.city}`,
+    item: { "@id": `${SITE}/#office-${office._id}` },
+  })),
+};
+
+const schema = buildGraph([
+  ...siteGraph(),
+  webPageNode(seo, url, { type: "CollectionPage" }),
+  breadcrumbNode(breadcrumb.map((crumb) => ({ name: crumb.name, url: `${SITE}${crumb.path}` }))),
+  officeList,
+]);
+---
+
+<SiteLayout seo={seo} schema={schema} currentSection="about">
+  {blocks.map((block) => {
+    switch (block._type) {
+      case "pageHero":
+        return <PageHero block={block} />;
+      case "officeCardGrid":
+        return <OfficeCardGrid block={block} />;
+      case "locationMap":
+        return <LocationMap block={block} />;
+      case "calloutBand":
+        return <CalloutBand block={block} />;
+      case "testimonialBand":
+        return <TestimonialBand block={block} />;
+      default: {
+        const unhandled: never = block;
+        throw new Error(`[pages/offices] no renderer for block ${JSON.stringify(unhandled)}`);
+      }
+    }
+  })}
+</SiteLayout>

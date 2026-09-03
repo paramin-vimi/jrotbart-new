@@ -1,0 +1,63 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import PageHero from "@sections/PageHero.astro";
+import ServicesRows from "@sections/ServicesRows.astro";
+import ServiceCardGrid from "@sections/ServiceCardGrid.astro";
+import CtaBand from "@sections/CtaBand.astro";
+import TestimonialBand from "@sections/TestimonialBand.astro";
+
+import {
+  seo as pageSeo,
+  breadcrumb,
+  servicesHero,
+  servicesRows,
+  serviceCards,
+  consultationBand,
+  testimonial,
+} from "@content/pages/services";
+
+import { buildGraph, siteGraph, webPageNode, breadcrumbNode, itemListNode, SITE } from "@lib/schema";
+
+/**
+ * Service listing — /services/.
+ *
+ * Section order follows the Figma frame `Service - Listing` (10976:21516) top
+ * to bottom. Each section is a block from the fixed union in
+ * src/content/types.ts, assembled in src/content/pages/services.ts — this
+ * page composes, it does not contain content or layout of its own. The tail
+ * (mint strip + contact section) comes from SiteLayout.
+ */
+
+const url = `${SITE}/services/`;
+const seo = { ...pageSeo, canonical: url };
+
+/* The ItemList is the eight services in the order the page shows them: the
+   four rows, then the four cards. Derived from the blocks so it can never
+   drift from what is rendered. */
+const listedServices = [...servicesRows.services, ...serviceCards.services];
+
+const schema = buildGraph([
+  ...siteGraph(),
+  webPageNode(seo, url),
+  breadcrumbNode(breadcrumb.map((crumb) => ({ name: crumb.label, url: `${SITE}${crumb.href}` }))),
+  itemListNode(
+    url,
+    listedServices.map((service) => ({ name: service.title, url: `${SITE}${service.href}` })),
+  ),
+]);
+---
+
+<SiteLayout seo={seo} schema={schema} currentSection="services">
+  {/* Figma draws this frame's text column 454 wide (10976:21520), against
+      the 530 the Office listing uses — a measure, not copy, so it is passed
+      here rather than authored in the content module. */}
+  <PageHero block={servicesHero} columnClass="max-w-[454px]" />
+
+  <ServicesRows block={servicesRows} />
+
+  <ServiceCardGrid block={serviceCards} />
+
+  <CtaBand block={consultationBand} />
+
+  <TestimonialBand block={testimonial} />
+</SiteLayout>

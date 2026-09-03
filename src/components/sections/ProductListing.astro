@@ -1,0 +1,232 @@
+---
+/**
+ * Metal listing — Figma `Product` 9922:2914 on the Gold listing (1366x2905)
+ * and 10977:23578 on the Silver listing (identical geometry).
+ *
+ * Four parts, 64px apart at lg (the frame's VERTICAL gap), 48 below:
+ *   1. header column (534 wide: overline → 24 → H1 40/52 → 24 → body) → 32 →
+ *      the tab row (1174 wide, 1px rule underneath; each tab 200x72: 18px
+ *      metal chip → 12 → label 600 16/24 → 12 → "/ N" 16/24 tertiary; the
+ *      current tab is brand-red with a 2px red underline sitting ON the rule).
+ *   2. metal heading row: 64px `bg-bg-primary` tile holding a 32px metal
+ *      square → 24 → H2 32/44 ("Gold Bars & Coins.").
+ *   3. the card grid — `partials/ProductCard.astro`, the same card as every
+ *      other product grid (3 x 370 with 32/64 gaps).
+ *   4. Load More, the dark button, centred.
+ *
+ * TABS are a <nav> of links (one page per metal), not JS tabs: every product
+ * of a metal is on its own page for search engines. Only metals with a
+ * listing page are passed in `tabs` (content decides). The nav's accessible
+ * name is the header's overline ("Products") — there is no field for it.
+ * INTEGRATOR: a `tabsLabel` on ProductListingBlock would be cleaner.
+ *
+ * SORT: rendered only when `block.sort` is set (it is not — the frame draws
+ * a one-option control, TODO(client)). When present it is a native <select>
+ * that reorders the cards client-side by name.
+ *
+ * LOAD MORE is progressive. Every card is in the HTML; the button is
+ * rendered `hidden`. When the script finds more than `pageSize` cards it hides
+ * the rest, reveals the button, and each click shows the next `pageSize` and
+ * moves focus to the first newly revealed card's link. No JavaScript = every
+ * card visible, no button. `pageSize` is read from `data-page-size`, never
+ * baked into a selector.
+ *
+ * Responsive (invented — the Figma is desktop-only)
+ * -------------------------------------------------
+ * • REVIEW: the grid is 3 / 2 / 1 as ProductGrid.
+ * • REVIEW: below lg the header column is full width and the tab row
+ *   becomes a horizontal track (`overflow-x-auto`) whose tabs hug their text
+ *   with 24px inline padding; the track itself carries the 1px rule so the
+ *   active underline still sits on it while scrolling.
+ * • REVIEW: the heading tile stays 64px at every width; the H2 wraps.
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import Button from "@primitives/Button.astro";
+import Icon from "@primitives/Icon.astro";
+import ProductCard from "./partials/ProductCard.astro";
+import type { Metal, ProductListingBlock } from "@content/types";
+
+interface Props {
+  block: ProductListingBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const {
+  header,
+  tabs,
+  sort,
+  metalHeading,
+  products,
+  pageSize,
+  loadMoreLabel,
+  badgeLabel,
+  ctaLabel,
+  specLabels,
+  metalLabels,
+} = block;
+
+const theme = block.theme ?? "light";
+const SURFACE = {
+  light: "bg-bg-secondary",
+  tinted: "bg-bg-primary",
+  dark: "bg-always-black",
+} as const;
+
+/* Static so Tailwind sees every class; a template literal would not generate them. */
+const METAL_CHIP: Record<Metal, string> = {
+  gold: "bg-metal-gold",
+  silver: "bg-metal-silver",
+  platinum: "bg-metal-platinum",
+  palladium: "bg-metal-palladium",
+};
+
+const sortId = `${block._key}-sort`;
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={theme}
+  data-seam={block.seam}
+  data-product-listing
+  aria-label={header.heading}
+  class:list={[SURFACE[theme], "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container class="flex flex-col gap-lg lg:gap-xl">
+    {/* ---- 1. Header column + tab row ---- */}
+    <div class="flex flex-col gap-md">
+      <SectionHeader header={header} as="h1" class="lg:max-w-[534px]" />
+
+      <div class="flex items-center justify-between gap-md border-b border-border-primary">
+        <nav aria-label={header.overline ?? metalHeading} class="min-w-0 max-lg:overflow-x-auto">
+          <ul role="list" class="flex">
+            {tabs.map((tab) => (
+              <li class="shrink-0">
+                <a
+                  href={tab.href}
+                  aria-current={tab.current ? "page" : undefined}
+                  class:list={[
+                    "relative flex h-[72px] items-center gap-3 whitespace-nowrap text-base leading-6 transition-colors duration-150 hover:text-brand-red motion-reduce:transition-none max-lg:px-sm lg:w-[200px]",
+                    tab.current ? "text-brand-red" : "text-text-primary",
+                  ]}
+                >
+                  <span class:list={["block h-[18px] w-[18px] shrink-0", METAL_CHIP[tab.metal]]} aria-hidden="true" />
+                  <span class="font-semibold">{tab.label}</span>
+                  <span class="text-text-tertiary">/ {tab.count}</span>
+                  {tab.current && (
+                    /* 2px red underline, 1px inset each side as drawn (9933:3077). It sits
+                       flush on the row's rule (the frame overlaps it by 1px — but below lg
+                       the nav scrolls, and an overflow container clips anything hanging
+                       past its bottom edge, so flush is the one placement that works at
+                       every width). */
+                    <span class="absolute inset-x-px bottom-0 h-0.5 bg-brand-red" aria-hidden="true" />
+                  )}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {sort && (
+          <label for={sortId} class="relative flex shrink-0 items-center gap-1 text-base leading-6 font-semibold text-text-primary">
+            <span>{sort.label}</span>
+            <select
+              id={sortId}
+              data-sort
+              class="cursor-pointer appearance-none bg-transparent pr-7 font-semibold text-text-primary focus-visible:outline-2"
+            >
+              {sort.options.map((option) => (
+                <option value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <Icon name="chevron-down" class="pointer-events-none absolute right-0 h-6 w-6" />
+          </label>
+        )}
+      </div>
+    </div>
+
+    {/* ---- 2. Metal heading ---- */}
+    <div class="flex items-center gap-sm">
+      <span class="grid h-16 w-16 shrink-0 place-items-center bg-bg-primary" aria-hidden="true">
+        <span class:list={["block h-8 w-8", METAL_CHIP[block.metal]]} />
+      </span>
+      <h2 class="text-[length:var(--step-h2)] leading-[1.375] text-text-primary md:leading-[var(--line-h2)]">
+        {metalHeading}
+      </h2>
+    </div>
+
+    {/* ---- 3. Cards + 4. Load More ---- */}
+    <div class="flex flex-col items-center gap-lg lg:gap-xl">
+      <ul
+        role="list"
+        data-products
+        data-page-size={pageSize}
+        class="grid w-full grid-cols-1 gap-x-md gap-y-lg sm:grid-cols-2 lg:grid-cols-3 lg:gap-y-xl"
+      >
+        {products.map((product) => (
+          <ProductCard
+            product={product}
+            badgeLabel={badgeLabel}
+            ctaLabel={ctaLabel}
+            specLabels={specLabels}
+            metalLabels={metalLabels}
+          />
+        ))}
+      </ul>
+
+      {/* Wrapped because Button's props are closed: the script toggles the
+          wrapper's `hidden` and listens on the button inside. */}
+      <div data-load-more hidden>
+        <Button type="button" variant="dark">{loadMoreLabel}</Button>
+      </div>
+    </div>
+  </Container>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-product-listing]").forEach((root) => {
+    const list = root.querySelector<HTMLUListElement>("[data-products]");
+    const button = root.querySelector<HTMLElement>("[data-load-more]");
+    const select = root.querySelector<HTMLSelectElement>("[data-sort]");
+    if (!list) return;
+
+    const cards = () => Array.from(list.children) as HTMLElement[];
+    const pageSize = Number(list.dataset.pageSize) || 0;
+    let shown = pageSize;
+
+    // Paging is a no-op unless the content asked for it AND there is more to show.
+    const paged = pageSize > 0 && cards().length > pageSize;
+
+    const apply = () => {
+      if (!paged || !button) return;
+      cards().forEach((card, index) => {
+        card.hidden = index >= shown;
+      });
+      button.hidden = shown >= cards().length;
+    };
+
+    if (paged && button) {
+      apply();
+      button.addEventListener("click", () => {
+        const first = cards()[shown];
+        shown += pageSize;
+        apply();
+        // Move focus to the first card just revealed, so keyboard and screen
+        // reader users land on new content instead of a button that may
+        // have just disappeared.
+        first?.querySelector<HTMLElement>("a, button")?.focus();
+      });
+    }
+
+    select?.addEventListener("change", () => {
+      const direction = select.value === "za" ? -1 : 1;
+      const name = (card: HTMLElement) => card.querySelector("h3")?.textContent?.trim() ?? "";
+      const sorted = cards().sort((a, b) => direction * name(a).localeCompare(name(b), "en"));
+      sorted.forEach((card) => list.appendChild(card));
+      shown = pageSize;
+      apply();
+    });
+  });
+</script>

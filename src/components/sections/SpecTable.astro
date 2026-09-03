@@ -1,0 +1,152 @@
+---
+/**
+ * Specifications — Figma `Product` 11083:19935 (coin) / 11083:19682 (bar),
+ * the first child of the light "specs + provenance + premium" frame; the two
+ * MediaWithText blocks that follow it seam onto this surface.
+ *
+ * Header (overline → H2 32/44, via SectionHeader) → 24 → tab row → 32 →
+ * panel: a 1px-bordered table of rows, each 64px tall (20/24 padding), the
+ * label an eyebrow in text-tertiary and the value Playfair 500 16/24, in two
+ * equal columns 64px apart (531 + 64 + 531 inside 1174).
+ *
+ * TABS render only when MORE THAN ONE group has rows. Both drawn frames have
+ * empty "Physical" / "Issue data" groups, so today no tab row renders and the
+ * one populated group is the panel — the tabs appear the day a second group
+ * gets rows. Progressive: without JavaScript every group renders stacked
+ * with its label as an eyebrow heading; the script turns the labels into
+ * `role="tab"` buttons and hides all but the current panel.
+ *
+ * Every row also feeds `productNode().additionalProperty` in lib/schema.ts,
+ * so the rows are plain label/value pairs — nothing here is markup-only.
+ *
+ * Responsive (invented — the Figma is desktop-only)
+ * -------------------------------------------------
+ * • REVIEW: below md each row stacks label over value (`grid-cols-1`, 8px
+ *   apart, 16px row padding) — a 14px uppercase label beside a wrapping value
+ *   at 300px reads as two columns of fragments.
+ * • REVIEW: the tab row scrolls horizontally rather than wrapping.
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import type { SpecTableBlock } from "@content/types";
+
+interface Props {
+  block: SpecTableBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header } = block;
+
+const theme = block.theme ?? "light";
+const SURFACE = {
+  light: "bg-bg-secondary",
+  tinted: "bg-bg-primary",
+  dark: "bg-always-black",
+} as const;
+
+/* Groups without rows are not drawn at all — an empty tab is a broken promise. */
+const groups = block.groups.filter((group) => group.rows.length > 0);
+const tabbed = groups.length > 1;
+const tabId = (key: string) => `${block._key}-tab-${key}`;
+const panelId = (key: string) => `${block._key}-panel-${key}`;
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={theme}
+  data-seam={block.seam}
+  data-spec-table
+  aria-label={header.heading}
+  class:list={[SURFACE[theme], "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container class="flex flex-col gap-md">
+    <div class="flex flex-col gap-sm">
+      <SectionHeader header={header} />
+
+      {tabbed && (
+        /* Tab labels: eyebrow, 32px apart; the current one brand-red with a
+           2px red rule 16px under its cap line (11083:19943). Without JS the
+           buttons do nothing and every panel is visible, which is fine. */
+        <div role="tablist" data-tablist class="flex gap-md overflow-x-auto">
+          {groups.map((group, index) => (
+            <button
+              type="button"
+              role="tab"
+              id={tabId(group._key)}
+              aria-controls={panelId(group._key)}
+              aria-selected={index === 0 ? "true" : "false"}
+              tabindex={index === 0 ? undefined : -1}
+              class="eyebrow relative shrink-0 whitespace-nowrap pb-xs text-text-tertiary transition-colors duration-150 hover:text-text-primary aria-selected:text-brand-red motion-reduce:transition-none after:absolute after:inset-x-px after:bottom-0 after:h-0.5 after:bg-brand-red after:opacity-0 aria-selected:after:opacity-100"
+            >
+              {group.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <div class="flex flex-col gap-md">
+      {groups.map((group, index) => (
+        <div
+          id={panelId(group._key)}
+          role={tabbed ? "tabpanel" : undefined}
+          aria-labelledby={tabbed ? tabId(group._key) : undefined}
+          data-panel
+          data-panel-index={index}
+          class="flex flex-col gap-md"
+        >
+          {tabbed && (
+            /* The no-JS heading for each group; the script hides it once the tabs work. */
+            <h3 class="eyebrow text-text-tertiary" data-panel-heading>{group.label}</h3>
+          )}
+          <dl class="border border-border-primary">
+            {group.rows.map((row) => (
+              <div class="grid grid-cols-1 gap-2xs border-b border-border-primary px-sm py-xs last:border-b-0 md:grid-cols-2 md:items-baseline md:gap-xl md:py-5">
+                <dt class="eyebrow text-text-tertiary">{row.label}</dt>
+                <dd class="font-display text-base leading-6 font-medium text-text-primary">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </div>
+  </Container>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-spec-table]").forEach((root) => {
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[role=tab]"));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>("[data-panel]"));
+    if (tabs.length < 2) return;
+
+    // The tabs work from here on, so the per-panel no-JS headings go.
+    root.querySelectorAll<HTMLElement>("[data-panel-heading]").forEach((h) => (h.hidden = true));
+
+    const select = (index: number, focus = false) => {
+      tabs.forEach((tab, i) => {
+        const current = i === index;
+        tab.setAttribute("aria-selected", String(current));
+        tab.tabIndex = current ? 0 : -1;
+        if (current && focus) tab.focus();
+      });
+      panels.forEach((panel, i) => {
+        panel.hidden = i !== index;
+      });
+    };
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => select(index));
+      // Arrow keys move between tabs, as the WAI-ARIA tabs pattern expects.
+      tab.addEventListener("keydown", (event) => {
+        const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+        if (!delta) return;
+        event.preventDefault();
+        select((index + delta + tabs.length) % tabs.length, true);
+      });
+    });
+
+    select(0);
+  });
+</script>

@@ -1,0 +1,118 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import ProductHero from "@sections/ProductHero.astro";
+import ProseSection from "@sections/ProseSection.astro";
+import SpecTable from "@sections/SpecTable.astro";
+import MediaWithText from "@sections/MediaWithText.astro";
+import FeatureGrid from "@sections/FeatureGrid.astro";
+import TestimonialBand from "@sections/TestimonialBand.astro";
+import FaqAccordion from "@sections/FaqAccordion.astro";
+import ProductGrid from "@sections/ProductGrid.astro";
+import CalloutBand from "@sections/CalloutBand.astro";
+import ContactSection from "@sections/ContactSection.astro";
+
+import type { ProductDetail } from "@content/types";
+import { listedMetals, products } from "@content/products";
+import { productPage, productBreadcrumbLabels, productPath, relatedProductPaths } from "@content/pages/product-page";
+import { metalListingHref } from "@content/pages/product";
+import { contact, mintStrip } from "@content/contact";
+import { isProductDetail } from "@lib/products";
+
+import {
+  buildGraph,
+  siteGraph,
+  webPageNode,
+  breadcrumbNode,
+  productNode,
+  faqPageNode,
+  SITE,
+} from "@lib/schema";
+
+/**
+ * Product page — /buy-<metal>/<slug>/, one template for coins and bars.
+ *
+ * The block list comes from src/content/pages/product-page.ts (Figma
+ * `Product - Coin (Template)` 11083:19848 / `Product - Bar (Template)`
+ * 11083:19595 — identical structure, driven by the document's `form`); this
+ * route composes, builds the structured data, and contains no content.
+ *
+ * ROUTES EMITTED: one per `ProductDetail` whose metal has a listing. A
+ * listing-only `Product` (card data, no detail document) gets no page — its
+ * card already points at the contact anchor through `productHref()` — and a
+ * detail document for an unlisted metal (the pending platinum / palladium
+ * pair) is not in `products` at all, so neither can reach here.
+ *
+ * TAIL. This is the one page type that renders the site-wide contact section
+ * itself (`tail={false}` on SiteLayout): the enquiry opens with the product
+ * already named, as a line of text in the message (amendment 13).
+ */
+export function getStaticPaths() {
+  return products
+    .filter(isProductDetail)
+    .filter((product) => listedMetals.includes(product.metal))
+    .map((product) => ({
+      params: { metal: product.metal, product: product.slug },
+      props: { product },
+    }));
+}
+
+interface Props {
+  product: ProductDetail;
+}
+
+const { product } = Astro.props;
+const page = productPage(product);
+
+// SITE carries `base`; Astro.site alone does not (see src/pages/[slug].astro).
+const url = `${SITE}${productPath(product)}`;
+const seo = { ...page.seo, canonical: url };
+
+const schema = buildGraph([
+  ...siteGraph(),
+  webPageNode(seo, url, { type: "ItemPage", about: { "@id": `${url}#product` } }),
+  breadcrumbNode([
+    { name: productBreadcrumbLabels.home, url: `${SITE}/` },
+    { name: page.metalLabel, url: `${SITE}${metalListingHref(product.metal)}` },
+    { name: product.shortName, url },
+  ]),
+  productNode(
+    product,
+    url,
+    relatedProductPaths(product).map((path) => `${SITE}${path}`),
+  ),
+  faqPageNode(product.faqs),
+]);
+---
+
+<SiteLayout seo={seo} schema={schema} currentSection="products" tail={false}>
+  <ProductHero block={page.hero} />
+
+  {/* 11083:19927 draws a 1px rule under the tinted section (the frame's
+      bottom stroke); the block has no field for it, so it is passed through. */}
+  <ProseSection block={page.whyHold} class="border-b border-border-primary" />
+
+  <SpecTable block={page.specs} />
+
+  {/* Both media blocks draw the 32/44 heading and, below lg, put the photo
+      above the copy — it is what the section is about (REVIEW in the component). */}
+  <MediaWithText block={page.provenance} headingSize="h2" mobileMediaFirst />
+
+  <MediaWithText block={page.premiumDrivers} headingSize="h2" mobileMediaFirst />
+
+  <FeatureGrid block={page.tax} />
+
+  <TestimonialBand block={page.testimonialA} />
+
+  {/* Every row is drawn open (11083:20025), which the native exclusive
+      accordion group cannot do — so the group is switched off here rather
+      than named after the slug. TODO(client): open state. */}
+  <FaqAccordion block={page.faq} initiallyOpen="all" exclusiveGroup="" />
+
+  <ProductGrid block={page.related} />
+
+  <TestimonialBand block={page.testimonialB} />
+
+  <CalloutBand block={page.quote} />
+
+  <ContactSection block={contact} mintStrip={mintStrip} prefill={page.prefill} />
+</SiteLayout>

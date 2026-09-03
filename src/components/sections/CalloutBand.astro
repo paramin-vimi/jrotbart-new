@@ -1,0 +1,110 @@
+---
+/**
+ * Callout band — the standalone `calloutBand` block: one heading, one
+ * action. Absorbs the Buy PM CTA cards (×7), the Office listing inline CTA,
+ * the Office HK callouts (×2) and the Coin/Bar quote band.
+ *
+ * "strip" (default) — the contained CalloutCard partial (8px brand-red bar,
+ *   Playfair 20/28 heading, button / inline arrow / stacked arrow-link) inside
+ *   a full-width section. The card paints `theme` (its own surface, as the
+ *   partial does); the SECTION around it paints the surface it sits on, which
+ *   in every drawn instance is the OTHER one — a tinted card on the light
+ *   page surface (I10770:11997, I10770:12006, I10770:12175, I11041:15557,
+ *   I11120:15916, I10980:13468), a light "hug" card on the tinted steps
+ *   surface (I10770:12141) — except the `bordered` news callout, which is a
+ *   transparent box drawn ON the light surface (I11009:15467). That rule is
+ *   the default; a page can override it with the `surface` prop when a strip
+ *   ever lands on a surface the rule gets wrong. `data-theme` carries the
+ *   section surface (what the seam CSS and neighbours care about), and
+ *   `seam` from content makes the strip sit 96 / 64 under the previous block
+ *   on the same surface, as the frames draw it (Buy PM 96, HK 96).
+ *
+ *   The heading is an <h2> at the H3 type size: standalone, the callout is a
+ *   section of the page (H1 → H2 → H3 is the a11y invariant); as the `aside`
+ *   of proseSection / featureGrid the same card renders an <h3>.
+ *
+ * "display" — Coin/Bar 11136:25475 / 11127:23329 (1366 × 238): full-bleed
+ *   always-black band, 96 padding, heading Playfair 500 32/44 in always-white
+ *   (max 849 wide) left, the solid button right, centred on the button's 46px;
+ *   no accent bar. The frame's 1px bottom border is #000 @10% on #0a0a0a —
+ *   invisible — and is dropped.
+ *
+ * REVIEW (no mobile design): display puts the button under the heading, full
+ * width, below md (as CalloutCard's button form does) and the heading steps
+ * down through `--step-h2`; strip forms inherit CalloutCard's own rules.
+ */
+import Container from "@primitives/Container.astro";
+import Button from "@primitives/Button.astro";
+import CalloutCard from "./partials/CalloutCard.astro";
+import type { CalloutBandBlock, CtaStyle } from "@content/types";
+
+interface Props {
+  block: CalloutBandBlock;
+  /** strip only: the surface the section paints AROUND the card. Default: the opposite of the card's `theme`, or the same surface when `bordered` (see above). */
+  surface?: "light" | "tinted";
+  class?: string;
+}
+
+const { block, surface: surfaceProp, class: className = "" } = Astro.props;
+const {
+  heading,
+  cta,
+  variant = "strip",
+  width = "full",
+  bordered = false,
+  ctaLayout = "inline",
+  theme,
+  seam,
+} = block;
+
+const cardTheme: "light" | "tinted" = theme === "tinted" ? "tinted" : "light";
+const surface: "light" | "tinted" =
+  surfaceProp ?? (bordered ? cardTheme : cardTheme === "tinted" ? "light" : "tinted");
+const surfaceClass = surface === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+
+/* The comparison must be inline: TS narrows `cta.style` through a direct
+   `=== "arrow"` test but not through a boolean, so the else branch would keep
+   the full CtaStyle union. Display bands draw the solid button only. */
+const buttonVariant: Exclude<CtaStyle, "arrow"> =
+  cta.style === "arrow" ? "solid" : (cta.style ?? "solid");
+---
+
+{variant === "display" ? (
+  <section
+    id={block.anchorId}
+    data-block
+    data-theme="dark"
+    data-seam={seam}
+    aria-label={heading}
+    class:list={["on-dark bg-always-black py-lg md:py-xl lg:py-3xl", className]}
+  >
+    <Container class="flex flex-col gap-md md:flex-row md:items-center md:justify-between md:gap-lg lg:gap-3xl">
+      <h2 class="max-w-[849px] font-display text-[length:var(--step-h2)] leading-[1.375] font-medium text-always-white md:leading-[var(--line-h2)]">
+        {heading}
+      </h2>
+      <Button href={cta.href} variant={buttonVariant} external={cta.external} class="w-full shrink-0 md:w-auto">
+        {cta.label}
+      </Button>
+    </Container>
+  </section>
+) : (
+  <section
+    id={block.anchorId}
+    data-block
+    data-theme={surface}
+    data-seam={seam}
+    aria-label={heading}
+    class:list={[surfaceClass, "py-lg md:py-xl lg:py-3xl", className]}
+  >
+    <Container>
+      <CalloutCard
+        card={{ heading, cta }}
+        theme={cardTheme}
+        ctaLayout={ctaLayout}
+        width={width}
+        bordered={bordered}
+        as="h2"
+      />
+    </Container>
+  </section>
+)}

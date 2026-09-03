@@ -1,0 +1,362 @@
+---
+/**
+ * Page hero — the `pageHero` block: the <h1> of every non-homepage page, one
+ * paragraph, and any of a check-bulleted proof list, hairline stat cells, a
+ * "Member of" mark row, one CTA and one media composition.
+ *
+ * FOUR DRAWN FORMS, one component, chosen by `block.media`:
+ *
+ *   text-only   Service listing 10976:21520 (454-wide column) and Office
+ *               listing 10980:11777 (530-wide column + stats). A plain
+ *               contained column: overline → 24 → H1 40/52 → 24 → body 16/24
+ *               → 24 → stats → 24 → "Member of" row (→ 24 → CTA). The column
+ *               width is the only thing that differs between the two frames,
+ *               so it is the `columnClass` prop (default 530; the Service
+ *               listing passes `max-w-[454px]`). The block after it seams
+ *               `tight` (64px) — both frames draw the intro 64 above the next
+ *               block inside a 96-padded surface.
+ *
+ *   composite   Buy Precious Metals 10726:9161 (1366 × 700, tinted, sits
+ *               UNDER the transparent nav like the homepage hero, so the page
+ *               passes `headerOverlay` and this block reserves the nav
+ *               headroom itself: media box at y=170 = nav 132 + 38). Text
+ *               column 588 wide at y=245: H1 → 16 → sub → 16 → proof rows
+ *               (24 tall, 4 apart, 16px check in brand red + Playfair 16/24)
+ *               → 32 → "Member of" → 32 → button. Media box 530 × 530 at
+ *               x=731: backdrop photo 530 × 353 at y=250 (15.1% down, 66.6%
+ *               tall), the cut-out advisor 312 × 530 at x=840 (20.6% in)
+ *               standing on the box's bottom edge and overhanging the photo's
+ *               top by 80px. The cut-out asset must be the DRAWN crop of the
+ *               bitmap (Figma crops the raw 624 × 912 export to its middle
+ *               55 × 64 %) — see TODO(assets) in the fixture/page module.
+ *
+ *   split       Office Hong Kong 11043:18243 (1366 × 560): two 683 halves,
+ *               left on the block's surface with the text column (491 wide,
+ *               vertically centred: H1 → 24 → body → 24 → "Member of" → 28
+ *               → button), right the photograph edge to edge (object-cover).
+ *               Full-bleed: no Container at lg — the left half pads itself to
+ *               the container's left edge (`max(48px, 100% − 587px)`, i.e.
+ *               half the viewport minus half of 1174, which is exactly 96 at
+ *               1366 and stays aligned on wider screens).
+ *
+ * Headings go through SectionHeader (h1, runs, accent tone). The body
+ * paragraphs are rendered HERE rather than by SectionHeader because its
+ * `max-w-[65ch]` cap (~527px in Source Sans 16) is narrower than two of the
+ * drawn measures (530 and 588) and would re-wrap them; the column is the
+ * measure in every frame. Accent runs render at the roman size (amendment 3).
+ *
+ * REVIEW (no mobile design exists — decisions made here):
+ *   1. Copy first in the DOM in every form; the H1 and CTA are the payload.
+ *   2. split: stacks below lg — text half full width with the container
+ *      padding, then the photo at 4/3 (the HK bitmap IS 4/3, so nothing is
+ *      cropped) weighted to the right where the subjects sit.
+ *   3. composite: below lg the media sits under the text as a 4/3 photo with
+ *      the cut-out standing on its bottom edge at half the width (the drawn
+ *      crop is a tall 312 × 530 figure — at the plan's 60% it would overhang
+ *      the photo by a quarter of its height); below 480 the cut-out is
+ *      dropped and only the photo remains — a 190px-wide person over a
+ *      140px-tall photo reads as a sticker.
+ *   4. stats: three cells side by side down to 480 (each 155 wide as drawn,
+ *      hairline right rules), stacked with hairline bottom rules below that.
+ *   5. "Member of": label above the marks below sm, inline from sm — the
+ *      homepage hero's rule, same markup, same `logoBox()` sizes.
+ *   6. text-only keeps its column width at every size (it only ever shrinks).
+ */
+import Container from "@primitives/Container.astro";
+import Button from "@primitives/Button.astro";
+import Overline from "@primitives/Overline.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import Icon from "@primitives/Icon.astro";
+import type { PageHeroBlock } from "@content/types";
+import { logoBox } from "@lib/logoBox";
+
+interface Props {
+  block: PageHeroBlock;
+  /** text-only form: the text column's width class. Figma draws 530 (offices) and 454 (services). */
+  columnClass?: string;
+  class?: string;
+}
+
+const { block, columnClass = "max-w-[530px]", class: className = "" } = Astro.props;
+const {
+  header,
+  accentTone = "muted",
+  proofPoints = [],
+  stats = [],
+  accreditationLabel,
+  accreditations = [],
+  cta,
+  media,
+  theme = "light",
+  seam,
+} = block;
+
+const surface = theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+const form = media?.kind ?? "text";
+
+/* SectionHeader renders overline + H1 only; the body is laid out below at the
+   column's own measure (see the header comment). */
+const headerNoBody = { ...header, body: undefined };
+const paragraphs =
+  header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
+
+/* Cta.style widens to include "arrow", which Button does not accept; a hero
+   CTA is always the solid button in the frames. */
+const ctaVariant = cta?.style && cta.style !== "arrow" ? cta.style : "solid";
+
+const hasMemberOf = accreditationLabel !== undefined && accreditations.length > 0;
+
+/* HARD LINE BREAKS. Two of the frames break their H1 by hand — "Five
+   offices.⏎Owner-operated, everywhere." (10980:11779) and "We Offer
+   Comprehensive⏎Precious Metals Services" (10976:21522) — because the natural
+   wrap lands inside "Owner-operated" (the hyphen is a break opportunity and
+   `text-wrap: balance` takes it). The content carries the frame's own "\n"
+   inside the heading run and the H1 is rendered pre-line, so that newline is
+   a line break and every other whitespace run still collapses. A heading
+   without a "\n" is unaffected. */
+const h1Breaks = "[&_h1]:whitespace-pre-line";
+---
+
+{form === "split" && media?.kind === "split" ? (
+  <section
+    id={block.anchorId}
+    data-block
+    data-theme={theme}
+    data-seam={seam}
+    aria-label={header.heading}
+    class:list={["lg:grid lg:grid-cols-2", className]}
+  >
+    {/* Left half. Padding-left = the site container's left edge (see header
+        comment); right padding 96 at ≥1366 gives the drawn 491 column
+        (683 − 96 − 491 = 96), 48 at lg where the half is narrower. */}
+    <div
+      class:list={[
+        surface,
+        "flex items-center px-sm py-lg md:px-lg md:py-xl lg:min-h-[560px] lg:pl-[max(var(--spacing-lg),calc(100%-587px))] lg:pr-lg xl:pr-3xl",
+      ]}
+    >
+      <div class="flex w-full flex-col gap-sm lg:max-w-[491px]">
+        <SectionHeader as="h1" header={headerNoBody} accentTone={accentTone} class={h1Breaks} />
+        {paragraphs.map((paragraph) => (
+          <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+        ))}
+        {hasMemberOf && (
+          <div class="flex flex-col gap-2xs sm:flex-row sm:items-center sm:gap-xs">
+            <Overline class="shrink-0">{accreditationLabel}</Overline>
+            <ul class="flex flex-wrap items-center gap-xs">
+              {accreditations.map((item) => (
+                <li>
+                  <img
+                    src={item.image.src}
+                    alt={item.image.decorative ? "" : item.image.alt}
+                    aria-hidden={item.image.decorative ? "true" : undefined}
+                    width={item.image.width}
+                    height={item.image.height}
+                    decoding="async"
+                    class:list={["object-contain", logoBox(item.image)]}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {cta && (
+          /* Drawn 28 under the marks, not 24: the extra 4px is the pt-1. */
+          <div class="pt-1">
+            <Button href={cta.href} variant={ctaVariant} external={cta.external} class="w-full sm:w-auto">
+              {cta.label}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Right half: the photograph, edge to edge. */}
+    <img
+      src={media.image.src}
+      alt={media.image.decorative ? "" : media.image.alt}
+      aria-hidden={media.image.decorative ? "true" : undefined}
+      width={media.image.width}
+      height={media.image.height}
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+      class="aspect-[4/3] h-auto w-full object-cover object-[80%_center] lg:aspect-auto lg:h-full lg:min-h-[560px] lg:object-center"
+    />
+  </section>
+) : form === "composite" && media?.kind === "composite" ? (
+  <section
+    id={block.anchorId}
+    data-block
+    data-theme={theme}
+    data-seam={seam}
+    aria-label={header.heading}
+    class:list={[
+      surface,
+      /* Under the transparent nav: headroom = measured nav height + the 38px
+         the media box sits below it (y=170 on a 132 nav). Bottom: the cut-out
+         stands on the frame's bottom edge, so no padding at lg; the 700
+         min-height is the drawn frame. */
+      "relative overflow-hidden pt-[calc(var(--nav-height,132px)+38px)] pb-lg lg:min-h-[700px] lg:pb-0",
+      className,
+    ]}
+  >
+    {/* Columns 588 + 530 with the 48 gap (drawn 47) = 1166 of the 1174
+        container; minmax() lets both shrink at lg where the container is 928. */}
+    <Container class="lg:grid lg:grid-cols-[minmax(0,588px)_minmax(0,530px)] lg:items-start lg:gap-lg">
+      {/* Text column: y=245 is 75px below the media box's top (170). */}
+      <div class="flex flex-col gap-md lg:mt-[75px]">
+        <div class="flex flex-col gap-xs">
+          <SectionHeader as="h1" header={headerNoBody} accentTone={accentTone} class={h1Breaks} />
+          {paragraphs.map((paragraph) => (
+            <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+          ))}
+          {proofPoints.length > 0 && (
+            <ul class="flex flex-col gap-1">
+              {proofPoints.map((point) => (
+                /* Row 24 tall: 16px check on a 4px top pad (drawn 6px down),
+                   8px gap, Playfair 500 16/24 in text-primary. */
+                <li class="flex items-start gap-2xs">
+                  <Icon name="check" class="mt-1.5 h-4 w-4 shrink-0 text-brand-red" />
+                  <span class="font-display text-base leading-6 font-medium text-text-primary">{point}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {hasMemberOf && (
+          <div class="flex flex-col gap-2xs sm:flex-row sm:items-center sm:gap-xs">
+            <Overline class="shrink-0">{accreditationLabel}</Overline>
+            <ul class="flex flex-wrap items-center gap-xs">
+              {accreditations.map((item) => (
+                <li>
+                  <img
+                    src={item.image.src}
+                    alt={item.image.decorative ? "" : item.image.alt}
+                    aria-hidden={item.image.decorative ? "true" : undefined}
+                    width={item.image.width}
+                    height={item.image.height}
+                    decoding="async"
+                    class:list={["object-contain", logoBox(item.image)]}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {cta && (
+          <div>
+            <Button href={cta.href} variant={ctaVariant} external={cta.external} class="w-full sm:w-auto">
+              {cta.label}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Media box. At lg: the drawn 530 square — photo 15.1% down / 66.6%
+          tall, cut-out 20.6% in / 58.9% wide / full height. Below lg: a 4/3
+          photo with the cut-out standing on its bottom edge at half the
+          width; the 10% top padding is the head-room that overhang needs
+          (0.5 × 530/312 − 0.75 ≈ 0.10 of the width). Below 480 only the photo. */}
+      <div class="relative mt-lg min-[480px]:pt-[10%] lg:mt-0 lg:aspect-square lg:pt-0">
+        <img
+          src={media.photo.src}
+          alt={media.photo.decorative ? "" : media.photo.alt}
+          aria-hidden={media.photo.decorative ? "true" : undefined}
+          width={media.photo.width}
+          height={media.photo.height}
+          loading="eager"
+          decoding="async"
+          class="aspect-[4/3] h-auto w-full object-cover lg:absolute lg:inset-x-0 lg:top-[15.1%] lg:aspect-auto lg:h-[66.6%]"
+        />
+        <div class="absolute bottom-0 left-1/2 hidden aspect-[312/530] w-1/2 -translate-x-1/2 min-[480px]:block lg:top-0 lg:left-[20.6%] lg:aspect-auto lg:h-full lg:w-[58.9%] lg:translate-x-0">
+          <img
+            src={media.cutout.src}
+            alt={media.cutout.decorative ? "" : media.cutout.alt}
+            aria-hidden={media.cutout.decorative ? "true" : undefined}
+            width={media.cutout.width}
+            height={media.cutout.height}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+            class="h-full w-full object-cover object-top"
+          />
+        </div>
+      </div>
+    </Container>
+  </section>
+) : (
+  <section
+    id={block.anchorId}
+    data-block
+    data-theme={theme}
+    data-seam={seam}
+    aria-label={header.heading}
+    class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+  >
+    <Container>
+      <div class:list={["flex flex-col gap-sm", columnClass]}>
+        <SectionHeader as="h1" header={headerNoBody} accentTone={accentTone} class={h1Breaks} />
+        {paragraphs.map((paragraph) => (
+          <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+        ))}
+
+        {proofPoints.length > 0 && (
+          <ul class="flex flex-col gap-1">
+            {proofPoints.map((point) => (
+              <li class="flex items-start gap-2xs">
+                <Icon name="check" class="mt-1.5 h-4 w-4 shrink-0 text-brand-red" />
+                <span class="font-display text-base leading-6 font-medium text-text-primary">{point}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {stats.length > 0 && (
+          /* Drawn 10980:12506: cells 155 wide, 32 apart, value Playfair 20/28
+             over label 16/24 tertiary (4px gap), hairline right rule on all
+             but the last, 8px before the rule. */
+          <ul class="flex flex-col gap-xs min-[480px]:flex-row min-[480px]:gap-md">
+            {stats.map((stat) => (
+              <li class="flex flex-col gap-1 border-b border-border-primary pb-xs last:border-b-0 last:pb-0 min-[480px]:w-[155px] min-[480px]:border-r min-[480px]:border-b-0 min-[480px]:pr-2xs min-[480px]:pb-0 min-[480px]:last:border-r-0">
+                <span class="font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary">{stat.value}</span>
+                <span class="text-base leading-6 text-text-tertiary">{stat.label}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {hasMemberOf && (
+          <div class="flex flex-col gap-2xs sm:flex-row sm:items-center sm:gap-xs">
+            <Overline class="shrink-0">{accreditationLabel}</Overline>
+            <ul class="flex flex-wrap items-center gap-xs">
+              {accreditations.map((item) => (
+                <li>
+                  <img
+                    src={item.image.src}
+                    alt={item.image.decorative ? "" : item.image.alt}
+                    aria-hidden={item.image.decorative ? "true" : undefined}
+                    width={item.image.width}
+                    height={item.image.height}
+                    decoding="async"
+                    class:list={["object-contain", logoBox(item.image)]}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {cta && (
+          <div>
+            <Button href={cta.href} variant={ctaVariant} external={cta.external} class="w-full sm:w-auto">
+              {cta.label}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Container>
+  </section>
+)}

@@ -1,0 +1,20 @@
+---
+import OfficePage from "@components/OfficePage.astro";
+import { officeById } from "@content/offices";
+import { hongKongPage } from "@content/officePages/hong-kong";
+
+/**
+ * /buy-gold-hong-kong/ — the Hong Kong office page (Figma 10784:11826).
+ *
+ * The live URL is kept: it ranks for "buy gold in Hong Kong" today. The
+ * office FACTS come from the Office document, the page's copy from
+ * src/content/officePages/hong-kong.ts, and the block order from
+ * OfficePage.astro — this file only joins the two.
+ *
+ * Singapore is deliberately NOT built here (Amendment 9): its live page
+ * ranks, no design exists for it, and a noindexed stub would de-index it.
+ */
+const office = officeById("hong-kong");
+---
+
+<OfficePage office={office} page={hongKongPage} />

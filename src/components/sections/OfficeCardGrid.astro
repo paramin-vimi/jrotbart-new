@@ -1,0 +1,201 @@
+---
+/**
+ * Office card grid — Figma 10980:12676 (the office listing). Photo cards
+ * with a hairline border: picture, then a 32px-padded body of city title
+ * (+ optional HEADQUARTERS chip), address, two "eyebrow label / value" detail
+ * rows on 5%-black rules, and — 48px below — the "Visit the … desk" link.
+ * Distinct from the homepage's hairline `officeGrid`.
+ *
+ * THE FOUR-OFFICE GRID RULE (Amendment 10). The frame draws FIVE cards on a
+ * three-column grid: the featured (Hong Kong, 772×699) spans two columns with
+ * Singapore beside it, then three equal cards. Bangkok is not shipped (no
+ * address, phone or licence exists — `pendingOffices` in offices.ts), which
+ * leaves four offices, and a 2+1 / 2+1 arrangement would strand one card next
+ * to an empty slot. So at lg the featured card spans the FULL three-column
+ * width in row 1 and the remaining three are equal cards in row 2. With five
+ * offices the same markup falls back to 2+1 / 1+1+1 automatically: the
+ * featured span is `lg:col-span-3` only while exactly three cards follow it.
+ *
+ * `offices[0]` is the featured card. The photo keeps the drawn 770×368 crop
+ * when it spans the row and the 368-square crop otherwise; both `object-cover`
+ * with the focal point a little above centre, which is where the skylines sit.
+ *
+ * The desk link renders ONLY for offices whose card has a `cta` (i.e. a built
+ * route) — the others show no link rather than a 404 (TODO(client) in the
+ * page module). Phone values are `tel:` links. The address is one flowing
+ * paragraph (lines joined by ", "), which is how the frame sets it.
+ *
+ * REVIEW (no mobile design): md is two columns with the featured card spanning
+ * both (photo at 16:9); below md one column, featured first, every photo at
+ * 16:9 — a 368-square photo above 300px of text reads as a poster on a phone.
+ * When an odd number of small cards is left at md, the last one also spans
+ * both columns (16:9 photo) so the grid never ends on a half-empty row.
+ * Detail rows stay label-left / value-right at every width.
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import ArrowGo from "@primitives/ArrowGo.astro";
+import type { Office, OfficeCardGridBlock } from "@content/types";
+
+interface Props {
+  block: OfficeCardGridBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, offices, cards, rowLabels } = block;
+
+const surface = block.theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+const headingId = `${block._key}-heading`;
+/* Heading level of each item. When this block carries its own header that
+   header is the section <h2>, so items nest at h3. When it does NOT (the
+   Service listing and Office listing open with a pageHero owning the page
+   <h1>), an h3 here skips a level straight from h1 — WCAG 1.3.1 and the
+   repo's no-heading-skips invariant. Measured: /services/ and /offices/ each
+   reported exactly one skip before this. */
+const ItemTag = header ? "h3" : "h2";
+
+const [featured, ...rest] = offices;
+/* Exactly three small cards → the featured card takes the whole first row at
+   lg (the four-office rule above). Any other count keeps the drawn 2 + 1. */
+const featuredSpansRow = rest.length === 3;
+/* An odd number of small cards at md leaves one alone on the last row. */
+const lastSmallSpansMd = rest.length % 2 === 1;
+
+/* One template for both card sizes: each entry carries the column span of its
+   <li> and the aspect ratio of its photo at every breakpoint. */
+interface CardPlan {
+  office: Office;
+  li: string;
+  photo: string;
+}
+const plans: CardPlan[] = [];
+if (featured) {
+  plans.push({
+    office: featured,
+    li: featuredSpansRow ? "md:col-span-2 lg:col-span-3" : "md:col-span-2",
+    photo: "aspect-video lg:aspect-[770/368]",
+  });
+}
+rest.forEach((office, index) => {
+  const spansMd = lastSmallSpansMd && index === rest.length - 1;
+  plans.push({
+    office,
+    li: spansMd ? "md:col-span-2 lg:col-span-1" : "",
+    photo: spansMd ? "aspect-video lg:aspect-square" : "aspect-video md:aspect-square",
+  });
+});
+
+const telHref = (office: Office) =>
+  `tel:${office.phoneHref ?? office.phone?.replace(/[^+\d]/g, "")}`;
+
+const linkClass =
+  "group/cta button-text inline-flex items-center gap-2xs self-start text-brand-red " +
+  "transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none";
+const arrowClass =
+  "transition-transform duration-150 group-hover/cta:translate-x-1 " +
+  "motion-reduce:transition-none motion-reduce:group-hover/cta:translate-x-0";
+const rowClass =
+  "flex items-center justify-between gap-xs border-t border-border-secondary pt-3";
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={block.theme ?? "light"}
+  data-seam={block.seam}
+  aria-labelledby={header ? headingId : undefined}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div class="flex flex-col gap-lg">
+      {header && (
+        <div id={headingId}>
+          <SectionHeader header={header} />
+        </div>
+      )}
+
+      <ul role="list" class="grid grid-cols-1 gap-md md:grid-cols-2 lg:grid-cols-3">
+        {plans.map(({ office, li, photo }) => {
+          const card = cards[office._id] ?? {};
+          const titleId = `${block._key}-${office._id}`;
+          return (
+            <li class:list={["flex flex-col border border-border-primary", li]}>
+              <article class="flex h-full flex-col" aria-labelledby={titleId}>
+                {office.photo && (
+                  <img
+                    src={office.photo.src}
+                    alt={office.photo.decorative ? "" : office.photo.alt}
+                    aria-hidden={office.photo.decorative ? "true" : undefined}
+                    width={office.photo.width}
+                    height={office.photo.height}
+                    loading="lazy"
+                    decoding="async"
+                    class:list={["w-full object-cover object-[50%_40%]", photo]}
+                  />
+                )}
+
+                <div class="flex flex-1 flex-col gap-lg p-md">
+                  <div class="flex flex-col gap-xs">
+                    <div class="flex flex-wrap items-center gap-xs">
+                      <ItemTag
+                        id={titleId}
+                        class="font-display text-base leading-6 font-medium text-text-primary"
+                      >
+                        {office.city}
+                      </ItemTag>
+                      {card.badge && (
+                        <span class="inline-flex h-[25px] items-center border border-brand-red px-3 eyebrow text-brand-red">
+                          {card.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <address class="text-base not-italic leading-6 text-text-secondary">
+                      {office.address.join(", ")}
+                    </address>
+
+                    <dl class="flex flex-col gap-3">
+                      {office.phone && (
+                        <div class={rowClass}>
+                          <dt class="eyebrow text-text-secondary">{rowLabels.phone}</dt>
+                          <dd class="text-right text-base leading-6 text-text-secondary">
+                            <a
+                              href={telHref(office)}
+                              class="transition-colors duration-150 hover:text-brand-red motion-reduce:transition-none"
+                            >
+                              {office.phone}
+                            </a>
+                          </dd>
+                        </div>
+                      )}
+                      {office.vaultPartner && (
+                        <div class={rowClass}>
+                          <dt class="eyebrow text-text-secondary">{rowLabels.vaultPartner}</dt>
+                          <dd class="text-right text-base leading-6 text-text-secondary">
+                            {office.vaultPartner}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+
+                  {card.cta && (
+                    <a
+                      href={card.cta.href}
+                      class:list={[linkClass, "mt-auto"]}
+                      {...(card.cta.external ? { rel: "noopener noreferrer", target: "_blank" } : {})}
+                    >
+                      <span>{card.cta.label}</span>
+                      <ArrowGo class={arrowClass} />
+                    </a>
+                  )}
+                </div>
+              </article>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  </Container>
+</section>

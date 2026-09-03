@@ -1,0 +1,73 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import ProductListing from "@sections/ProductListing.astro";
+import TestimonialBand from "@sections/TestimonialBand.astro";
+
+import type { Metal } from "@content/types";
+import { listedMetals, byMetal } from "@content/products";
+import {
+  metalListingPage,
+  listingBreadcrumbLabels,
+  listingPath,
+  productsHubHref,
+} from "@content/pages/metal-listing-page";
+import { isProductDetail, productHref } from "@lib/products";
+
+import { buildGraph, siteGraph, webPageNode, breadcrumbNode, itemListNode, SITE } from "@lib/schema";
+
+/**
+ * Metal listing — /buy-gold/ and /buy-silver/.
+ *
+ * One template for every listed metal. The block list comes from
+ * src/content/pages/metal-listing-page.ts (Figma `Product - Gold Listing`
+ * 9922:2130 / `Product - Sliver Listing` 10977:23576); this route composes,
+ * builds the page's structured data, and contains no content of its own.
+ *
+ * ROUTES EMITTED: exactly the metals in `listedMetals` — gold and silver, the
+ * two the live site lists. The allowlist lives in src/content/products/index.ts
+ * beside the catalogue, not here, so a metal cannot get a URL without also
+ * getting a catalogue. The homepage's platinum and palladium cards stay
+ * homepage-only: no /buy-platinum/ or /buy-palladium/ is built.
+ * TODO(client): platinum and palladium listings — scope and product range.
+ *
+ * Static routes beat dynamic ones in Astro, so /buy-gold-hong-kong/ (a file of
+ * its own) is never swallowed by this `[metal]` segment.
+ */
+export function getStaticPaths() {
+  return listedMetals.map((metal) => ({ params: { metal }, props: { metal } }));
+}
+
+interface Props {
+  metal: Metal;
+}
+
+const { metal } = Astro.props;
+const page = metalListingPage(metal);
+
+// SITE carries `base`; Astro.site alone does not (see src/pages/[slug].astro).
+const url = `${SITE}${listingPath(metal)}`;
+const seo = { ...page.seo, canonical: url };
+
+// Only products with a page of their own are listed in the ItemList — a URL
+// that resolves to the contact anchor is not an item.
+const listedProducts = byMetal(metal)
+  .filter(isProductDetail)
+  .map((product) => ({ name: product.name, url: `${SITE}${productHref(product)}` }));
+
+const schema = buildGraph([
+  ...siteGraph(),
+  webPageNode(seo, url, { type: "CollectionPage" }),
+  breadcrumbNode([
+    { name: listingBreadcrumbLabels.home, url: `${SITE}/` },
+    { name: listingBreadcrumbLabels.products, url: `${SITE}${productsHubHref}` },
+    { name: page.metalLabel, url },
+  ]),
+  itemListNode(url, listedProducts),
+]);
+---
+
+<SiteLayout seo={seo} schema={schema} currentSection="products">
+  <ProductListing block={page.listing} />
+
+  <TestimonialBand block={page.testimonial} />
+</SiteLayout>

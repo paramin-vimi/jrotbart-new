@@ -1,0 +1,393 @@
+---
+/**
+ * Product page opener — Figma `Product` 11083:19850 (coin) / 11083:19597
+ * (bar), 1366x1074, light. One block for both forms; nothing here branches on
+ * `product.form` — the document carries the form-specific words.
+ *
+ * Back link (28px ring-arrow + BUTTON TEXT) → 48 → two 555px columns 64 apart:
+ *
+ * GALLERY (left). Main tile 555x555, `bg-bg-primary` with a 1px rule, the
+ * picture `object-contain` inside with the same 13% inset the product card
+ * uses (the frame's fill has that margin baked into its bitmap: the coins
+ * span ~395 of the 553px tile; the re-exported cut-outs are trimmed, so the
+ * inset restores the drawn density); a 40px zoom button top-right and 40px
+ * previous/next buttons bottom-right, all inset 16; 8px below, a row of
+ * five 105px thumbnails (7.5px apart, 14px padding, 1px rule, the current one
+ * ruled in always-black). The fifth tile is the product video and renders
+ * ONLY when `product.video` exists — it is the shared VideoFacade, so it opens
+ * the page's one video lightbox rather than forking the dialog (deviation:
+ * the facade shows the video's poster and 64px play disc, not the frame's
+ * flat black tile with a 32px glyph).
+ *
+ * Progressive: the thumbnails are links to the full-size pictures and the
+ * three buttons are rendered `hidden`; the script swaps the main picture on
+ * thumbnail click, un-hides the buttons, and opens the zoom <dialog>
+ * (native focus trap, Escape, backdrop click, focus restored to the zoom
+ * button). Arrow keys cycle the pictures inside the dialog.
+ *
+ * INFO (right). Badge → eyebrow line (6px red square + "Mint · Location")
+ * → H1 40/52 → summary → the four-cell facts strip → the terms card (1px
+ * rule, 4px red left edge, 32/32/28/32 padding): price row, then one row per
+ * `product.terms`, then the small-print `priceNote` → the CTA.
+ *
+ * The vertical rhythm is MEASURED from the frame, which pads around the
+ * eyebrows' 9px CAP boxes while CSS lays out 20px line boxes (see the same
+ * note on ProductCard's ribbon); the odd `mt-[27px]` / `mt-[14px]` /
+ * `mt-[22px]` values land each cap line and line box where the frame has it.
+ *
+ * PRICE ROW (`priceDisplay`): "formula" prints "XAU spot × 1.000 oz" — the
+ * ISO 4217 metal code and the fine content, both derived; "live" keeps that
+ * markup and, once /api/spot answers, replaces it with "US$ n" (spot x fine
+ * ounces) — nothing static ever ships, the bar frame's "US$4,400" included;
+ * "none" omits the row. The "Live feed" label is text-secondary with no dot:
+ * the frame's #1f8a5b is not a Figma Variable (TODO(design): status colour).
+ *
+ * The Metal fact's value is the metal name. The block carries no display
+ * label for it, so it is the enum value capitalised ("gold" → "Gold").
+ * INTEGRATOR: `ProductHeroLabels` wants a `metals: Record<Metal, string>`
+ * (or the block the card labels' `metalLabels`) so this stops being derived.
+ *
+ * Responsive (invented — the Figma is desktop-only)
+ * -------------------------------------------------
+ * • REVIEW: below lg the gallery stacks ABOVE the info — it is the product.
+ * • REVIEW: below sm the thumbnails become a horizontal snap strip of 72px
+ *   tiles; five 105px tiles do not fit a phone.
+ * • REVIEW: the facts strip is 2 x 2 below sm (rules on the odd cells).
+ * • REVIEW: below 560px the terms rows stack label over value and the value
+ *   column goes fluid (it is a fixed 320px right column from 560 up).
+ * • The H1 keeps the `--step-h1` ramp (32 → 40).
+ */
+import Container from "@primitives/Container.astro";
+import Overline from "@primitives/Overline.astro";
+import Button from "@primitives/Button.astro";
+import ArrowGo from "@primitives/ArrowGo.astro";
+import VideoFacade from "@primitives/VideoFacade.astro";
+import type { Metal, ProductHeroBlock } from "@content/types";
+import type { ProductHeroLabelsExtended } from "@content/pages/product";
+
+interface Props {
+  /**
+   * `labels` may carry the two optional extras from ProductHeroLabelsExtended
+   * (`livePrice`, `gallery.close`); a plain ProductHeroBlock still fits.
+   * INTEGRATOR: fold both into `ProductHeroLabels` in types.ts.
+   */
+  block: ProductHeroBlock & { labels: ProductHeroLabelsExtended };
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { backLink, product, priceDisplay, labels, cta } = block;
+const { mint, gallery } = product;
+
+const theme = block.theme ?? "light";
+const SURFACE = {
+  light: "bg-bg-secondary",
+  tinted: "bg-bg-primary",
+  dark: "bg-always-black",
+} as const;
+
+/* ISO 4217 codes for the four metals — data, not copy. */
+const SPOT_CODES: Record<Metal, string> = { gold: "XAU", silver: "XAG", platinum: "XPT", palladium: "XPD" };
+const spotLabel = labels.spot.replace("%s", SPOT_CODES[product.metal]);
+const ounces = `× ${product.fineContentToz.toFixed(3)} oz`;
+
+const eyebrow = mint.location ? `${mint.name} · ${mint.location}` : mint.name;
+const metalName = product.metal.charAt(0).toUpperCase() + product.metal.slice(1);
+
+const facts = [
+  { label: labels.facts.metal, value: metalName },
+  { label: labels.facts.form, value: product.formLabel },
+  { label: labels.facts.fineness, value: product.fineness },
+  { label: labels.facts.grossWeight, value: product.grossWeight },
+];
+
+const headingId = `${block._key}-heading`;
+const main = gallery[0];
+const closeLabel = labels.gallery.close ?? labels.gallery.zoom;
+
+/* 40px white square buttons with a hairline, as drawn (11083:19856 / 19861 / 19864). */
+const controlClass =
+  "grid h-10 w-10 place-items-center border border-border-primary bg-always-white text-text-primary transition-colors duration-150 hover:border-brand-red hover:text-brand-red motion-reduce:transition-none";
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={theme}
+  data-seam={block.seam}
+  aria-labelledby={headingId}
+  class:list={[SURFACE[theme], "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container class="flex flex-col gap-lg">
+    <a
+      href={backLink.href}
+      class="group/back button-text inline-flex items-center gap-2xs self-start text-brand-red transition-colors duration-150 hover:text-brand-950 motion-reduce:transition-none"
+    >
+      <ArrowGo direction="back" class="transition-transform duration-150 group-hover/back:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover/back:translate-x-0" />
+      <span>{backLink.label}</span>
+    </a>
+
+    <div class="grid grid-cols-1 gap-lg lg:grid-cols-2 lg:gap-xl">
+      {/* ---- Gallery ---- */}
+      <div class="flex flex-col gap-2xs" data-product-gallery>
+        <div class="relative aspect-square border border-border-primary bg-bg-primary">
+          <img
+            data-main
+            src={main.src}
+            alt={main.decorative ? "" : main.alt}
+            aria-hidden={main.decorative ? "true" : undefined}
+            width={main.width}
+            height={main.height}
+            decoding="async"
+            class="h-full w-full object-contain p-[13%]"
+          />
+
+          <button type="button" data-zoom hidden aria-label={labels.gallery.zoom} class:list={["absolute right-4 top-4", controlClass]}>
+            {/* Magnifier with a plus (11083:19857), 18px. */}
+            <svg viewBox="0 0 18 18" class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.125" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="7.75" cy="7.75" r="5" />
+              <path d="M11.5 11.5l3.75 3.75M7.75 5.5v4.5M5.5 7.75h4.5" />
+            </svg>
+          </button>
+
+          <div class="absolute bottom-4 right-4 flex gap-2xs">
+            <button type="button" data-prev hidden aria-label={labels.gallery.previous} class={controlClass}>
+              <svg viewBox="0 0 14 14" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.17" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8.5 3.5 5 7l3.5 3.5" />
+              </svg>
+            </button>
+            <button type="button" data-next hidden aria-label={labels.gallery.next} class={controlClass}>
+              <svg viewBox="0 0 14 14" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.17" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5.5 3.5 9 7l-3.5 3.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <ul role="list" class="grid grid-cols-5 gap-[7.5px] max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto">
+          {gallery.map((image, index) => (
+            <li class="max-sm:w-[72px] max-sm:shrink-0 max-sm:snap-start">
+              <a
+                href={image.src}
+                data-thumb
+                aria-current={index === 0 ? "true" : undefined}
+                class="block aspect-square border border-border-primary bg-bg-primary p-[13%] transition-colors duration-150 hover:border-text-tertiary aria-[current]:border-always-black motion-reduce:transition-none"
+              >
+                <img
+                  src={image.src}
+                  alt={image.decorative ? "" : image.alt}
+                  aria-hidden={image.decorative ? "true" : undefined}
+                  width={image.width}
+                  height={image.height}
+                  loading="lazy"
+                  decoding="async"
+                  class="h-full w-full object-contain"
+                />
+              </a>
+            </li>
+          ))}
+          {product.video && (
+            <li class="max-sm:w-[72px] max-sm:shrink-0 max-sm:snap-start">
+              <VideoFacade video={product.video} ratio="1/1" class="h-full w-full border border-border-primary" />
+            </li>
+          )}
+        </ul>
+
+        <dialog
+          data-zoom-dialog
+          aria-label={labels.gallery.zoom}
+          class="m-0 h-dvh max-h-none w-screen max-w-none border-0 bg-transparent p-0 backdrop:bg-always-black/80 backdrop:backdrop-blur-sm"
+        >
+          <div class="flex h-full w-full items-center justify-center p-4" data-zoom-backdrop>
+            <div class="relative">
+              <img data-zoom-image src={main.src} alt={main.alt} class="max-h-[90vh] max-w-[90vw] bg-bg-primary object-contain" />
+              <button
+                type="button"
+                data-zoom-close
+                aria-label={closeLabel}
+                class="absolute -top-11 right-0 grid h-10 w-10 place-items-center text-always-white transition-colors hover:text-always-white/75 motion-reduce:transition-none"
+              >
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </dialog>
+      </div>
+
+      {/* ---- Info ---- */}
+      <div class="flex flex-col items-start">
+        {product.bestSeller && (
+          <Overline tone="white" class="bg-brand-red px-4 py-0.5">{labels.badge}</Overline>
+        )}
+
+        <p class:list={["flex items-center gap-2xs", product.bestSeller && "mt-[27px]"]}>
+          <span class="block h-1.5 w-1.5 shrink-0 bg-brand-red" aria-hidden="true" />
+          <span class="eyebrow text-text-tertiary">{eyebrow}</span>
+        </p>
+
+        <h1 id={headingId} class="mt-[14px] text-[length:var(--step-h1)] leading-[1.3] text-text-primary">
+          {product.title}
+        </h1>
+
+        <p class="mt-5 text-base leading-6 text-text-secondary">{product.summary}</p>
+
+        {/* Facts strip: four cells, rule on the right of every cell but the last
+            (the frame rules cells 1, 3 and 4 — a file slip). */}
+        <dl class="mt-[22px] grid w-full grid-cols-2 sm:grid-cols-4">
+          {facts.map((fact) => (
+            <div class="flex flex-col gap-[2px] border-border-primary pr-2xs odd:border-r sm:border-r sm:last:border-r-0 max-sm:[&:nth-child(n+3)]:mt-xs">
+              <dt class="eyebrow text-text-tertiary">{fact.label}</dt>
+              <dd class="font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary">
+                {fact.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        {/* Terms card. The frame's 4x400 red rectangle overflows the card
+            (it starts 17px above it); it is the card's left border here. */}
+        <div class="mt-md w-full border border-border-primary border-l-4 border-l-brand-red bg-bg-secondary px-md pt-md pb-7">
+          {priceDisplay !== "none" && (
+            <div class="flex items-baseline justify-between gap-2xs border-b border-border-secondary pb-sm" aria-live="polite">
+              <p class="flex items-baseline gap-2xs">
+                <span
+                  data-spot
+                  data-price-display={priceDisplay}
+                  data-metal={product.metal}
+                  data-toz={product.fineContentToz}
+                  data-live-template={labels.livePrice}
+                  class="font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary"
+                >
+                  {spotLabel}
+                </span>
+                <span data-ounces class="text-base leading-6 text-text-tertiary">{ounces}</span>
+              </p>
+              <p class="eyebrow shrink-0 text-text-secondary">{labels.liveFeed}</p>
+            </div>
+          )}
+
+          <dl>
+            {product.terms.map((row) => (
+              /* The value column is the drawn 320px only while the card can afford it:
+                 at lg the info column is 432px wide and a fixed 320 overflowed the
+                 page by 4px, so it is `minmax(0, 320px)` and the label takes the rest. */
+              <div class="grid grid-cols-1 gap-2xs border-b border-border-secondary py-sm min-[560px]:grid-cols-[1fr_minmax(0,320px)] min-[560px]:items-baseline min-[560px]:gap-sm">
+                <dt class="eyebrow text-text-tertiary">{row.label}</dt>
+                <dd class="text-base leading-6 text-text-secondary">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {product.priceNote && (
+            <p class="pt-sm text-xs leading-[18px] text-text-tertiary">{product.priceNote}</p>
+          )}
+        </div>
+
+        <Button href={cta.href} variant={cta.style === "arrow" ? "solid" : (cta.style ?? "solid")} external={cta.external} class="mt-md">
+          {cta.label}
+        </Button>
+      </div>
+    </div>
+  </Container>
+</section>
+
+<script>
+  // ---- Gallery: thumbnails, previous / next, zoom dialog ----
+  document.querySelectorAll<HTMLElement>("[data-product-gallery]").forEach((root) => {
+    const main = root.querySelector<HTMLImageElement>("[data-main]");
+    const thumbs = Array.from(root.querySelectorAll<HTMLAnchorElement>("[data-thumb]"));
+    const zoom = root.querySelector<HTMLButtonElement>("[data-zoom]");
+    const prev = root.querySelector<HTMLButtonElement>("[data-prev]");
+    const next = root.querySelector<HTMLButtonElement>("[data-next]");
+    const dialog = root.querySelector<HTMLDialogElement>("[data-zoom-dialog]");
+    const zoomImage = dialog?.querySelector<HTMLImageElement>("[data-zoom-image]");
+    if (!main || thumbs.length === 0) return;
+
+    let index = 0;
+
+    const show = (i: number) => {
+      index = (i + thumbs.length) % thumbs.length;
+      const thumb = thumbs[index];
+      const img = thumb.querySelector("img");
+      main.src = thumb.href;
+      main.alt = img?.alt ?? "";
+      if (zoomImage) {
+        zoomImage.src = thumb.href;
+        zoomImage.alt = img?.alt ?? "";
+      }
+      thumbs.forEach((t, j) => {
+        if (j === index) t.setAttribute("aria-current", "true");
+        else t.removeAttribute("aria-current");
+      });
+    };
+
+    thumbs.forEach((thumb, i) => {
+      thumb.addEventListener("click", (event) => {
+        event.preventDefault();
+        show(i);
+      });
+    });
+
+    if (thumbs.length > 1 && prev && next) {
+      prev.hidden = false;
+      next.hidden = false;
+      prev.addEventListener("click", () => show(index - 1));
+      next.addEventListener("click", () => show(index + 1));
+    }
+
+    if (zoom && dialog && zoomImage) {
+      zoom.hidden = false;
+      const open = () => {
+        zoomImage.src = main.src;
+        zoomImage.alt = main.alt;
+        document.documentElement.style.overflow = "hidden";
+        dialog.showModal(); // native: focus trap + Escape + focus restoration
+      };
+      const unlock = () => {
+        document.documentElement.style.overflow = "";
+      };
+      zoom.addEventListener("click", open);
+      dialog.addEventListener("close", unlock);
+      dialog.addEventListener("cancel", unlock);
+      dialog.querySelector("[data-zoom-close]")?.addEventListener("click", () => dialog.close());
+      // A click outside the picture — on the dialog or its centring wrapper — closes it.
+      dialog.addEventListener("click", (event) => {
+        const target = event.target as HTMLElement;
+        if (target === dialog || target.dataset.zoomBackdrop !== undefined) dialog.close();
+      });
+      dialog.addEventListener("keydown", (event) => {
+        const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+        if (!delta) return;
+        event.preventDefault();
+        show(index + delta);
+      });
+    }
+  });
+
+  // ---- Live price: only when the content asked for it ----
+  document.querySelectorAll<HTMLElement>('[data-spot][data-price-display="live"]').forEach(async (spot) => {
+    const metal = spot.dataset.metal ?? "";
+    const toz = Number(spot.dataset.toz);
+    if (!metal || !toz) return;
+    try {
+      const response = await fetch("/api/spot", { headers: { accept: "application/json" } });
+      if (!response.ok) return;
+      const data = (await response.json()) as { metals?: Record<string, number> };
+      const price = data.metals?.[metal];
+      if (typeof price !== "number") return; // the formula stays if the feed is down
+      const value = Math.round(price * toz);
+      // The "US$%s" pattern is content (labels.livePrice); without one the
+      // number is formatted as plain USD currency.
+      const template = spot.dataset.liveTemplate;
+      spot.textContent = template
+        ? template.replace("%s", value.toLocaleString("en-US"))
+        : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+      const ounces = spot.parentElement?.querySelector<HTMLElement>("[data-ounces]");
+      if (ounces) ounces.hidden = true;
+    } catch {
+      /* formula stays */
+    }
+  });
+</script>

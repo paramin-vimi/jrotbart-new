@@ -1,0 +1,191 @@
+---
+/**
+ * Team roster — Figma 11041:15863 ("Your Team in Hong Kong", tinted).
+ * Overline → 24 → H2 → 48 → a three-column grid (370 / gap 32 across, 64
+ * between rows) of hairline-bordered cards in three derived forms:
+ *
+ *   featured  — `featured`: one full-width card (1174×368), the 368-square
+ *               headshot on the left and the body vertically centred beside it.
+ *   photo     — a member with BOTH a photo and a bio: headshot on top, then
+ *               role (eyebrow) → 16 → name → 16 → bio → 16 → links.
+ *   compact   — everyone else: role → 16 → name → 16 → links, no photo.
+ *
+ * Bodies are padded 32; roles are the `eyebrow` style in text-tertiary,
+ * names Playfair 20/28, bios 16/24 secondary. The variant is derived from the
+ * data, never declared — a member gains the photo card the day a headshot and
+ * bio exist for them.
+ *
+ * LINKS. The frame draws three 48px icon discs (LinkedIn, email, phone) on
+ * EVERY card, but no member has any link data, so the row renders only the
+ * links that exist and disappears entirely when there are none — an icon that
+ * goes nowhere is worse than no icon (TODO(client) in team.ts). The icons are
+ * drawn in text-primary, not the disc's default brand red; `[&>span]` on the
+ * link out-specifies the disc's own colour without an important flag.
+ *
+ * HEADSHOTS are 2:3 portraits shown as squares: `object-cover object-top`
+ * keeps the head, which is what the frame's crop does.
+ *
+ * REVIEW (no mobile design): three columns → two at md → one below; the
+ * featured card stacks its photo (capped at 360px, top-anchored) over the
+ * text below md. Roles wrapping to two lines are accepted, and when the
+ * roster size orphans a cell the grid simply ends — no filler.
+ */
+import Container from "@primitives/Container.astro";
+import SectionHeader from "@primitives/SectionHeader.astro";
+import IconDisc from "@primitives/IconDisc.astro";
+import type { IconName, TeamGridBlock, TeamMember } from "@content/types";
+
+interface Props {
+  block: TeamGridBlock;
+  class?: string;
+}
+
+const { block, class: className = "" } = Astro.props;
+const { header, featured, members, linkLabels } = block;
+
+const surface = block.theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary";
+const headingId = `${block._key}-heading`;
+
+interface MemberLink {
+  href: string;
+  icon: IconName;
+  label: string;
+  external?: boolean;
+}
+
+/** Only the links a member actually has, in the drawn order. */
+const linksOf = (member: TeamMember): MemberLink[] => {
+  const links: MemberLink[] = [];
+  const name = (template: string) => template.replace("%s", member.name);
+  if (member.links?.linkedin) {
+    links.push({ href: member.links.linkedin, icon: "linkedin", label: name(linkLabels.linkedin), external: true });
+  }
+  if (member.links?.email) {
+    links.push({ href: `mailto:${member.links.email}`, icon: "email", label: name(linkLabels.email) });
+  }
+  if (member.links?.phoneHref) {
+    links.push({ href: `tel:${member.links.phoneHref}`, icon: "phone", label: name(linkLabels.phone) });
+  }
+  return links;
+};
+
+const isPhotoCard = (member: TeamMember) => Boolean(member.photo && member.bio);
+
+const roleClass = "eyebrow text-text-tertiary";
+const nameClass = "font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary";
+const bioClass = "text-base leading-6 text-text-secondary";
+const linkClass =
+  "block rounded-full text-text-primary transition-colors duration-150 " +
+  "[&>span]:text-text-primary hover:[&>span]:text-brand-red motion-reduce:transition-none";
+---
+
+<section
+  id={block.anchorId}
+  data-block
+  data-theme={block.theme ?? "light"}
+  data-seam={block.seam}
+  aria-labelledby={headingId}
+  class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
+>
+  <Container>
+    <div class="flex flex-col gap-lg">
+      <div id={headingId}>
+        <SectionHeader header={header} />
+      </div>
+
+      <ul role="list" class="grid grid-cols-1 gap-x-md gap-y-xl md:grid-cols-2 lg:grid-cols-3">
+        {featured && (
+          <li class="border border-border-primary md:col-span-2 lg:col-span-3">
+            {/* From md the 2:3 headshot is taken out of flow and pinned to the
+                card's left edge at full card height (min 368): as a flex item
+                its intrinsic height (552 at 368 wide) would set the row height,
+                not the drawn square. `md:pl-[368px]` reserves its column. */}
+            <article
+              class="relative flex flex-col md:min-h-[368px] md:pl-[368px]"
+              aria-labelledby={`${block._key}-${featured._id}`}
+            >
+              {featured.photo && (
+                <img
+                  src={featured.photo.src}
+                  alt={featured.photo.decorative ? "" : featured.photo.alt}
+                  aria-hidden={featured.photo.decorative ? "true" : undefined}
+                  width={featured.photo.width}
+                  height={featured.photo.height}
+                  loading="lazy"
+                  decoding="async"
+                  class="max-h-[360px] w-full object-cover object-top md:absolute md:inset-y-0 md:left-0 md:h-full md:max-h-none md:w-[368px]"
+                />
+              )}
+              <div class="flex flex-1 flex-col justify-center gap-xs p-md md:min-h-[368px]">
+                <p class={roleClass}>{featured.role}</p>
+                <h3 id={`${block._key}-${featured._id}`} class={nameClass}>{featured.name}</h3>
+                {featured.bio && <p class={bioClass}>{featured.bio}</p>}
+                {linksOf(featured).length > 0 && (
+                  <ul role="list" class="flex flex-wrap gap-xs">
+                    {linksOf(featured).map((link) => (
+                      <li>
+                        <a
+                          href={link.href}
+                          aria-label={link.label}
+                          class={linkClass}
+                          {...(link.external ? { rel: "noopener noreferrer", target: "_blank" } : {})}
+                        >
+                          <IconDisc name={link.icon} />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </article>
+          </li>
+        )}
+
+        {members.map((member) => {
+          const photoCard = isPhotoCard(member);
+          const links = linksOf(member);
+          const titleId = `${block._key}-${member._id}`;
+          return (
+            <li class="border border-border-primary">
+              <article class="flex h-full flex-col" aria-labelledby={titleId}>
+                {photoCard && member.photo && (
+                  <img
+                    src={member.photo.src}
+                    alt={member.photo.decorative ? "" : member.photo.alt}
+                    aria-hidden={member.photo.decorative ? "true" : undefined}
+                    width={member.photo.width}
+                    height={member.photo.height}
+                    loading="lazy"
+                    decoding="async"
+                    class="aspect-square w-full object-cover object-top"
+                  />
+                )}
+                <div class="flex flex-col gap-xs p-md">
+                  <p class={roleClass}>{member.role}</p>
+                  <h3 id={titleId} class={nameClass}>{member.name}</h3>
+                  {photoCard && <p class={bioClass}>{member.bio}</p>}
+                  {links.length > 0 && (
+                    <ul role="list" class="flex flex-wrap gap-xs">
+                      {links.map((link) => (
+                        <li>
+                          <a
+                            href={link.href}
+                            aria-label={link.label}
+                            class={linkClass}
+                            {...(link.external ? { rel: "noopener noreferrer", target: "_blank" } : {})}
+                          >
+                            <IconDisc name={link.icon} />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </article>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  </Container>
+</section>
