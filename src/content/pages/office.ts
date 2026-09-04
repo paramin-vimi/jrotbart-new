@@ -94,16 +94,24 @@ export const locationMapLabels = {
 } as const;
 
 /**
- * The heading counts come from `offices.length` / `vaults.length`, so today
- * it reads "Four Offices. Sixteen Vaults." where the frame draws "Five" and
- * "Fifteen" — a recorded deviation (Amendment 11).
- * TODO(client): Bangkok (fifth office) and the vault count (15 drawn, 16
- * pinned, 11 on the live FAQ) — see offices.ts and vaults.ts.
+ * The heading counts default to `offices.length` / `vaults.length`, and either
+ * can be overridden where the design's own number differs from our data.
+ *
+ * The vault count is genuinely unsettled — FOUR numbers exist for it: the frame
+ * writes "Fifteen" in this heading and "15" in the hero stat, the frame's own
+ * map draws ELEVEN vault dots, the live site's FAQ says eleven, and vaults.ts
+ * lists sixteen cities. The listing page overrides to the frame's 15 so the page
+ * reads as designed.
+ * TODO(client): settle the vault count (15 written / 11 drawn / 11 live / 16 in
+ * our data) and the Bangkok office — see offices.ts and vaults.ts.
  */
 export function locationMapBlock(input: {
   _key: string;
   offices: Office[];
   vaults: Vault[];
+  /** Override the number the heading prints, when the design's differs. */
+  officeCount?: number;
+  vaultCount?: number;
   theme?: LocationMapBlock["theme"];
   seam?: LocationMapBlock["seam"];
 }): LocationMapBlock {
@@ -112,7 +120,10 @@ export function locationMapBlock(input: {
     _key: input._key,
     theme: input.theme,
     seam: input.seam,
-    header: locationMapLabels.heading(input.offices.length, input.vaults.length),
+    header: locationMapLabels.heading(
+      input.officeCount ?? input.offices.length,
+      input.vaultCount ?? input.vaults.length,
+    ),
     legend: locationMapLabels.legend,
     // "filter" would need a selected state the frame does not draw. TODO(client).
     control: "legend",

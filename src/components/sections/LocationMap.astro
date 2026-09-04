@@ -263,11 +263,18 @@ const tooltipClass =
         </div>
       </div>
 
-      <!-- Every location, pinned or not. Named by the section heading. -->
+      <!--
+        Every location, pinned or not — the text equivalent of the map, so its
+        information is not locked inside an image and a set of icon buttons.
+        SR-ONLY because the frame (10980:13178) draws the map and nothing under
+        it; rendering this list visibly was a departure from the design. It
+        stays in the accessibility tree, which is what makes the map readable
+        at all without sight.
+      -->
       <ul
         role="list"
         aria-labelledby={headingId}
-        class="grid grid-cols-1 gap-x-md gap-y-xs sm:grid-cols-2 lg:grid-cols-4"
+        class="sr-only"
       >
         {listed.map((entry) => (
           <li class="flex flex-col border-t border-border-secondary pt-3">

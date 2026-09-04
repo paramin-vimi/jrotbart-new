@@ -86,12 +86,59 @@ export const seo: Seo = {
   description: heroBody.invitation,
 };
 
+/*
+ * THE FIFTH CARD — a placeholder, and deliberately NOT a document.
+ *
+ * The frame draws five offices (10980:12798), and the client asked for the page
+ * to match. But the Bangkok card in Figma is a copy of the Israel card with only
+ * the city name changed: it carries Israel's street address
+ * ("37 Sheerit Israel St. Tel-Aviv 6816522, Bangkok"), Israel's +972 phone
+ * number and Israel's vault partner. That is a designer copy-paste, not an
+ * office.
+ *
+ * It is defined HERE, local to this page, rather than in src/content/offices.ts,
+ * because that module feeds the homepage office grid, the contact directory and
+ * the LocalBusiness structured data on every page. A fabricated address must not
+ * reach any of those — publishing one as machine-readable business data is a
+ * different order of mistake from showing it on a page under review.
+ *
+ * The address and phone below are the frame's, verbatim, so what you see is what
+ * the design says. They are wrong.
+ * TODO(client): does J. Rotbart have a Bangkok office? If yes, send the real
+ * address, phone and vault partner and this becomes a proper document in
+ * offices.ts. If no, the frame's fifth card and its "Five offices" heading
+ * should go.
+ */
+const bangkokPlaceholder: Office = {
+  _id: "bangkok",
+  slug: "buy-gold-bangkok", // no route is built for it
+  city: "Bangkok",
+  country: "Thailand",
+  // Verbatim from 10980:12799 — this is Israel's address.
+  address: ["37 Sheerit Israel St. Tel-Aviv 6816522, Bangkok"],
+  // Verbatim from 10980:12803 — this is Israel's number.
+  phone: "+972 54 6363228",
+  phoneHref: "+972546363228",
+  email: "info@jrotbart.com",
+  photo: {
+    src: "/figma/office-card-bangkok--10980-12795.webp",
+    alt: "Bangkok's skyline at dusk", // TODO(client): approve; stock photography
+    width: 368,
+    height: 368,
+  },
+  vaultPartner: "Malca-Amit",
+};
+
+/** The five cards this page draws: the four real offices plus the placeholder. */
+const cardOffices: Office[] = [...offices, bangkokPlaceholder];
+
 /* ------------------------------------------------------------------------ */
 /* 10980:11777 — pageHero (text-only, 530 column)                            */
 /* ------------------------------------------------------------------------ */
 
-/** "Five" → "Four" today; sentence position, so capitalised. */
-const officeCount = numberWord(offices.length, true);
+/** Counts the CARDS the page draws (five, including the Bangkok placeholder),
+ *  so the heading, the stat and the grid can never disagree with each other. */
+const officeCount = numberWord(cardOffices.length, true);
 
 /** 10980:11779 "Five offices. Owner-operated, everywhere." — the count is derived (see the header comment). */
 const heroHeading = {
@@ -105,10 +152,13 @@ const heroHeading = {
 };
 
 const heroStats: Stat[] = [
-  // 10980:12508 / 12509 — drawn "5"; derived. TODO(client): Bangkok.
-  { value: String(offices.length), label: "Owner-operated offices" },
-  // 10980:12520 / 12521 — drawn "15"; derived from the pinned vaults. TODO(client): vault count (15 / 16 / 11).
-  { value: String(vaults.length), label: "Allocated vault locations" },
+  // 10980:12508 / 12509 — drawn "5"; derived from the cards, which include the
+  // Bangkok placeholder. TODO(client): confirm Bangkok, then this is just 5.
+  { value: String(cardOffices.length), label: "Owner-operated offices" },
+  /* 10980:12520 — the frame's own "15", matching the map heading. Our vaults.ts
+     lists 16 cities and the frame's map draws 11 dots; the number is a client
+     question, not a derivation. TODO(client): settle 15 / 11 / 16. */
+  { value: "15", label: "Allocated vault locations" },
   // 10980:12511 / 12512. TODO(client): "40+" jurisdictions served — source for the figure.
   { value: "40+", label: "Jurisdictions served" },
 ];
@@ -153,7 +203,10 @@ const routes: Partial<Record<Office["_id"], string>> = Object.fromEntries(
 
 export const cardGrid: OfficeCardGridBlock = officeCardGridBlock({
   _key: "offices-cards",
-  offices,
+  /* Five cards, so the featured card spans 2 of 3 columns with Singapore beside
+     it and the other three below — the layout the frame draws (10980:12677 is
+     772 wide in a 1174 grid). With four it spanned the full width. */
+  offices: cardOffices,
   routes,
   // Drawn 64 under the hero on the same #fdfcfc surface (10980:11776 gap 64).
   seam: "tight",
@@ -167,6 +220,12 @@ export const map: LocationMapBlock = locationMapBlock({
   _key: "offices-map",
   offices,
   vaults,
+  /* The counts the FRAME prints (10980:13182 "Five Offices. Fifteen Vaults."),
+     not our data's. Offices: five, because the page draws five cards. Vaults:
+     fifteen, which matches neither the eleven dots the frame's own map draws nor
+     the sixteen cities in vaults.ts — see the TODO in pages/office.ts. */
+  officeCount: cardOffices.length,
+  vaultCount: 15,
   // Drawn 96 under the cards on the same surface (10980:11775 gap 96).
   seam: "default",
 });
