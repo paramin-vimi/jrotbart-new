@@ -457,10 +457,16 @@ const visit = officeVisitBlock({
   // the run is not bold here — recorded deviation; the fix is a Paragraph
   // body on OfficeVisitBlock (integrator request).
   body: "We are a few minutes on foot from Sheung Wan MTR station Exit B and a short walk from Central. Meetings are by appointment, so your visit is private and unhurried. If you are outside Hong Kong, the same conversation works by video call.",
-  // TODO(assets): a Hong Kong static map for the panel. The frame's panel
-  // (11120:15943) is a drawing of Singapore and is never shipped; until the
-  // artwork exists the panel renders flat with the marker card and the
-  // directions link (Amendment 6).
+  /* TODO(assets): a Hong Kong static map for this panel.
+     CONFIRMED by rendering the node: the frame's panel (11120:15943) is a map
+     of SINGAPORE — the pin sits on Singapore's coastline and the marker card
+     drawn inside the artwork reads "J. Rotbart & Co. — Singapore / Six Battery
+     Road · Raffles Place". The designer copy-pasted the Singapore visit panel
+     onto the Hong Kong page and updated only the text outside it.
+     Deliberately NOT shipped: a Singapore map captioned with a Hong Kong
+     address could send a client to the wrong city, which is worse than an empty
+     panel. Until a Hong Kong map exists the panel renders flat with the marker
+     card, the address and the directions link (Amendment 6). */
   map: undefined,
   // Hours are the Office document's live value ("Monday to Friday, 9:30am –
   // 5:30pm HKT"), not the frame's "09.00 - 18.00" (11120:15939) — Amendment
