@@ -1,8 +1,7 @@
 ---
 import SiteLayout from "@/layouts/SiteLayout.astro";
 import PageHero from "@sections/PageHero.astro";
-import ServicesRows from "@sections/ServicesRows.astro";
-import ServiceCardGrid from "@sections/ServiceCardGrid.astro";
+import FeatureGrid from "@sections/FeatureGrid.astro";
 import CtaBand from "@sections/CtaBand.astro";
 import TestimonialBand from "@sections/TestimonialBand.astro";
 
@@ -10,8 +9,7 @@ import {
   seo as pageSeo,
   breadcrumb,
   servicesHero,
-  servicesRows,
-  serviceCards,
+  serviceGrid,
   consultationBand,
   testimonial,
 } from "@content/pages/services";
@@ -31,10 +29,14 @@ import { buildGraph, siteGraph, webPageNode, breadcrumbNode, itemListNode, SITE 
 const url = `${SITE}/services/`;
 const seo = { ...pageSeo, canonical: url };
 
-/* The ItemList is the eight services in the order the page shows them: the
-   four rows, then the four cards. Derived from the blocks so it can never
-   drift from what is rendered. */
-const listedServices = [...servicesRows.services, ...serviceCards.services];
+/* The ItemList is the ten services in the order the grid shows them, derived
+   from the rendered cells so it cannot drift from the page. Two of the ten have
+   no page of their own yet and point at the enquiry form; they are still listed,
+   because the list describes what this page offers, not what is routable. */
+const listedServices = serviceGrid.cells.map((cell) => ({
+  name: cell.title,
+  href: cell.link?.href ?? "#contact",
+}));
 
 const schema = buildGraph([
   ...siteGraph(),
@@ -42,7 +44,11 @@ const schema = buildGraph([
   breadcrumbNode(breadcrumb.map((crumb) => ({ name: crumb.label, url: `${SITE}${crumb.href}` }))),
   itemListNode(
     url,
-    listedServices.map((service) => ({ name: service.title, url: `${SITE}${service.href}` })),
+    listedServices.map((service) => ({
+      name: service.name,
+      // A "#contact" href is this page plus a fragment, never a bare fragment.
+      url: service.href.startsWith("#") ? `${url}${service.href}` : `${SITE}${service.href}`,
+    })),
   ),
 ]);
 ---
@@ -53,9 +59,9 @@ const schema = buildGraph([
       here rather than authored in the content module. */}
   <PageHero block={servicesHero} columnClass="max-w-[454px]" />
 
-  <ServicesRows block={servicesRows} />
-
-  <ServiceCardGrid block={serviceCards} />
+  {/* The ten services as one two-column grid of icon cells (10977:23256).
+      Figma types the cell titles at 16/24, which is `titleSize="h4"`. */}
+  <FeatureGrid block={serviceGrid} titleSize="h4" />
 
   <CtaBand block={consultationBand} />
 

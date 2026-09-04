@@ -58,12 +58,20 @@ import type { FeatureCell, FeatureGridBlock, Metal } from "@content/types";
 
 interface Props {
   block: FeatureGridBlock;
-  /** Cell title size. "h3" = Playfair 20/28 (metals, tax, HK, split rows); "h4" = 16/24 (related services). Always an <h3>. */
+  /** Cell title SIZE, independent of the heading level (which is h3 under this
+   *  block's own header, h2 when the block is headerless). "h3" = Playfair
+   *  20/28; "h4" = 16/24. */
   titleSize?: "h3" | "h4";
   class?: string;
 }
 
 const { block, titleSize = "h3", class: className = "" } = Astro.props;
+
+/* Cell heading level. With a header this block owns an <h2>, so cells nest at
+   h3. Headerless — the Service listing's grid sits directly under the page's
+   own <h1> — an h3 would skip a level (WCAG 1.3.1). Same rule as ServicesRows,
+   ServiceCardGrid and OfficeCardGrid. */
+const CellTag = block.header ? "h3" : "h2";
 const { header, layout, columns, frame, cells, afterBody, aside } = block;
 
 const theme = block.theme === "tinted" || block.theme === "dark" ? "tinted" : "light";
@@ -124,7 +132,7 @@ const rel = (external?: boolean) => (external ? { rel: "noopener noreferrer", ta
   data-block
   data-theme={theme}
   data-seam={block.seam}
-  aria-label={header?.heading}
+  aria-label={header?.heading ?? block.label}
   class:list={[surface, "py-lg md:py-xl lg:py-3xl", className]}
 >
   <Container>
@@ -163,7 +171,7 @@ const rel = (external?: boolean) => (external ? { rel: "noopener noreferrer", ta
                 )}
 
                 <div class="flex min-w-0 flex-1 flex-col">
-                  <h3 class={TITLE[titleSize]}>{cell.title}</h3>
+                  <CellTag class={TITLE[titleSize]}>{cell.title}</CellTag>
                   {cell.eyebrow && <p class="eyebrow mt-xs text-text-tertiary">{cell.eyebrow}</p>}
 
                   <div class:list={["flex flex-col gap-sm", isMetal(cell) ? "mt-sm" : "mt-2xs"]}>

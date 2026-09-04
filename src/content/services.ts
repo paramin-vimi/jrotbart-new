@@ -211,8 +211,54 @@ export const authenticationAndAssaying: Service = {
   href: "/authentication-and-assaying/",
 };
 
+/*
+ * The two services that appear ONLY on the Service listing frame
+ * (10849:11740), which draws ten. Neither has a page on the live site
+ * (/sell-precious-metals/ and /conversions-and-settlements/ both 404), so both
+ * link to the contact form until one exists.
+ */
+
+export const sellPreciousMetals: Service = {
+  _id: "sell-precious-metals",
+  title: "Sell Precious Metals",
+  /* Not invented: this is the selling half of the approved `buy-sell` copy,
+     which reads "We will also buy your precious metals, either buybacks of
+     bullion we sold to you or purchases of bullion acquired elsewhere, subject
+     to authentication." The frame itself is lorem here.
+     TODO(client): approve this wording, or supply your own. */
+  description:
+    "We buy your precious metals — both buybacks of bullion we sold to you and purchases of bullion acquired elsewhere, subject to authentication.",
+  image: cardPhoto(
+    "image-124--10563-13145.webp",
+    // TODO(assets): the frame gives this service no photograph; this is the
+    // authentication card's image standing in.
+    "Close-up of a bar stamped FINE GOLD 999.9 beside a stack of coins.",
+  ),
+  // TODO(client): no page exists for this service; the card links to the
+  // enquiry form until one does.
+  href: "#contact",
+};
+
+export const conversionsAndSettlements: Service = {
+  _id: "conversions-and-settlements",
+  title: "Conversions & Settlements",
+  /* TODO(client): DESCRIPTION NEEDED. The frame is lorem, the live site has no
+     page, and nothing in the existing copy covers this service — so there is
+     nothing to derive it from. Deliberately left as a visible placeholder
+     rather than invented: this describes a regulated financial service. */
+  description: "[Description to supply]",
+  image: cardPhoto(
+    "image-124--10563-13145.webp",
+    // TODO(assets): no photograph is drawn for this service.
+    "Close-up of a bar stamped FINE GOLD 999.9 beside a stack of coins.",
+  ),
+  // TODO(client): no page exists for this service.
+  href: "#contact",
+};
+
 export const services: Service[] = [
   buySell,
+  sellPreciousMetals,
   globalStorage,
   globalShipping,
   lendingAndFinance,
@@ -220,6 +266,7 @@ export const services: Service[] = [
   safeDepositBox,
   wealthPreservation,
   authenticationAndAssaying,
+  conversionsAndSettlements,
 ];
 
 /** Lookup by `_id`. Throws at build time on a typo, which is the point. */

@@ -1,14 +1,24 @@
-import type { CtaBandBlock, Link, PageHeroBlock, Seo, TestimonialBandBlock } from "@content/types";
-import type { ServiceCardGridSection, ServicesRowsSection } from "@content/homepage/services";
-import { toCardEntry, toRowEntry } from "@content/homepage/services";
+import type {
+  CtaBandBlock,
+  FeatureCell,
+  FeatureGridBlock,
+  IconName,
+  Link,
+  PageHeroBlock,
+  Seo,
+  Service,
+  TestimonialBandBlock,
+} from "@content/types";
 import {
   authenticationAndAssaying,
   buySell,
   consultationAndAdvisory,
+  conversionsAndSettlements,
   globalShipping,
   globalStorage,
   lendingAndFinance,
   safeDepositBox,
+  sellPreciousMetals,
   wealthPreservation,
 } from "@content/services";
 import { primaryEmail } from "@content/offices";
@@ -17,9 +27,13 @@ import { testimonialOne } from "@content/testimonials";
 /**
  * Service listing — /services/.
  *
- * Figma: frame `Service - Listing` 10976:21516; the page-specific blocks are
- * the children of 10976:21519 (a 96-padded surface with a 64px rhythm), then
- * the shared testimonial band 10976:21607 and the site tail. Live URL
+ * Figma: frame `Service - Listing` 10849:11740 — NOTE there are TWO frames of
+ * that name in the file. This page was first built from the other one
+ * (10976:21516), which draws four photo rows plus a four-up card grid; the
+ * client confirmed 10849:11740 is the intended design. It draws TEN services
+ * as a two-column grid of icon cells, and shares only its header, CTA card and
+ * tail with the other frame. Page body is 10972:9075; the CTA card 10977:23549;
+ * the shared testimonial 10972:9206 and the site tail follow. Live URL
  * jrotbart.com/services/ (captured 2026-09-03). Copy source: SP
  * build-plan/texts/svc-listing.txt, cross-checked against the live page.
  *
@@ -98,37 +112,70 @@ export const servicesHero: PageHeroBlock = {
 };
 
 // ---------------------------------------------------------------------------
-// 2 — The four primary service rows (10976:21524–21554), headerless
+// 2 — The ten services (10977:23256), a two-column grid of icon cells
 // ---------------------------------------------------------------------------
 
-export const servicesRows: ServicesRowsSection = {
-  _key: "services-rows",
-  _type: "servicesRows",
-  // Headerless: the pageHero above carries the page's H1, so the rows start
-  // at the top of the block and the landmark is named by `label`.
+/*
+ * The frame draws ten cells in two columns of 539 with a 96px gutter and a
+ * 236px row pitch: a 48px ringed icon, a Playfair 16/24 title, two lines of
+ * body, then a "Learn More" link with the 28px Arrow Go ring. No photographs,
+ * no rules and no box — `frame: "none"`.
+ *
+ * ICONS are the frame's own, paired cell by cell (10977:23259 … 23322). Three
+ * of them are new to the icon map: airplane, group and certificate. Note the
+ * frame gives Global Shipping an AIRPLANE where the homepage row uses a truck,
+ * and reuses the earth glyph for both Global Storage and Wealth Preservation —
+ * both are the design's choices, not slips to correct here.
+ *
+ * BODY COPY: every one of the ten is lorem in the frame. Eight carry their real
+ * description from the live site through the Service document; the two that
+ * exist only on this frame are handled in services.ts — one derived from
+ * approved copy, one a visible placeholder.
+ */
+/*
+ * `title` is overridden per cell because this frame labels the services more
+ * tersely than the Service documents do — "Global Storage" here against the
+ * document's "Secure Global Storage", which is the live-site title the homepage
+ * rows and cards use. The document is shared, so the shorter label belongs to
+ * this page, not to the document.
+ * TODO(client): two labels now exist for the same eight services. Confirm which
+ * is canonical; if it is the frame's, the documents should change instead.
+ */
+const cell = (service: Service, icon: IconName, title = service.title): FeatureCell => ({
+  _key: service._id,
+  marker: { kind: "icon", icon },
+  title,
+  body: [service.description],
+  // I10977:23263;5207:2578 — the component's default label is "Explore"; the
+  // frame overrides every instance to "Learn More".
+  link: { label: "Learn More", href: service.href, style: "arrow" },
+  ref: { service: service._id },
+});
+
+export const serviceGrid: FeatureGridBlock = {
+  _key: "services-grid",
+  _type: "featureGrid",
+  theme: "light",
+  layout: "stacked",
+  columns: 2,
+  frame: "none",
+  // Headerless: the pageHero above carries the page's H1, so the landmark is
+  // named by the label instead.
   label: "Our services",
-  // Drawn 64px under the hero on the same surface (frame gap, 10976:21519).
+  // Drawn 64px under the hero on the same surface.
   seam: "tight",
-  services: [buySell, globalStorage, globalShipping, lendingAndFinance].map(toRowEntry),
-};
-
-// ---------------------------------------------------------------------------
-// 3 — The four secondary service cards (10976:21564), headerless
-// ---------------------------------------------------------------------------
-
-export const serviceCards: ServiceCardGridSection = {
-  _key: "services-cards",
-  _type: "serviceCardGrid",
-  // No "More Services We Offer" sub-header on this frame; the label is the
-  // landmark's accessible name only.
-  label: "More services",
-  seam: "tight",
-  services: [
-    consultationAndAdvisory,
-    safeDepositBox,
-    wealthPreservation,
-    authenticationAndAssaying,
-  ].map(toCardEntry),
+  cells: [
+    cell(buySell, "gold", "Buy Precious Metals"),
+    cell(sellPreciousMetals, "selling", "Sell Precious Metals"),
+    cell(globalStorage, "earth", "Global Storage"),
+    cell(lendingAndFinance, "bank", "Lending & Finance"),
+    cell(safeDepositBox, "safebox", "Safe Deposit Box Storage"),
+    cell(globalShipping, "airplane", "Global Shipping & Logistics"),
+    cell(authenticationAndAssaying, "check-badge", "Authentication & Assaying"),
+    cell(consultationAndAdvisory, "group", "Consultation & Advisory"),
+    cell(conversionsAndSettlements, "certificate", "Conversions & Settlements"),
+    cell(wealthPreservation, "earth", "Wealth Preservation"),
+  ],
 };
 
 // ---------------------------------------------------------------------------

@@ -86,7 +86,8 @@ export type IconName =
   | "shield-safe" | "safebox" | "earth-pin" | "coin" | "gold"
   | "check" | "truck" | "earth" | "bank" | "selling"
   | "linkedin" | "email" | "phone" | "pin"
-  | "check-badge" | "arrow-back" | "chevron-down" | "pin-office";
+  | "check-badge" | "arrow-back" | "chevron-down" | "pin-office"
+  | "airplane" | "group" | "certificate";
 
 /** A value/label pair with no icon and no caption (Office listing: "5 / Owner-operated offices"). */
 export interface Stat {
@@ -578,6 +579,9 @@ export interface FeatureCell {
 export interface FeatureGridBlock extends BlockBase {
   _type: "featureGrid";
   header?: SectionHeading;
+  /** Landmark name when there is no `header` — the Service listing's grid sits
+   *  under the page's own H1, so it has no heading of its own to be named by. */
+  label?: string;
   /** "split": header (and `aside`, pinned to its bottom) in a 410px left column, cells as one list on the right. */
   layout: HeaderLayout;
   /** Cell columns. split layout is always 1. */
