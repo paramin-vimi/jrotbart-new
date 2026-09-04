@@ -69,11 +69,11 @@ function cutoutStyle(row: ServiceRowEntry): string {
 }
 ---
 
-<!--
+{/*
   Adjacent-sibling collapse: when ServiceCardGrid follows this section they are
   one visual section in the design (96px between blocks, not 96 + 96 of padding).
   The rule lives here so both components stay independently droppable.
--->
+*/}
 <style>
   .services-rows + :global(.service-card-grid) {
     padding-block-start: 0;

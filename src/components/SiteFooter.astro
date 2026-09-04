@@ -153,9 +153,9 @@ const footerLink =
   class:list={["on-dark bg-always-black pt-lg md:pt-xl lg:pt-3xl", className]}
 >
   <Container class="flex flex-col gap-lg md:gap-xl">
-    <!-- ── Brand lockup ────────────────────────────────────────────
+    {/* ── Brand lockup ────────────────────────────────────────────
          Not a link: the sitemap two rows down already carries "Home",
-         and a second home link here would only add a tab stop. -->
+         and a second home link here would only add a tab stop. */}
     <img
       src={logo.src}
       alt={logo.decorative ? "" : logo.alt}
@@ -167,15 +167,15 @@ const footerLink =
       class="h-10 w-auto self-start object-contain object-left"
     />
 
-    <!-- ── Main row: sitemap + subscribe ───────────────────────────
+    {/* ── Main row: sitemap + subscribe ───────────────────────────
          lg gives the sitemap 640/1174 of the row so the subscribe block
          resolves to exactly 534 at the 1366 design width and stays in
          proportion below it; md splits the row 50/50; below that the two
          blocks stack. The comp has no gap between the two — 640 + 534 is
-         the whole 1174 — hence lg:gap-0. -->
+         the whole 1174 — hence lg:gap-0. */}
     <div class="flex flex-col gap-xl md:flex-row md:gap-lg lg:gap-0">
-      <!-- Sitemap. Two <nav> landmarks rather than one, so their headings
-           (which the design never paints) can serve as accessible names. -->
+      {/* Sitemap. Two <nav> landmarks rather than one, so their headings
+           (which the design never paints) can serve as accessible names. */}
       <div class="grid grid-cols-1 sm:grid-cols-2 md:flex-1 lg:w-[54.5145%] lg:flex-none">
         {
           columns.map((column) => (
@@ -200,7 +200,7 @@ const footerLink =
         }
       </div>
 
-      <!-- Subscribe -->
+      {/* Subscribe */}
       <div class="flex flex-col gap-xs md:flex-1">
         <form
           class="flex flex-col gap-2xs"
@@ -330,8 +330,8 @@ const footerLink =
       </div>
     </div>
 
-    <!-- ── Legal bar ───────────────────────────────────────────────
-         The footer's only bottom padding lives here, exactly as in the comp. -->
+    {/* ── Legal bar ───────────────────────────────────────────────
+         The footer's only bottom padding lives here, exactly as in the comp. */}
     <div
       class="flex flex-col items-start gap-xs border-t border-border-white-opacity py-sm md:flex-row md:items-center md:justify-between"
     >

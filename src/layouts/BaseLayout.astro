@@ -66,7 +66,7 @@ const ogImage = withBase(seo.ogImage?.src ?? "/og-default.jpg");
     {noindex && <meta name="robots" content="noindex, follow" />}
     {!noindex && <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />}
 
-    <!-- Open Graph -->
+    {/* Open Graph */}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="J. Rotbart & Co." />
     <meta property="og:locale" content="en" />
@@ -75,7 +75,7 @@ const ogImage = withBase(seo.ogImage?.src ?? "/og-default.jpg");
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
 
-    <!-- X / Twitter -->
+    {/* X / Twitter */}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={seo.title} />
     <meta name="twitter:description" content={seo.description} />

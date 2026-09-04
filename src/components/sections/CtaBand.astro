@@ -73,7 +73,7 @@ const rel = (external?: boolean) =>
   >
     <Container>
       <div class="flex flex-col gap-md border border-border-primary border-l-8 border-l-brand-red p-md lg:flex-row lg:items-center lg:gap-lg lg:p-lg">
-        <!-- Left column: overline, heading, body; right rule from lg -->
+        {/* Left column: overline, heading, body; right rule from lg */}
         <div class="flex flex-col gap-xs lg:min-w-0 lg:flex-1 lg:border-r lg:border-border-primary lg:pr-lg">
           {overline && <Overline tone="red">{overline}</Overline>}
           <h2 class="font-display text-base leading-6 font-medium text-text-primary">
@@ -82,9 +82,9 @@ const rel = (external?: boolean) =>
           {body && <p class="text-base leading-6 text-text-secondary">{body}</p>}
         </div>
 
-        <!-- Right column: the stacked buttons and the helper line. `shrink-0`
+        {/* Right column: the stacked buttons and the helper line. `shrink-0`
              with no set width lets the column hug its widest child, and the
-             buttons fill it — which is how the drawn pair come out 269 wide. -->
+             buttons fill it — which is how the drawn pair come out 269 wide. */}
         <div class="flex flex-col gap-xs lg:shrink-0">
           <Button href={cta.href} variant={buttonVariant(cta.style)} external={cta.external} class="w-full">
             {cta.label}
@@ -123,7 +123,7 @@ const rel = (external?: boolean) =>
   >
     <Container>
       <div class="flex flex-col gap-md lg:flex-row lg:items-center lg:gap-0">
-        <!-- Left column: heading, body, CTA, helper links -->
+        {/* Left column: heading, body, CTA, helper links */}
         <div
           class:list={[
             "flex flex-col",
@@ -201,12 +201,12 @@ const rel = (external?: boolean) =>
           }
         </div>
 
-        <!--
+        {/*
           Badge column. On desktop it is inset 48px past the rule and optically
           centred against the left column. On mobile the vertical rule becomes a
           horizontal one above the block, the 48px inset is dropped, and the
           badges are allowed to wrap.
-        -->
+        */}
         {
           hasBadges && (
             <div class="border-t border-border-primary pt-md lg:w-[360px] lg:shrink-0 lg:border-t-0 lg:pt-0 lg:pl-lg">

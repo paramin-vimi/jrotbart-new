@@ -100,7 +100,7 @@ const headerParagraphs =
   header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
 ---
 
-<!--
+{/*
   Responsive (no non-desktop frame exists in Figma — every value below the
   desktop column is ours and needs client sign-off):
     block padding   96 -> 64 (md) -> 48 (base)
@@ -111,7 +111,7 @@ const headerParagraphs =
   The 1px outer box on the accordion is KEPT at every width rather than
   degrading to bare dividers — without it the rows lose their left and right
   edges and read as loose text on the tinted ground.
--->
+*/}
 <section
   id={block.anchorId}
   aria-labelledby={headingId}
@@ -123,23 +123,23 @@ const headerParagraphs =
   <Container>
     <div class="flex flex-col gap-lg md:gap-xl lg:gap-3xl">
       <div class="flex flex-col gap-md lg:gap-lg">
-        <!--
+        {/*
           Capped at the 887 the frames give this header container
           (11009:15418), the same measure FeatureGrid / ProcessSteps /
           ComparisonTable use for a stacked header. Inert on the homepage,
           whose header is an overline and a short H2 and nothing else.
-        -->
+        */}
         <header class="flex max-w-[887px] flex-col gap-sm">
           {header.overline && <Overline tone="red">{header.overline}</Overline>}
 
-          <!--
+          {/*
             Figma measures this node at 32/44 (cap height 23px on the 1:1
             render), which is SMALLER than the shared `--step-h2` ramp
             (28 -> 40px) that global.css gives every other section heading.
             global.css is owned by another workstream, so the measured value is
             set locally here and the conflict is raised in the handover — if
             `--step-h2` is corrected to 32/44 this override should be deleted.
-          -->
+          */}
           <h2
             id={headingId}
             class="text-[28px] leading-[36px] text-text-primary md:text-[32px] md:leading-[44px]"
@@ -156,7 +156,7 @@ const headerParagraphs =
           ))}
         </header>
 
-        <!--
+        {/*
           1px box on all four sides; rows divide it, the last row has no rule.
 
           `-mb-px` on each row is the stroke MODEL, not a spacing tweak: Figma
@@ -169,7 +169,7 @@ const headerParagraphs =
           the width of its own border restores Figma's 76px pitch while the
           rule stays a real border (a box-shadow would match too, but forced-
           colours mode drops shadows and the dividers would vanish).
-        -->
+        */}
         <div class="border border-border-primary">
           {
             faqs.map((faq, index) => (

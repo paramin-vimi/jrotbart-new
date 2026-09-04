@@ -41,11 +41,11 @@ const quoteLines = testimonial.quote.split("\n");
 const attribution = `${testimonial.name} - ${testimonial.organisation}`;
 ---
 
-<!--
+{/*
   `on-dark` switches the global :focus-visible ring to white.
   The 1px bottom border is in the Figma node and is all but invisible against
   brand-950; kept for fidelity.
--->
+*/}
 <section
   id={block.anchorId}
   data-block
@@ -57,19 +57,19 @@ const attribution = `${testimonial.name} - ${testimonial.organisation}`;
   ]}
 >
   <Container>
-    <!--
+    {/*
       Responsive: stacked below 1024 (quote first, media below and
       left-aligned), row from 1024 up. The 96px column gap only appears at
       1280+ where there is room for it; 1024-1279 uses 48.
-    -->
+    */}
     <div class="flex flex-col gap-lg lg:flex-row lg:items-center lg:gap-lg xl:gap-3xl">
       <figure class="m-0 flex min-w-0 flex-1 flex-col gap-md">
         <div class="relative">
-          <!--
+          {/*
             Decorative open-quote glyph. Sits at the top-left of the quote
             block, behind the text (the blockquote is positioned, so it paints
             on top). 80x64 at desktop, scaled to 56x45 on small screens.
-          -->
+          */}
           <svg
             viewBox="0 0 80 64"
             aria-hidden="true"
@@ -99,13 +99,13 @@ const attribution = `${testimonial.name} - ${testimonial.organisation}`;
         </div>
 
         <figcaption class="flex items-center gap-xs">
-          <!-- Figma: 32 x 1 white rule before the attribution. -->
+          {/* Figma: 32 x 1 white rule before the attribution. */}
           <span class="h-px w-8 shrink-0 bg-always-white" aria-hidden="true"></span>
           <span class="eyebrow text-always-white">{attribution}</span>
         </figcaption>
       </figure>
 
-      <!--
+      {/*
         Square media. Held at 320px at every breakpoint: stacked at tablet
         widths a full-width square would be ~670px tall, which swamps the
         quote.
@@ -123,7 +123,7 @@ const attribution = `${testimonial.name} - ${testimonial.organisation}`;
         a primitive-level divergence used by every video on the page, so it is
         not patched locally here — it needs one decision applied in
         VideoFacade.astro. Figma also draws no hover overlay on the thumbnail.
-      -->
+      */}
       <div class="mx-auto w-full max-w-80 shrink-0 lg:mx-0 lg:w-80">
         {
           testimonial.video ? (

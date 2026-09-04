@@ -70,8 +70,8 @@ const PLAY_OVERLAY =
   class:list={["bg-bg-secondary pb-lg md:pb-xl lg:pb-3xl", className]}
 >
   <Container>
-    <!-- Below `sm` the EXPLORE link wraps under the heading rather than being
-         squeezed alongside it. -->
+    {/* Below `sm` the EXPLORE link wraps under the heading rather than being
+         squeezed alongside it. */}
     <div class="flex flex-wrap items-center justify-between gap-sm">
       <SectionHeader header={headingOnly} as="h2" class={H2_32_44} />
       {
@@ -113,13 +113,13 @@ const PLAY_OVERLAY =
       }
     </div>
 
-    <!--
+    {/*
       Four columns at `lg`, two below it all the way down to the smallest
       screen. A one-up column of portrait cards would run past 2,000px of
       scroll, and a swipe row would hide half the set behind an affordance we
       would then have to teach; a 2×2 keeps every card reachable and keeps the
       designed portrait crop intact.
-    -->
+    */}
     <ul
       role="list"
       class="mt-md grid grid-cols-2 gap-xs sm:gap-md lg:mt-lg lg:grid-cols-4"

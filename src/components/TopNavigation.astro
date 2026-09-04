@@ -69,7 +69,7 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
   data-site-header
   class="fixed inset-x-0 top-0 z-50 transition-transform duration-200 motion-reduce:transition-none"
 >
-  <!-- ── Utility bar ─────────────────────────────────────────────── -->
+  {/* ── Utility bar ─────────────────────────────────────────────── */}
   <div data-utility-bar class="on-dark bg-always-black">
     <Container class="flex h-11 items-center justify-between gap-sm">
       {showPriceTicker ? <PriceTicker /> : <div />}
@@ -168,7 +168,7 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
     </Container>
   </div>
 
-  <!-- ── Navbar ──────────────────────────────────────────────────── -->
+  {/* ── Navbar ──────────────────────────────────────────────────── */}
   <div
     data-navbar
     {...solid ? { "data-solid": "" } : {}}
@@ -197,7 +197,7 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
         />
       </a>
 
-      <!-- Desktop menu -->
+      {/* Desktop menu */}
       <nav class="hidden lg:block" aria-label="Primary">
         {/* Figma's 48px item gap is measured at 1366 and only fits there: the
             six labels need 450px, so 48px gaps need 690px of row and there is
@@ -243,7 +243,7 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
         </ul>
       </nav>
 
-      <!-- Mobile toggle -->
+      {/* Mobile toggle */}
       <button
         type="button"
         data-menu-toggle
@@ -270,7 +270,7 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
       ))}
   </div>
 
-  <!-- ── Mobile drawer ───────────────────────────────────────────── -->
+  {/* ── Mobile drawer ───────────────────────────────────────────── */}
   <div
     id="mobile-menu"
     data-mobile-menu

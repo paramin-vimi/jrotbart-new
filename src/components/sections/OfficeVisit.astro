@@ -79,7 +79,7 @@ const bodyClass = "text-base leading-6 text-text-secondary";
     {/* 679 / 431 as fr units: the drawn proportion at 1366, and no fixed
         1174px track to widen the page between lg and the full frame. */}
     <div class="flex flex-col gap-lg lg:grid lg:grid-cols-[minmax(0,679fr)_minmax(0,431fr)] lg:items-center lg:gap-xl">
-      <!-- Intro, address card, CTA -->
+      {/* Intro, address card, CTA */}
       <div class="flex flex-col">
         {header.overline && <Overline tone="red">{header.overline}</Overline>}
         <h2
@@ -129,7 +129,7 @@ const bodyClass = "text-base leading-6 text-text-secondary";
         </Button>
       </div>
 
-      <!-- Map panel: artwork when it exists, always the marker card, pin and directions link -->
+      {/* Map panel: artwork when it exists, always the marker card, pin and directions link */}
       <div class="flex flex-col gap-xs">
         <div class="relative min-h-[320px] overflow-hidden bg-bg-primary lg:min-h-[574px]">
           {map.image && (

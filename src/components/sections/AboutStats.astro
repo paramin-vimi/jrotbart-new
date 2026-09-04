@@ -61,9 +61,9 @@ const FRAME_SEAM =
   class:list={[surface, "py-lg md:py-xl lg:py-3xl", FRAME_SEAM, className]}
 >
   <Container>
-    <!-- Desktop: 410 / 96 / 668. Below lg the intro stacks above the stats. -->
+    {/* Desktop: 410 / 96 / 668. Below lg the intro stacks above the stats. */}
     <div class="flex flex-col gap-lg lg:flex-row lg:items-start lg:gap-3xl">
-      <!-- Intro -->
+      {/* Intro */}
       <div class="flex flex-col gap-md lg:w-[410px] lg:shrink-0">
         <div class="flex flex-col gap-sm">
           {header.overline && <Overline tone="red">{header.overline}</Overline>}
@@ -96,13 +96,13 @@ const FRAME_SEAM =
           )}
         </div>
 
-        <!-- Figma button: 240 × 46 fixed. Mobile: full width, capped so it does
+        {/* Figma button: 240 × 46 fixed. Mobile: full width, capped so it does
              not stretch edge-to-edge on tablets.
 
              CENTRED while the section is one stacked column, left-aligned again
              from lg where the Figma layout resumes. Between 768 and 1023 the
              button is 240px in a container up to 927px wide, so left-aligning
-             it stranded it against ~690px of empty space. -->
+             it stranded it against ~690px of empty space. */}
         {header.cta && (
           <Button
             href={header.cta.href}
@@ -115,7 +115,7 @@ const FRAME_SEAM =
         )}
       </div>
 
-      <!-- Statistics. A list: four peer facts, order is not meaningful. -->
+      {/* Statistics. A list: four peer facts, order is not meaningful. */}
       <ul
         role="list"
         class="grid grid-cols-1 gap-md sm:grid-cols-2 lg:min-w-0 lg:flex-1"
@@ -129,7 +129,7 @@ const FRAME_SEAM =
               <Icon name={stat.icon} class="h-7 w-7" />
             </span>
 
-            <!-- Numeral + suffix share a baseline (Figma: align-end, 2px gap). -->
+            {/* Numeral + suffix share a baseline (Figma: align-end, 2px gap). */}
             <p class="flex flex-wrap items-end gap-[2px] text-text-primary">
               <span
                 class="font-display text-[2rem] font-medium italic leading-[1.15] md:text-[2.5rem] md:leading-[52px]"

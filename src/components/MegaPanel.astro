@@ -36,7 +36,7 @@ const feature = item.feature;
 >
   <div class="border-y border-border-primary bg-bg-secondary shadow-[0_18px_40px_-24px_rgba(26,26,26,0.35)]">
     <div class="container-site grid gap-xl py-lg lg:grid-cols-[minmax(0,1fr)_320px] lg:py-xl">
-      <!-- ── Item grid ─────────────────────────────────────────── -->
+      {/* ── Item grid ─────────────────────────────────────────── */}
       <div class="flex flex-col gap-sm">
         {item.panelLabel && (
           <p class="eyebrow text-text-tertiary">{item.panelLabel}</p>
@@ -89,7 +89,7 @@ const feature = item.feature;
         </a>
       </div>
 
-      <!-- ── Feature rail ──────────────────────────────────────── -->
+      {/* ── Feature rail ──────────────────────────────────────── */}
       {feature && (
         <aside
           class:list={[

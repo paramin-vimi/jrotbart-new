@@ -88,7 +88,7 @@ const HEADER_OVERLINE_TRIM = "[&>.eyebrow]:-mt-[4px] [&>.eyebrow]:-mb-[7px]";
   class:list={["bg-bg-secondary py-lg md:py-xl lg:py-3xl", className]}
 >
   <Container>
-    <!-- Header row: 563 / 563 two-up on desktop, stacked below `lg`. -->
+    {/* Header row: 563 / 563 two-up on desktop, stacked below `lg`. */}
     <div class="grid gap-sm lg:grid-cols-2 lg:gap-lg">
       <SectionHeader
         header={headingOnly}
@@ -107,12 +107,12 @@ const HEADER_OVERLINE_TRIM = "[&>.eyebrow]:-mt-[4px] [&>.eyebrow]:-mb-[7px]";
       }
     </div>
 
-    <!--
+    {/*
       Article grid. Desktop is 3 × 370 with a 32px gutter. Below `lg` it drops
       to two columns and then to a single column — a stack, not a carousel:
       three cards do not earn the controls, the swipe affordance or the
       reduced-motion handling a carousel would need.
-    -->
+    */}
     <ul
       role="list"
       class="mt-md grid gap-md sm:grid-cols-2 lg:mt-lg lg:grid-cols-3"
