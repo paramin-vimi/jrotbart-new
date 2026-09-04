@@ -46,7 +46,13 @@ const SURFACE = {
 } as const;
 
 /* Groups without rows are not drawn at all — an empty tab is a broken promise. */
-const groups = block.groups.filter((group) => group.rows.length > 0);
+/* Every authored group becomes a tab, including one whose rows are still to be
+   supplied. An earlier build filtered those out, which silently deleted the
+   "Physical" and "Issue data" tabs the frame draws and left one unlabelled
+   table — the page looked finished while two thirds of the specification was
+   missing. Rendering the tab with an empty panel keeps the design and makes the
+   gap visible, which is what the TODO beside those rows is for. */
+const groups = block.groups;
 const tabbed = groups.length > 1;
 const tabId = (key: string) => `${block._key}-tab-${key}`;
 const panelId = (key: string) => `${block._key}-panel-${key}`;

@@ -233,11 +233,17 @@ const controlClass =
 
         <p class="mt-5 text-base leading-6 text-text-secondary">{product.summary}</p>
 
-        {/* Facts strip: four cells, rule on the right of every cell but the last
-            (the frame rules cells 1, 3 and 4 — a file slip). */}
+        {/* Facts strip: four cells, NO rules between them.
+            An earlier build drew a rule on every cell but the last, because
+            three of the four Figma frames are named "VerticalBorder". That read
+            a LAYER NAME, and this file's names are documented as stale
+            (CLAUDE.md: "Layer names are stale... Trust the rendered pixels").
+            None of those frames carries a stroke, and sampling the render at the
+            cell boundaries returns pure background — the design has no dividers
+            here. */}
         <dl class="mt-[22px] grid w-full grid-cols-2 sm:grid-cols-4">
           {facts.map((fact) => (
-            <div class="flex flex-col gap-[2px] border-border-primary pr-2xs odd:border-r sm:border-r sm:last:border-r-0 max-sm:[&:nth-child(n+3)]:mt-xs">
+            <div class="flex flex-col gap-[2px] pr-2xs max-sm:[&:nth-child(n+3)]:mt-xs">
               <dt class="eyebrow text-text-tertiary">{fact.label}</dt>
               <dd class="font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary">
                 {fact.value}
@@ -264,7 +270,7 @@ const controlClass =
                 </span>
                 <span data-ounces class="text-base leading-6 text-text-tertiary">{ounces}</span>
               </p>
-              <p class="eyebrow shrink-0 text-text-secondary">{labels.liveFeed}</p>
+              <p class="eyebrow shrink-0 text-status-live">{labels.liveFeed}</p>
             </div>
           )}
 

@@ -50,6 +50,14 @@
   /* Figma variable 9602:5686 (#000000 @5%): price-panel rows, office-card
      detail rows, the product terms card. Half the weight of border-primary. */
   --color-border-secondary: #0000000d;
+
+  /* The "Live feed" flag on a product price card (Figma 11083:19914). Figma sets
+     it as a raw #1f8a5b, NOT a Variable, so an earlier build shipped it grey
+     rather than introduce an untokenised colour (CLAUDE.md rule 2). The client
+     asked for the green, so it becomes a token — which is the rule's actual
+     intent: colours live in @theme, never inline in a component.
+     TODO(design): promote this to a Figma Variable so the two stay in step. */
+  --color-status-live: #1f8a5b;
   --color-border-white-opacity: #ffffff4d;
 
   --color-always-white: #ffffff;

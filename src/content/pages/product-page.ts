@@ -232,6 +232,10 @@ export function productPage(product: ProductDetail): ProductPage {
     header: {
       overline: relatedHeader.overline,
       heading: relatedHeader.heading,
+      /* Carries the italic "alongside." run; the field was being dropped here,
+         which is why the heading rendered flat even after the runs were
+         authored. */
+      headingRuns: relatedHeader.headingRuns,
       cta: { label: relatedHeader.ctaLabel, href: listingHref, style: "arrow" },
     },
     products: relatedProducts(product),

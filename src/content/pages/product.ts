@@ -156,7 +156,16 @@ export const faqFooter = {
 /** 11127:23352 / 23354 / 23355 — `cta.href` is the metal listing, set by the route. */
 export const relatedHeader = {
   overline: "Related Products",
+  /* "alongside." is italic tertiary in the frame. The geometry dump reports one
+     roman style for the whole line, which is why an earlier build rendered it
+     flat — the run lives in `characterStyleOverrides` on 11127:23354, where
+     characters 11-20 carry PlayfairDisplay-MediumItalic in #767676.
+     `headingRuns`, not `headingAccent`: ProductGrid APPENDS an accent after the
+     heading, so an accent here would print "alongside." twice. `heading` keeps
+     the full plain string because aria and schema read it. Per the accepted
+     deviation the run renders at the roman size, not the 40px Figma sets. */
   heading: "Often held alongside.",
+  headingRuns: [{ text: "Often held " }, { text: "alongside.", accent: true }],
   ctaLabel: "Explore",
 };
 

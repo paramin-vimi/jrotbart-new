@@ -114,13 +114,35 @@ export const premiumDriversMedia: ImageRef = {
  * wording. The two icons are the frame's placeholders (truck, bank).
  * TODO(client): office icons.
  */
+/**
+ * The four cells of the "Where you buy matters." grid, one per office, in the
+ * order the frame draws them (11083:20002/20007/20012/20017).
+ *
+ * Philippines and Israel are drawn with the body "[Compliance to supply]" — a
+ * note to the client, not copy. An earlier build OMITTED those two cells, which
+ * left a four-column section carrying two cards: the page looked finished while
+ * half the tax guidance was missing, and nothing on screen said so. They now
+ * render with the placeholder visible, because a gap the client can see is the
+ * point of a placeholder. The wording is deliberately not invented: tax
+ * treatment is regulated advice and we do not have it.
+ */
 export const taxTreatment = (
   singapore: Paragraph,
   hongKong: Paragraph = "No GST or VAT applies to investment precious metals.",
 ): ProductDetail["taxTreatment"] => [
+  /* Icons are the frame's, paired by card: truck / safebox / bank / selling
+     (11083:20002, 20007, 20012, 20017). They do not read as tax metaphors —
+     that is what the design draws. */
   { office: "singapore", icon: "truck", body: [singapore] },
-  { office: "hong-kong", icon: "bank", body: [hongKong] },
+  { office: "hong-kong", icon: "safebox", body: [hongKong] },
+  // TODO(client): Philippines tax treatment — the frame says "[Compliance to supply]".
+  { office: "philippines", icon: "bank", body: [PENDING_COMPLIANCE] },
+  // TODO(client): Israel tax treatment — the frame says "[Compliance to supply]".
+  { office: "israel", icon: "selling", body: [PENDING_COMPLIANCE] },
 ];
+
+/** Verbatim from the frame; shipped so the gap is visible rather than hidden. */
+export const PENDING_COMPLIANCE = "[Compliance to supply]";
 
 /** The Singapore rule as drawn on the coin frame (11083:20003) — a 999.9 coin on the IRAS list. */
 export const singaporeCoinRule =
