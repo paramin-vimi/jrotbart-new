@@ -1,7 +1,7 @@
 ---
 import "@/styles/global.css";
 import type { Seo } from "@content/types";
-import { b2blead } from "@content/integrations";
+import { b2blead, gleap } from "@content/integrations";
 import BackToTop from "@components/BackToTop.astro";
 
 interface Props {
@@ -102,6 +102,15 @@ const ogImage = withBase(seo.ogImage?.src ?? "/og-default.jpg");
         set:html={JSON.stringify(schema)}
       />
     )}
+
+    {/* Gleap feedback widget. Last in <head>, per the vendor's instruction to
+        place it before </head>; `is:inline` keeps the snippet verbatim rather
+        than letting the bundler touch it.
+        TODO(client): a third-party script that can set cookies, record sessions
+        and capture screenshots — see the privacy note in
+        src/content/integrations.ts. It needs gating behind the consent layer
+        this site does not have yet. */}
+    <script is:inline set:html={gleap.snippet} />
 
     <slot name="head" />
   </head>

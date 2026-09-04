@@ -73,3 +73,31 @@ export const elfsight = {
   appId: "9468f01e-fe66-439f-89e9-5e7b7d0508f6",
   platformScript: "https://static.elfsight.com/platform/platform.js",
 } as const;
+
+/**
+ * Gleap — in-page feedback and bug reporting widget.
+ *
+ * Loaded on every page from BaseLayout. The snippet is the vendor's own: it
+ * stubs `window.Gleap`, queues any calls made before the SDK arrives, then
+ * appends their script to <head> and initialises it.
+ *
+ * The `sdkKey` is a PUBLIC client-side identifier — Gleap's own installation
+ * instructions put it in the page source, and it is visible to anyone viewing
+ * any site that uses Gleap. It is not a secret and does not belong in an
+ * environment variable. (Note this repository is public, which changes nothing
+ * for this value but would for a server-side key.)
+ *
+ * NOTE(privacy): like b2blead and Elfsight above, this is a third-party script
+ * that can set cookies and identify visitors — Gleap records sessions and
+ * captures screenshots when a user files feedback. It is listed here so the
+ * consent layer this site still needs has one place to gate against, and so it
+ * is obvious what the pages load from other people's servers.
+ */
+export const gleap = {
+  sdkKey: "EjBOLbqdda0qiiofhByGzpY8WPMCfR0T",
+
+  /** The vendor snippet, verbatim apart from the key being interpolated. */
+  get snippet() {
+    return `!function(){if(!(window.Gleap=window.Gleap||[]).invoked){window.GleapActions=[];var e=new Proxy({invoked:!0},{get:function(e,n){return"invoked"===n?e.invoked:function(){var e=Array.prototype.slice.call(arguments);window.GleapActions.push({e:n,a:e})}},set:function(e,n,t){return e[n]=t,!0}});window.Gleap=e;var n=document.getElementsByTagName("head")[0],t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src="https://sdk.gleap.io/latest/index.js",n.appendChild(t),window.Gleap.initialize("${this.sdkKey}")}}();`;
+  },
+} as const;
