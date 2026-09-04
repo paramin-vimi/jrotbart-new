@@ -41,9 +41,11 @@ interface Props {
   footerBody?: string;
   /**
    * Which rows start open. "first" = the homepage (Figma draws row 1 open);
-   * "all" = the product, office and Buy PM frames, which draw every row open
-   * (pair it with `exclusiveGroup=""`, or the native exclusive group closes
-   * all but one); "none" = fully collapsed.
+   * "all" = every row expanded (pair it with `exclusiveGroup=""`, or the native
+   * exclusive group closes all but one). NOTE the page frames draw every row
+   * open, but nothing ships that way: an expanded row in Figma is how the
+   * designer shows the copy, and shipping it makes the questions unscannable.
+   * "none" = fully collapsed, which is what the live site does.
    */
   initiallyOpen?: "first" | "all" | "none";
   /**

@@ -126,16 +126,17 @@ const schema = buildGraph([
 
   <TestimonialBand block={testimonialThird} />
 
-  {/* Frame 10726:9365 draws all eight rows open (every chevron is
-      Navigations/Expand Less), which the native exclusive accordion group
-      cannot express — so the group is switched OFF here rather than named
-      after the route. Passing nothing inherited FaqAccordion's homepage
-      defaults: one row open (the block came out 794px short of the drawn
-      2047) and `name="home-faq"` on a page with no homepage FAQ, which put
-      the two pages' rows in the same exclusive group.
-      TODO(client): open state — same question as the product and office
-      routes ask. */}
-  <FaqAccordion block={faq} initiallyOpen="all" exclusiveGroup="" />
+  {/* Frame 10726:9365 draws every row open, and an earlier build shipped that
+      literally — which was wrong. A designer expands the rows in Figma to show
+      the copy; it is not a statement about default state. "Trust the rendered
+      pixels" governs LAYOUT, not behaviour, and the evidence for behaviour
+      points the other way: the live site ships its FAQ fully collapsed, and
+      this design system's own homepage opens exactly one row inside an
+      exclusive group. Expanding all eight also defeats the pattern — the
+      questions stop being scannable and the block grows ~800px.
+      TODO(client): confirm one row open (this), or fully collapsed as the live
+      site has it. */}
+<FaqAccordion block={faq} exclusiveGroup="buy-pm-faq" />
 
   <NewsGrid block={newsWithPosts} cardCtaLabel={newsCardCtaLabel} />
   <CalloutBand block={storageCallout} />

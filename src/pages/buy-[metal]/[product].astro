@@ -106,7 +106,7 @@ const schema = buildGraph([
   {/* Every row is drawn open (11083:20025), which the native exclusive
       accordion group cannot do — so the group is switched off here rather
       than named after the slug. TODO(client): open state. */}
-  <FaqAccordion block={page.faq} initiallyOpen="all" exclusiveGroup="" />
+  <FaqAccordion block={page.faq} exclusiveGroup="product-faq" />
 
   <ProductGrid block={page.related} />
 

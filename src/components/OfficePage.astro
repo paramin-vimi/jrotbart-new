@@ -121,7 +121,10 @@ const schema = buildGraph([
   page.faq ? faqPageNode(page.faq.faqs) : null,
 ]);
 
-const faqInitiallyOpen = page.faqInitiallyOpen ?? "all";
+/* Defaults to one row open in an exclusive group, matching the homepage.
+   The office frame draws every row expanded, but that is how a designer shows
+   copy in a frame, not a default state — see the note on the Buy PM route. */
+const faqInitiallyOpen = page.faqInitiallyOpen ?? "first";
 /* An exclusive group would close every row but one, so it is only set when
    the rows are NOT all drawn open. */
 const faqGroup = faqInitiallyOpen === "all" ? "" : `${office._id}-faq`;

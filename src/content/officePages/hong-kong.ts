@@ -595,7 +595,10 @@ export const hongKongPage: OfficePageContent = {
   testimonialAfterTeam,
   visit,
   faq,
-  // Every row is drawn open (11041:16435). TODO(client): open state — the
-  // homepage opens one row and closes the rest.
-  faqInitiallyOpen: "all",
+  /* Frame 11041:16435 draws every row open, but that is a designer showing the
+     copy in a frame, not a default state — so this no longer overrides the
+     template, which opens one row inside an exclusive group as the homepage
+     does. The live site ships its FAQ fully collapsed.
+     TODO(client): one row open (current), or fully collapsed like the live
+     site? Set `faqInitiallyOpen: "none"` for the latter. */
 };
