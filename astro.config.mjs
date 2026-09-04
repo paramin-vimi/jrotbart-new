@@ -64,8 +64,18 @@ export default defineConfig({
   },
 
   build: {
-    // Inline small stylesheets rather than paying a round trip for them.
-    inlineStylesheets: "auto",
+    // Every stylesheet is a linked file; none is inlined into the page.
+    //
+    // "auto" inlined small scoped component stylesheets to save a round trip,
+    // which put a ~2.8KB <style> block in the homepage source. The client asked
+    // for no styling in the markup, and this is the honest version of that
+    // request: what remains in the HTML is class NAMES pointing at this file,
+    // not rules.
+    //
+    // The trade is one extra request for a file the browser then caches across
+    // all 24 pages, against a block that was re-sent with every page that used
+    // it. On a repeat visit or any second page this is strictly cheaper.
+    inlineStylesheets: "never",
   },
 
   // The floating dev toolbar overlaps the bottom-left of the page, which is
