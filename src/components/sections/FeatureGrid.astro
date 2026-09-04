@@ -99,8 +99,12 @@ const METAL_MARK: Record<Metal, string> = {
 const isSplit = layout === "split";
 const isMetal = (cell: FeatureCell) => cell.marker?.kind === "metal";
 /* Boxed icon cells stack the disc above the text (related services, tax);
-   every other marker sits beside it. */
-const markerAbove = (cell: FeatureCell) => frame === "boxed" && cell.marker?.kind === "icon";
+   every other marker sits beside it — unless the block asks for a placement,
+   which the Service listing does (a bare frame with the disc above). */
+const markerAbove = (cell: FeatureCell) =>
+  cell.marker?.kind === "icon" &&
+  (block.markerPlacement === "above" ||
+    (block.markerPlacement !== "beside" && frame === "boxed"));
 /* Marker-to-text gap: 16 in the rules frame, 24 elsewhere. */
 const markerGap = frame === "rules" ? "min-[480px]:gap-xs" : "min-[480px]:gap-sm";
 

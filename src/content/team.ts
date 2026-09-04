@@ -1,4 +1,7 @@
 import type { ImageRef, Office, TeamMember } from "./types";
+import { officeById } from "./offices";
+
+const hongKongOffice = officeById("hong-kong");
 
 /**
  * Team members — the "Your Team in Hong Kong" roster (Figma 11041:15863).
@@ -11,8 +14,18 @@ import type { ImageRef, Office, TeamMember } from "./types";
  * TODO(client): eight of these names are not on the live About page, and
  * "Director / CFO" for Jonathan Rotbart differs from the live "Director".
  * Please confirm the roster and every role before launch.
- * TODO(client): no LinkedIn / email / phone data exists for anyone, so
- * `links` is empty and the icon row is not rendered. Supply per person.
+ * LINKS — read this before trusting the icon row. The frame draws three discs
+ * on every card (LinkedIn, email, a messaging app). No PER-PERSON contact data
+ * exists, and inventing a LinkedIn URL or an email address for a named real
+ * person is not something a build should do. On the client's instruction to
+ * match the design for now, every card therefore shows the same three FIRM-level
+ * destinations, defined once in `firmLinks` below: the company LinkedIn page and
+ * the Hong Kong office's own published email and phone number. All three are
+ * real and reach the firm; none is personal.
+ * TODO(client): supply per-person LinkedIn URLs, email addresses and direct
+ * lines, or confirm the firm-level fallbacks are what you want shown. Until
+ * then a visitor clicking "Jonathan Rotbart" LinkedIn reaches the company page,
+ * not his profile.
  * TODO(client): the seven headshots are staged photography — licence and
  * originals at ≥2× are needed.
  */
@@ -25,6 +38,19 @@ const headshot = (file: string, name: string, size = 370): ImageRef => ({
 
 const HK: Office["_id"] = "hong-kong";
 
+/*
+ * Firm-level contact points, shown on every team card until per-person data
+ * exists (see the note above). The email and phone are the Hong Kong office's
+ * published details from offices.ts — imported rather than retyped so they
+ * cannot drift. The LinkedIn URL is the company page recorded in footer.ts.
+ */
+const firmLinks: TeamMember["links"] = {
+  // TODO(client): the company LinkedIn, per the note in src/content/footer.ts.
+  linkedin: "https://hk.linkedin.com/company/j.rotbart-&-co",
+  email: hongKongOffice.email,
+  phoneHref: hongKongOffice.phoneHref,
+};
+
 export const team: TeamMember[] = [
   {
     _id: "jonathan-rotbart",
@@ -34,7 +60,7 @@ export const team: TeamMember[] = [
     // Drawn 368×368 in the featured card (11041:16374).
     photo: headshot("team-jonathan-rotbart--11041-16374.webp", "Jonathan Rotbart", 368),
     office: HK,
-    links: {},
+    links: firmLinks,
   },
   {
     _id: "lakhwinder-singh",
@@ -43,7 +69,7 @@ export const team: TeamMember[] = [
     bio: "Specializing in precious metals and digital commodities, City University of Hong Kong alumnus Lakhwinder Singh has advised 100+ wealth management clients. At J. Rotbart & Co., he spearheads digital asset growth and delivers strategic market insights.",
     photo: headshot("team-lakhwinder-singh--11041-16077.webp", "Lakhwinder Singh"),
     office: HK,
-    links: {},
+    links: firmLinks,
   },
   {
     _id: "rayman-lai",
@@ -52,7 +78,7 @@ export const team: TeamMember[] = [
     bio: "A CILT charter member with an MSc from Hong Kong Polytechnic University, Rayman brings 20+ years of supply chain leadership. At J. Rotbart & Co., he streamlines complex global operations and ensures efficient worldwide product distribution.",
     photo: headshot("team-rayman-lai--11041-16090.webp", "Rayman Lai"),
     office: HK,
-    links: {},
+    links: firmLinks,
   },
   {
     _id: "bobo-yau",
@@ -61,7 +87,7 @@ export const team: TeamMember[] = [
     bio: "With 10+ years across trade operations, e-commerce, and client service, Bobo delivers an exceptional end-to-end customer experience, supporting high-end clients and building long-term, trusted partnerships at J. Rotbart & Co.",
     photo: headshot("team-bobo-yau--11041-16103.webp", "Bobo Yau"),
     office: HK,
-    links: {},
+    links: firmLinks,
   },
   {
     _id: "elly-choy",
@@ -70,7 +96,7 @@ export const team: TeamMember[] = [
     bio: "Transitioning from real estate to precious metals, Elly advises clients on portfolio diversification across precious metals and digital commodities. At J. Rotbart & Co., she focuses on building long-term relationships and expanding the firm’s global digital presence.",
     photo: headshot("team-elly-choy--11041-16116.webp", "Elly Choy"),
     office: HK,
-    links: {},
+    links: firmLinks,
   },
   {
     _id: "indigo-lee",
@@ -79,7 +105,7 @@ export const team: TeamMember[] = [
     bio: "A University of Hong Kong graduate in Social Data Science, Indigo blends client relations and marketing expertise. At J. Rotbart & Co., he drives business development, providing tailored account servicing for precious metal investment diversification.",
     photo: headshot("team-indigo-lee--11041-16129.webp", "Indigo Lee"),
     office: HK,
-    links: {},
+    links: firmLinks,
   },
   {
     _id: "pinky-chong",
@@ -88,15 +114,15 @@ export const team: TeamMember[] = [
     bio: "With extensive experience in banking and fintech, Pinky excels at supporting high-net-worth clients. As Client Relations Executive at J. Rotbart & Co., she delivers tailored client service and guides precious metals investment diversification.",
     photo: headshot("team-pinky-chong--11041-16142.webp", "Pinky Chong"),
     office: HK,
-    links: {},
+    links: firmLinks,
   },
   // ---- Compact cards: no headshot, no bio in the design ----
-  { _id: "candice-chu", name: "Candice Chu", role: "Back office and Operations Officer, Money Lending", office: HK, links: {} },
-  { _id: "barbara-au", name: "Barbara Au", role: "Office and Admin Officer", office: HK, links: {} },
-  { _id: "man-lee", name: "Man Lee", role: "Procurement Manager, Precious Metals and Digital Assets", office: HK, links: {} },
-  { _id: "brenda-tang", name: "Brenda Tang", role: "Logistics Executive", office: HK, links: {} },
-  { _id: "gina-so", name: "Gina So", role: "Trading and Settlement Manager", office: HK, links: {} },
-  { _id: "faith-sin", name: "Faith Sin", role: "Logistics and Shipping Executive", office: HK, links: {} },
+  { _id: "candice-chu", name: "Candice Chu", role: "Back office and Operations Officer, Money Lending", office: HK, links: firmLinks },
+  { _id: "barbara-au", name: "Barbara Au", role: "Office and Admin Officer", office: HK, links: firmLinks },
+  { _id: "man-lee", name: "Man Lee", role: "Procurement Manager, Precious Metals and Digital Assets", office: HK, links: firmLinks },
+  { _id: "brenda-tang", name: "Brenda Tang", role: "Logistics Executive", office: HK, links: firmLinks },
+  { _id: "gina-so", name: "Gina So", role: "Trading and Settlement Manager", office: HK, links: firmLinks },
+  { _id: "faith-sin", name: "Faith Sin", role: "Logistics and Shipping Executive", office: HK, links: firmLinks },
 ];
 
 /** The member drawn as the full-width featured card, per office. */

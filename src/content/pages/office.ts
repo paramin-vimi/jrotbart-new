@@ -186,10 +186,13 @@ export const visitLabels = {
 
 /**
  * `heading` and `body` are per-office copy ("Visit Us in Sheung Wan", the
- * MTR paragraph) from the office page module. `map.image` is optional: until
- * an office has its own static map the panel renders without artwork — the
- * frame's panel (11120:15943) is a drawing of Singapore on the Hong Kong
- * page and is never shipped. TODO(assets): Hong Kong static map.
+ * MTR paragraph) from the office page module. `map` is optional: an office
+ * without static map artwork renders the panel flat, with the marker card and
+ * the directions link.
+ * NOTE Hong Kong currently passes the FRAME's panel (11120:15943), which is a
+ * drawing of SINGAPORE — shipped on the client's instruction to match the
+ * design, and flagged in that module and in its alt text.
+ * TODO(assets): a real Hong Kong static map.
  */
 export function officeVisitBlock(input: {
   _key: string;

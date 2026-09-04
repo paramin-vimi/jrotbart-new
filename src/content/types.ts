@@ -588,6 +588,11 @@ export interface FeatureGridBlock extends BlockBase {
   columns: 1 | 2 | 4;
   /** "none": bare rows (Buy PM why-choose). "rules": hairline above each row, no box (HK services). "boxed": 1px outer border + dividers, cell padding 32 (metals, related services, tax). */
   frame: "none" | "rules" | "boxed";
+  /** Where an icon marker sits relative to the cell text. Defaults to "above"
+   *  in a boxed frame and "beside" everywhere else; the Service listing draws a
+   *  bare frame with the disc ABOVE (10977:23257 is a VERTICAL cell, icon at
+   *  y=417 and text at y=481), so it sets this explicitly. */
+  markerPlacement?: "above" | "beside";
   cells: FeatureCell[];
   /** Paragraphs after the cells, in the cell column (Buy PM bars & coins). */
   afterBody?: Paragraph[];

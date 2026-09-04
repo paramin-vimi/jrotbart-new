@@ -159,6 +159,9 @@ export const serviceGrid: FeatureGridBlock = {
   layout: "stacked",
   columns: 2,
   frame: "none",
+  // 10977:23257 is a VERTICAL cell: the 48px disc at y=417, the text block at
+  // y=481 — a 16px gap under the icon, not beside it.
+  markerPlacement: "above",
   // Headerless: the pageHero above carries the page's H1, so the landmark is
   // named by the label instead.
   label: "Our services",

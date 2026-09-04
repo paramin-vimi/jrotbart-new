@@ -457,17 +457,37 @@ const visit = officeVisitBlock({
   // the run is not bold here — recorded deviation; the fix is a Paragraph
   // body on OfficeVisitBlock (integrator request).
   body: "We are a few minutes on foot from Sheung Wan MTR station Exit B and a short walk from Central. Meetings are by appointment, so your visit is private and unhurried. If you are outside Hong Kong, the same conversation works by video call.",
-  /* TODO(assets): a Hong Kong static map for this panel.
-     CONFIRMED by rendering the node: the frame's panel (11120:15943) is a map
-     of SINGAPORE — the pin sits on Singapore's coastline and the marker card
-     drawn inside the artwork reads "J. Rotbart & Co. — Singapore / Six Battery
-     Road · Raffles Place". The designer copy-pasted the Singapore visit panel
-     onto the Hong Kong page and updated only the text outside it.
-     Deliberately NOT shipped: a Singapore map captioned with a Hong Kong
-     address could send a client to the wrong city, which is worse than an empty
-     panel. Until a Hong Kong map exists the panel renders flat with the marker
-     card, the address and the directions link (Amendment 6). */
-  map: undefined,
+  /*
+     SHIPPED TO MATCH THE FRAME, at the client's explicit instruction, with the
+     caveat recorded here rather than hidden.
+
+     This artwork (11120:15943) is a map of SINGAPORE, not Hong Kong: the pin
+     sits on Singapore's coastline and the marker card drawn INTO the bitmap
+     reads "J. Rotbart & Co. — Singapore / Six Battery Road · Raffles Place".
+     The designer copy-pasted the Singapore visit panel onto the Hong Kong page
+     and updated only the text outside it.
+
+     What ships is the map GROUP (11120:15944) cropped to the panel window, not
+     the frame: the frame render has Figma's own "— Singapore, Six Battery Road"
+     marker card baked into the bitmap, and our marker card is narrower, so the
+     word "Singapore" showed past its edge. Cropping from the group gives clean
+     artwork with our own correct Hong Kong card over it. The crop is the delta
+     between the two absoluteBoundingBoxes (1672, 1492 at 1.7872 px/unit), NOT
+     the group's frame-relative x/y — that mistake lands on empty ocean.
+
+     The coastline is still the wrong one, which the alt text says plainly so a
+     screen-reader user is told rather than handed a confident wrong caption.
+
+     TODO(assets): BLOCKER before launch — a Hong Kong map for this panel.
+     Until then this must not reach a public, indexable page. */
+  map: {
+    src: "/figma/office-hk-map--11120-15943.webp",
+    alt:
+      "Placeholder map from the design file. The coastline shown is the Malay " +
+      "peninsula and Singapore, not Hong Kong. Awaiting Hong Kong map artwork.",
+    width: 431,
+    height: 574,
+  },
   // Hours are the Office document's live value ("Monday to Friday, 9:30am –
   // 5:30pm HKT"), not the frame's "09.00 - 18.00" (11120:15939) — Amendment
   // 5. TODO(client): which is right (offices.ts note 6).
