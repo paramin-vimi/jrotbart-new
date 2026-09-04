@@ -22,6 +22,23 @@ export const metalHref = (metal: Metal): string => `/buy-${metal}/`;
  * exists, else the `fallback` — the contact anchor, matching the live site,
  * where a client can ask about a product that has no page of its own yet.
  */
-export function productHref(product: Product, fallback = "#contact"): string {
-  return isProductDetail(product) ? `${metalHref(product.metal)}${product.slug}/` : fallback;
+export function productHref(
+  product: Product,
+  fallback = "#contact",
+  detailSlugs?: ReadonlySet<Product["slug"]>,
+): string {
+  /* Two ways a card can earn a link. The structural guard covers a card that IS
+     a ProductDetail (the listings pass the real documents). `detailSlugs` covers
+     the case the guard cannot see: the homepage authors its six cards by hand as
+     plain `Product`s, so they carry no gallery or specGroups even when a detail
+     document for the same slug exists elsewhere — four of them do. Without this
+     the homepage sent those four to the contact form while /buy-gold/ linked the
+     same product to a real page.
+
+     The registry is PASSED IN rather than imported: src/content/products/index.ts
+     already imports `isProductDetail` from this module, so importing the
+     catalogue here would close a cycle. */
+  if (isProductDetail(product)) return `${metalHref(product.metal)}${product.slug}/`;
+  if (detailSlugs?.has(product.slug)) return `${metalHref(product.metal)}${product.slug}/`;
+  return fallback;
 }

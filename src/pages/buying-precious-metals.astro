@@ -110,7 +110,10 @@ const schema = buildGraph([
   <FeatureGrid block={barsAndCoins} />
   <ProductGrid block={bestSellers} />
   <CalloutBand block={exploreCallout} />
-  <MediaWithText block={lbmaStandards} />
+  {/* 10726:13307 is Playfair Display 500 32/44 — the same H2 size the product
+      and office instances pass. Without it the block defaults to the homepage's
+      16/24 and the section heading reads as body copy. */}
+  <MediaWithText block={lbmaStandards} headingSize="h2" />
   <ProseSection block={origin} />
 
   <TestimonialBand block={testimonialSecond} />
@@ -123,7 +126,16 @@ const schema = buildGraph([
 
   <TestimonialBand block={testimonialThird} />
 
-  <FaqAccordion block={faq} />
+  {/* Frame 10726:9365 draws all eight rows open (every chevron is
+      Navigations/Expand Less), which the native exclusive accordion group
+      cannot express — so the group is switched OFF here rather than named
+      after the route. Passing nothing inherited FaqAccordion's homepage
+      defaults: one row open (the block came out 794px short of the drawn
+      2047) and `name="home-faq"` on a page with no homepage FAQ, which put
+      the two pages' rows in the same exclusive group.
+      TODO(client): open state — same question as the product and office
+      routes ask. */}
+  <FaqAccordion block={faq} initiallyOpen="all" exclusiveGroup="" />
 
   <NewsGrid block={newsWithPosts} cardCtaLabel={newsCardCtaLabel} />
   <CalloutBand block={storageCallout} />

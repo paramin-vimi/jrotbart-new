@@ -379,6 +379,23 @@ export interface MediaWithTextBlock extends BlockBase {
   body: Paragraph[];
   media: VideoRef | ImageRef;
   mediaSide: "left" | "right";
+  /**
+   * The drawn column split at lg, in the units of the 1366 frame's 1174px
+   * container: media column, gutter, copy column. Figma draws a DIFFERENT
+   * split on almost every instance — HK storage 431/64/679, HK regulation
+   * 679/64/431 (there the media is the wide column), product pages
+   * 555/64/555, Buy PM 539/96/539 — so the split is per-instance content, not
+   * a component constant. The three numbers are read straight off the frame
+   * and normalised to percentages, so they do not have to total exactly 1174.
+   * Omitted = the homepage Expertise drawing (42.4% media, 96px gutter).
+   *
+   * `align` is the row's cross-axis alignment, also read off the frame: every
+   * Phase-2 row is drawn `HORIZONTAL .../CENTER`, so the copy column sits
+   * centred against the taller photograph (Buy PM copy 505 in a 674 row =
+   * +84px). It is stated per instance rather than assumed from `split`,
+   * because a top-aligned split is a drawing we may yet meet.
+   */
+  split?: { media: number; gap: number; text: number; align?: "start" | "center" };
   /** Media aspect as "w/h". Homepage 668/392; product pages 555/416; office page 431/575 and 679/509. */
   ratio?: string;
   faqTeasers?: Link[];

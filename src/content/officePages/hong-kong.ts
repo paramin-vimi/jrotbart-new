@@ -367,6 +367,9 @@ const storage: MediaWithTextBlock = {
     height: 575,
   },
   mediaSide: "left",
+  // 11120:15989 — image 431 @x=96, gutter 64, copy 679 @x=591; the copy
+  // frame is drawn CENTER against the taller photo (400 in a 575 row).
+  split: { media: 431, gap: 64, text: 679, align: "center" },
   ratio: "431/575",
 };
 
@@ -413,6 +416,10 @@ const regulation: MediaWithTextBlock = {
     height: 509,
   },
   mediaSide: "right",
+  // 11120:15907 — copy 431 @x=96, gutter 64, image 679 @x=591, copy CENTER
+  // (396 in a 509 row). The WIDE column is the photograph here, the mirror of
+  // `storage` above; drawn, not a typo.
+  split: { media: 679, gap: 64, text: 431, align: "center" },
   ratio: "679/509",
 };
 

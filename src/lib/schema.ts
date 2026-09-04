@@ -47,7 +47,10 @@ export function organizationNode() {
  * site root. Add a slug here in the same change that adds its route
  * (src/pages/<slug>.astro) — the two must move together.
  */
-const OFFICE_ROUTES: ReadonlySet<Office["slug"]> = new Set<string>([]);
+const OFFICE_ROUTES: ReadonlySet<Office["slug"]> = new Set<string>([
+  // src/pages/buy-gold-hong-kong.astro
+  "buy-gold-hong-kong",
+]);
 
 const DAY_NAMES: Record<string, string> = {
   Mo: "Monday",

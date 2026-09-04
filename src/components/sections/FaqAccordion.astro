@@ -86,6 +86,16 @@ const accentIndex = headingAccent ? heading.indexOf(headingAccent) : -1;
 const headingBefore = accentIndex >= 0 ? heading.slice(0, accentIndex) : heading;
 const headingAfter =
   accentIndex >= 0 && headingAccent ? heading.slice(accentIndex + headingAccent.length) : "";
+
+/**
+ * `header.body` is part of the SectionHeading contract (types.ts) and one or
+ * more paragraphs. It used to be destructured away and never rendered, so the
+ * Buy PM lede (11009:15421) was dropped at build time with no type error and
+ * no warning. Normalised the same way SectionHeader does it, because the
+ * mid-line accent is why this header is composed by hand instead of using it.
+ */
+const headerParagraphs =
+  header.body === undefined ? [] : typeof header.body === "string" ? [header.body] : header.body;
 ---
 
 <!--
@@ -111,7 +121,13 @@ const headingAfter =
   <Container>
     <div class="flex flex-col gap-lg md:gap-xl lg:gap-3xl">
       <div class="flex flex-col gap-md lg:gap-lg">
-        <header class="flex flex-col gap-sm">
+        <!--
+          Capped at the 887 the frames give this header container
+          (11009:15418), the same measure FeatureGrid / ProcessSteps /
+          ComparisonTable use for a stacked header. Inert on the homepage,
+          whose header is an overline and a short H2 and nothing else.
+        -->
+        <header class="flex max-w-[887px] flex-col gap-sm">
           {header.overline && <Overline tone="red">{header.overline}</Overline>}
 
           <!--
@@ -132,6 +148,10 @@ const headingAfter =
               )
             }{headingAfter}
           </h2>
+
+          {headerParagraphs.map((paragraph: string) => (
+            <p class="text-base leading-6 text-text-secondary">{paragraph}</p>
+          ))}
         </header>
 
         <!--

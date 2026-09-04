@@ -29,6 +29,13 @@ import type { MediaWithTextBlock, VideoRef } from "@content/types";
  *
  * MEDIA RATIO: `block.ratio` (content) beats the `ratio` prop, which beats the
  * homepage's 668/392.
+ *
+ * COLUMN SPLIT: `block.split` (content) carries the drawn media / gutter / copy
+ * widths; without it the row falls back to the homepage drawing. It is content
+ * rather than a constant because Figma draws a different split on nearly every
+ * instance, including which SIDE gets the wide column — see the field's note in
+ * types.ts. The split is expressed as a percentage of the row so it keeps its
+ * proportions between lg and the 1366 frame, and the gutter stays the drawn px.
  */
 interface Props {
   block: MediaWithTextBlock;
@@ -45,6 +52,13 @@ interface Props {
    * the homepage video keeps copy-first. DOM order never changes (copy first).
    */
   mobileMediaFirst?: boolean;
+  /**
+   * Marks this instance as one of the three blocks of homepage frame
+   * `10229:7543`, which seam at 96 rather than 192 — see FRAME_SEAM below.
+   * Off by default: which frame a section belongs to is a fact about the page
+   * that composes it, not about the component.
+   */
+  frameSeam?: boolean;
   class?: string;
 }
 
@@ -56,10 +70,32 @@ const {
   ratio: ratioProp = "668/392",
   headingSize = "h4",
   mobileMediaFirst = false,
+  frameSeam = false,
   class: className = "",
 } = Astro.props as Props;
 const { header, body, media, mediaSide, faqTeasers, definitions, cta } = block;
 const ratio = block.ratio ?? ratioProp;
+
+/* Drawn column split → CSS. The media column is a percentage of the row (so
+   the proportion survives every width from lg up), the gutter stays the px
+   Figma drew, and the copy column is whatever is left (`lg:flex-1`). Both
+   values ride on custom properties set once on the row, because the numbers
+   come from content and Tailwind can only emit class names it can see in the
+   source. When a block declares no split the original homepage utilities are
+   emitted verbatim, so that page's markup is unchanged. */
+const { split } = block;
+const mediaShare = split
+  ? `${((split.media / (split.media + split.gap + split.text)) * 100).toFixed(4)}%`
+  : null;
+const rowStyle = split ? `--mwt-gap:${split.gap}px;--mwt-media:${mediaShare}` : undefined;
+const rowGapClass = split ? "lg:gap-[var(--mwt-gap)]" : "lg:gap-3xl";
+/* Cross-axis alignment is part of the drawn row, not a default: every Phase-2
+   frame is `HORIZONTAL .../CENTER`, so the copy sits centred against a photo
+   that is taller than it. Top alignment stays the fallback. */
+const rowAlignClass = split?.align === "center" ? "lg:items-center" : "lg:items-start";
+const mediaColClass = split
+  ? "w-full lg:w-[var(--mwt-media)] lg:shrink-0"
+  : "w-full lg:w-[42.4%] lg:shrink-0";
 
 const headingClass =
   headingSize === "h2"
@@ -69,8 +105,15 @@ const headingClass =
 /** See AboutStats.astro. Blocks A/B/C of Figma frame `10229:7543` sit 96px
     apart; three sibling sections each padded 96 would seam at 192. A marked
     section halves the padding only on an edge it shares with another marked
-    section. This component has exactly one instance (the homepage Expertise
-    block), which is inside that frame. */
+    section.
+
+    ONLY emitted for a caller that passes `frameSeam`. It used to be emitted
+    unconditionally, which was safe while the homepage Expertise block was the
+    component's only instance; once two MediaWithText sections became siblings
+    (product pages, the Hong Kong office page) the marker matched itself, and
+    its 48px `pt` — two class selectors — beat the `[data-seam]` rule that
+    AMENDMENTS #1 requires to compute 0, opening a 144px seam where Figma
+    draws 96. */
 const FRAME_SEAM =
   "frame-10229-7543 " +
   "[.frame-10229-7543+&]:pt-sm md:[.frame-10229-7543+&]:pt-md lg:[.frame-10229-7543+&]:pt-lg " +
@@ -95,13 +138,16 @@ const [firstParagraph, ...restParagraphs] = body;
   data-seam={block.seam}
   class:list={[
     "media-with-text py-lg md:py-xl lg:py-3xl",
-    FRAME_SEAM,
+    frameSeam && FRAME_SEAM,
     block.theme === "tinted" ? "bg-bg-primary" : "bg-bg-secondary",
     className,
   ]}
 >
   <Container>
-    <div class="flex flex-col gap-md lg:flex-row lg:items-start lg:gap-3xl">
+    <div
+      class:list={["flex flex-col gap-md lg:flex-row", rowAlignClass, rowGapClass]}
+      style={rowStyle}
+    >
       {/* Copy column. Always first in the DOM so the heading leads the reading
           order; `mediaSide` only reorders the visual columns at lg and up. */}
       <div class="flex flex-col gap-sm lg:min-w-0 lg:flex-1">
@@ -180,11 +226,12 @@ const [firstParagraph, ...restParagraphs] = body;
         )}
       </div>
 
-      {/* Media column. Figma derives its width from the text column's height;
-          in CSS it is a fixed share of the row so it cannot reflow unpredictably. */}
+      {/* Media column. Figma derives its width from the text column's height; in
+          CSS it is a declared share of the row (`block.split`, or the homepage
+          drawing) so it cannot reflow unpredictably. */}
       <div
         class:list={[
-          "w-full lg:w-[42.4%] lg:shrink-0",
+          mediaColClass,
           mediaSide === "left" && "lg:order-first",
           mobileMediaFirst && "max-lg:order-first",
         ]}

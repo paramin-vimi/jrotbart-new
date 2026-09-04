@@ -95,7 +95,13 @@ const number = (index: number) => String(index + 1).padStart(2, "0");
         REVIEW note in the file header. The rail's properties are scoped to
         md–1199 with stacked variants rather than set at md and undone at
         1200, so the 5-up never inherits a 260px minimum into a 209px track. */}
+    {/* `data-scroll-rail` is the hook for the keyboard fix below. The tab stop
+        and the accessible name are added by script ONLY while the rail really
+        overflows (md to 1199); at >=1200 it is a 5-up grid and must not keep a
+        dead tab stop. See src/lib/scrollable-region.ts for why the attribute is
+        not shipped in the markup the way LogoStrip ships its own. */}
     <ol
+      data-scroll-rail
       class:list={[
         "flex flex-col gap-lg",
         "max-md:border-l max-md:border-border-primary max-md:pl-lg",
@@ -132,3 +138,12 @@ const number = (index: number) => String(index + 1).padStart(2, "0");
     )}
   </Container>
 </section>
+
+<script>
+  import { syncScrollableRegions } from "@lib/scrollable-region";
+
+  /* WCAG 2.1.1 (Level A): between md and 1199 the rail scrolls horizontally and
+     holds no focusable element, so steps past the fold were unreachable without
+     a pointer — measured at 768, 756px of five 260px steps were hidden. */
+  syncScrollableRegions("[data-scroll-rail]", "Process steps, scrollable");
+</script>

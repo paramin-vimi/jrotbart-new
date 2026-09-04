@@ -90,8 +90,13 @@ const headClass = (highlighted?: boolean) =>
       <SectionHeader header={header} class={STACKED_HEADER} />
     )}
 
-    {/* The table: visible from md, screen-reader-only below. */}
-    <div class="max-md:sr-only md:overflow-x-auto">
+    {/* The table: visible from md, screen-reader-only below.
+        `data-scroll-table` is the keyboard hook — at 768 the 720px-min table
+        overflows its 672px container by 48px, clipping the highlighted column
+        with no way to scroll it from the keyboard. The tab stop is added by
+        script only while that is true (roughly 768-816), so no dead tab stop
+        survives at wider viewports. */}
+    <div data-scroll-table role="region" class="max-md:sr-only md:overflow-x-auto">
       <table class="w-full min-w-[720px] border-separate border-spacing-0 text-left">
         <caption class="sr-only">{header.heading}</caption>
         <colgroup>
@@ -172,3 +177,20 @@ const headClass = (highlighted?: boolean) =>
     </div>
   </Container>
 </section>
+
+<script>
+  import { syncScrollableRegions } from "@lib/scrollable-region";
+
+  /* WCAG 2.1.1 (Level A) — see the note on the wrapper above. The region is
+     named from the section heading so the landmark is not an unlabelled
+     "region"; AMENDMENTS #16's mobile path (table sr-only, cards aria-hidden)
+     is untouched, and the sr-only copy never overflows so it never gets a tab
+     stop. */
+  document.querySelectorAll<HTMLElement>("[data-scroll-table]").forEach((el) => {
+    const heading = el.closest("section")?.querySelector("h2, h3");
+    if (heading?.textContent && !el.hasAttribute("aria-label")) {
+      el.setAttribute("aria-label", `${heading.textContent.trim()}, scrollable table`);
+    }
+  });
+  syncScrollableRegions("[data-scroll-table]");
+</script>

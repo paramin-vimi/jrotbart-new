@@ -111,6 +111,11 @@ export const productBreadcrumbLabels = { home: "Home" };
 /** The drawn media box of both MediaWithText blocks (11083:19982 / 19984): 555 x 416. */
 const PRODUCT_MEDIA_RATIO = "555/416";
 
+/** 11083:19973 / 19983 — an even 555 / 64 / 555 row, whichever side the media
+    is on. The 64px gutter is narrower than the homepage's 96, and the copy
+    column is drawn CENTER against the 416px photo (339 / 267 tall). */
+const PRODUCT_SPLIT = { media: 555, gap: 64, text: 555, align: "center" } as const;
+
 /**
  * The FAQ heading is drawn "Frequently *Asked* Questions" (11083:20024 — the
  * italic is a style override on the middle word, so the text node reads
@@ -154,6 +159,7 @@ export function productPage(product: ProductDetail): ProductPage {
     body: product.provenance.body,
     media: product.provenance.media,
     mediaSide: "right",
+    split: PRODUCT_SPLIT,
     ratio: PRODUCT_MEDIA_RATIO,
     cta: provenanceCta,
   };
@@ -168,6 +174,7 @@ export function productPage(product: ProductDetail): ProductPage {
     body: product.premiumDrivers.body,
     media: product.premiumDrivers.media,
     mediaSide: "left",
+    split: PRODUCT_SPLIT,
     ratio: PRODUCT_MEDIA_RATIO,
     cta: premiumCta,
   };

@@ -14,6 +14,15 @@ import type { GlobalNavigation, NavItem } from "./types";
  *
  * TODO(client): confirm these panels, and whether the descriptions should be
  * rewritten — several are terse to the point of being generic.
+ *
+ * `section` — the current-state key. TopNavigation paints the item whose
+ * `section` matches the page's `currentSection` in brand red and gives it
+ * `aria-current="page"`; the design draws that state on 11083:20102
+ * ("Products", red, on a product page). It lives HERE rather than on each
+ * route because a section owns several URLs that are not the item's own href:
+ * "products" covers /buy-gold/, /buy-silver/ and every product detail page,
+ * and "services" covers the eight service pages. Matching on href alone would
+ * light nothing on any of them.
  */
 
 const menu: NavItem[] = [
@@ -22,6 +31,7 @@ const menu: NavItem[] = [
   {
     label: "Services",
     href: "/services/",
+    section: "services",
     panelLabel: "What we do",
     columns: 2,
     children: [
@@ -86,6 +96,7 @@ const menu: NavItem[] = [
   {
     label: "Products",
     href: "/products-buy-gold-silver-platinum-palladium/",
+    section: "products",
     panelLabel: "Metals we deal in",
     columns: 2,
     children: [
@@ -116,6 +127,7 @@ const menu: NavItem[] = [
   {
     label: "News & Events",
     href: "/blogs-events-press/",
+    section: "news",
     panelLabel: "Insight and coverage",
     columns: 2,
     children: [
@@ -133,7 +145,14 @@ const menu: NavItem[] = [
     },
   },
 
-  { label: "About us", href: "/about-us-gold-and-silver/" },
+  // `section: "about"` also carries /offices/ and the office pages, which have
+  // no menu item of their own. TODO(client): nav placement for the offices —
+  // see the same TODO on src/content/officePages/hong-kong.ts (Amendment 19).
+  { label: "About us", href: "/about-us-gold-and-silver/", section: "about" },
+
+  // No `section`: "Home" and "FAQs" are single pages, and no route asks to be
+  // marked current under them. Omitting the key is what keeps `isCurrent()`
+  // false for them rather than a value that nothing ever matches.
   { label: "FAQs", href: "/faq/" },
 ];
 

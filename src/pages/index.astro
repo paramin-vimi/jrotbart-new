@@ -93,8 +93,10 @@ const schema = buildGraph([
   <AboutStats block={aboutStats} />
 
   {/* Figma frame 10229:7543 orders these three blocks About -> Expertise ->
-      Offices. Expertise sits between them, not after. */}
-  <MediaWithText block={expertise} />
+      Offices. Expertise sits between them, not after, and `frameSeam` is what
+      makes the three meet at 96px instead of 192 — the marker is no longer
+      emitted by every MediaWithText, only by the block that is in that frame. */}
+  <MediaWithText block={expertise} frameSeam />
 
   <OfficeGrid block={officeGrid} />
 

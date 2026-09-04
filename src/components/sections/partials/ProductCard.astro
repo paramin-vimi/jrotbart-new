@@ -27,6 +27,7 @@ import Overline from "@primitives/Overline.astro";
 import ArrowGo from "@primitives/ArrowGo.astro";
 import type { Metal, Product } from "@content/types";
 import { productHref } from "@lib/products";
+import { detailSlugs } from "@content/products";
 
 interface Props {
   /** A card may override the grid-level CTA label (rarely needed). */
@@ -45,7 +46,7 @@ interface Props {
 const { product, badgeLabel, ctaLabel, specLabels, metalLabels, class: className = "" } =
   Astro.props;
 
-const href = productHref(product);
+const href = productHref(product, "#contact", detailSlugs);
 const mintLine = product.mint.location
   ? `${product.mint.name}, ${product.mint.location}`
   : product.mint.name;

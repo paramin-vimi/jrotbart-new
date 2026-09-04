@@ -483,6 +483,9 @@ export const lbmaStandards: MediaWithTextBlock = {
     height: 674,
   },
   mediaSide: "right",
+  // 10726:13303 — copy 539 @x=96, gutter 96, image 539 @x=731; the frame is
+  // `HORIZONTAL gap=96/CENTER`, copy 505 tall in a 674 row.
+  split: { media: 539, gap: 96, text: 539, align: "center" },
   ratio: "539/674",
   // 10726:13310 / 13313 — the two hairline rows under the body.
   definitions: [
@@ -770,8 +773,10 @@ export const faq: FaqAccordionBlock = {
     headingAccent: "Asked",
     body: "These are some of the questions clients ask us most often before buying. If yours is not covered here, one of our Value Experts will be happy to answer it directly.",
   },
-  // TODO(client): the frame draws every row open (the route passes
-  // initiallyOpen="all"); confirm against the homepage's one-open convention.
+  // TODO(client): the frame draws every row open, so the route passes
+  // initiallyOpen="all" AND exclusiveGroup="" — the second is not optional,
+  // because the native exclusive group would close all but one row again.
+  // Confirm against the homepage's one-open convention.
   faqs,
   footer: {
     // U+2019 apostrophe, verbatim from the frame (11009:15425).

@@ -33,6 +33,12 @@ export const productDetails: ProductDetail[] = [
 /** Full documents for metals without a listing yet. Not rendered anywhere. */
 export const pendingProducts: ProductDetail[] = platinumGroupProducts;
 
+/** Slugs that have a built detail page, for cards authored outside this catalogue
+ *  (the homepage writes its own `Product` literals). See productHref(). */
+export const detailSlugs: ReadonlySet<Product["slug"]> = new Set(
+  productDetails.map((product) => product.slug),
+);
+
 /** Every product of one metal, in catalogue order. */
 export const byMetal = (metal: Metal): Product[] => products.filter((p) => p.metal === metal);
 

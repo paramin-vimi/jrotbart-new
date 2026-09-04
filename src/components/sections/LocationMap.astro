@@ -142,10 +142,26 @@ const placeName = (place: { city: string; country: string }) =>
 
 const legendText =
   "font-display text-[length:var(--step-h3)] leading-7 font-medium text-text-primary";
+/*
+  WCAG 1.4.13 Content on Hover or Focus (Level AA) has three requirements, and
+  a pure CSS group-hover tooltip meets only one of them:
+    - Dismissable: Escape must hide it without moving focus. CSS cannot listen
+      for a key, so the script below adds a `[data-tip-hidden]` escape hatch.
+    - Hoverable: the pointer must be able to travel onto the tooltip itself.
+      `pointer-events-none` broke this — moving onto the tooltip meant no longer
+      hovering the group, so it vanished. It is now `pointer-events-auto`, and
+      because the tooltip sits inside the pin's own group, hovering it keeps the
+      group hovered.
+    - Persistent: it stays until the pointer or focus leaves, which held already.
+  This matters here because an open tooltip overlaps up to three neighbouring
+  pins, so a tooltip that cannot be dismissed can hide the very targets a user
+  is trying to reach.
+*/
 const tooltipClass =
-  "pointer-events-none invisible absolute left-0 z-10 flex w-max max-w-[220px] -translate-x-1/2 " +
+  "pointer-events-auto invisible absolute left-0 z-10 flex w-max max-w-[220px] -translate-x-1/2 " +
   "flex-col bg-bg-secondary px-xs py-2xs text-left opacity-0 shadow-sm transition-opacity duration-150 " +
   "group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 " +
+  "group-[[data-tip-hidden]]:invisible group-[[data-tip-hidden]]:opacity-0 " +
   "motion-reduce:transition-none";
 ---
 
@@ -208,7 +224,7 @@ const tooltipClass =
           {officePins.map((pin) => {
             const tipId = `${block._key}-tip-${pin.id}`;
             return (
-              <div class="group absolute" style={position(pin)}>
+              <div data-map-pin class="group absolute" style={position(pin)}>
                 <button
                   type="button"
                   class="block h-12 w-12 -translate-x-1/2 -translate-y-full text-brand-red"
@@ -228,7 +244,7 @@ const tooltipClass =
           {vaultPins.map((pin) => {
             const tipId = `${block._key}-tip-${pin.id}`;
             return (
-              <div class="group absolute" style={position(pin)}>
+              <div data-map-pin class="group absolute" style={position(pin)}>
                 <button
                   type="button"
                   class="grid h-6 w-6 -translate-x-1/2 -translate-y-1/2 place-items-center"
@@ -265,3 +281,33 @@ const tooltipClass =
     </div>
   </Container>
 </section>
+
+<script>
+  /*
+    Escape dismisses the open pin tooltip (WCAG 1.4.13 Dismissable) WITHOUT
+    moving focus — the criterion is explicit that focus must be able to stay
+    where it is. The flag is set on the pin's group wrapper and cleared as soon
+    as the pointer or focus leaves it, so the next hover/focus shows the tooltip
+    again rather than latching it off.
+  */
+  const pins = document.querySelectorAll<HTMLElement>("[data-map-pin]");
+
+  pins.forEach((pin) => {
+    const clear = () => pin.removeAttribute("data-tip-hidden");
+    pin.addEventListener("mouseleave", clear);
+    pin.addEventListener("focusout", (event) => {
+      const next = event.relatedTarget as Node | null;
+      if (!next || !pin.contains(next)) clear();
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    /* Hide whichever pin is currently showing a tooltip: the focused one, or
+       the hovered one when the pointer is driving. */
+    const active = document.activeElement?.closest<HTMLElement>("[data-map-pin]");
+    const hovered = Array.from(pins).find((p) => p.matches(":hover"));
+    const target = active ?? hovered;
+    if (target) target.setAttribute("data-tip-hidden", "");
+  });
+</script>

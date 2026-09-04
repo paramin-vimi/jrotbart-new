@@ -251,11 +251,22 @@ export const productCardLabels: ProductCardLabels = {
  * string) and made the description metal-neutral, but real gold copy and a gold
  * product photo are required.
  *
- * TODO(client): `slug` on each card is the URL segment a future detail page
- * would take (/buy-<metal>/<slug>/). None of these six has a detail document
- * yet, so every card CTA still resolves to "#contact" — the same destination
- * the live site uses — through `productHref()` in src/lib/products.ts. Confirm
- * the slug pattern before the pages are built.
+ * `slug` on each card is the URL segment of its detail page. FOUR of the six
+ * now have one — heraeus-gold-bar, argor-heraeus-gold-bar,
+ * royal-canadian-mint-gold-bar and heraeus-silver-bar — and their CTAs resolve
+ * to /buy-<metal>/<slug>/ through `productHref()` (src/lib/products.ts), which
+ * matches the slug against the catalogue's `detailSlugs`. The platinum and
+ * palladium cards keep the "#contact" fallback the live site uses, because
+ * neither metal has a listing route yet (see the allowlist in
+ * src/pages/buy-[metal]/).
+ *
+ * These six are still authored here by hand rather than referenced from
+ * src/content/products/, which duplicates five fields per card. Three of the
+ * four match their detail document character for character; royal-canadian-mint
+ * does NOT (its description differs), so collapsing the duplication would
+ * silently change homepage copy. That is a content decision, not a refactor.
+ * TODO(client): confirm which description is right for the Royal Canadian Mint
+ * bar, then this block can reference the catalogue instead.
  *
  * TODO(assets): BLOCKER — the six card exports are the wrong NODE, not the
  * wrong picture. Each one is the composed 370x370 image TILE: the beige matte,

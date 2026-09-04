@@ -36,8 +36,10 @@ import type { NavSection } from "@content/types";
  *               the top of the page.
  *   `current` — the menu item whose `section` matches gets the red "current"
  *               state drawn on 11083:20102 ("Products" on a product page) and
- *               `aria-current="page"`. `section` is set on the items in
- *               src/content/navigation.ts.
+ *               `aria-current="page"`, at both breakpoints. The `section` keys
+ *               live on the items in src/content/navigation.ts; a page that
+ *               passes nothing (the homepage) simply lights nothing, which is
+ *               what the homepage frame draws.
  */
 interface Props {
   solid?: boolean;
@@ -299,7 +301,18 @@ const currentLanguage = languages.find((l) => l.current) ?? languages[0];
             <li class="border-b border-border-primary last:border-0">
               {item.children?.length ? (
                 <details>
-                  <summary class="flex cursor-pointer list-none items-center justify-between py-3.5 font-display text-lg font-medium text-text-primary">
+                  {/* The drawer's disclosure carries the same current state as
+                      the desktop <button> it replaces (the two items with
+                      panels, Services and Products, are exactly the ones a
+                      route marks current most often). Without this the red
+                      state existed only above 1024px. */}
+                  <summary
+                    class:list={[
+                      "flex cursor-pointer list-none items-center justify-between py-3.5 font-display text-lg font-medium",
+                      isCurrent(item.section) ? "text-brand-red" : "text-text-primary",
+                    ]}
+                    {...isCurrent(item.section) ? { "aria-current": "page" } : {}}
+                  >
                     {item.label}
                     <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current transition-transform duration-150 [details[open]_&]:rotate-180 motion-reduce:transition-none" aria-hidden="true"><path d="M6 8l4 5 4-5z" /></svg>
                   </summary>
