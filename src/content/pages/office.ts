@@ -37,26 +37,37 @@ export const officeCardLabels = {
 } as const;
 
 /**
- * `routes` maps an office `_id` to the href of its BUILT page. Only those
- * offices get the desk link; the frame draws one on every card, but two
- * offices have no page yet. TODO(client): desk links for the Philippines and
- * Israel once their pages exist (or a contact anchor in the meantime).
+ * `routes` maps an office `_id` to the href of its BUILT page.
+ *
+ * The frame draws a desk link on EVERY card, so every card gets one. An office
+ * with a page links to it; an office without one links to `fallbackHref` — the
+ * on-page enquiry form — rather than being dropped. An earlier build omitted
+ * the link entirely for those, which lost three of the five buttons the design
+ * draws.
+ *
+ * A 404 was the other option and is worse: there are no live pages for the
+ * Philippines, Israel or Bangkok (/buy-gold-philippines/ and /buy-gold-israel/
+ * both 404, and /philippines/ redirects to an unrelated forum page), so a
+ * "real" URL would be a broken one. The contact anchor is a working
+ * destination and matches what the services listing does for a service with no
+ * page.
+ * TODO(client): point these at their own pages once they exist.
  */
 export function officeCardGridBlock(input: {
   _key: string;
   offices: Office[];
   routes: Partial<Record<Office["_id"], string>>;
+  /** Where a card links when its office has no page. Default: the enquiry form. */
+  fallbackHref?: string;
   header?: SectionHeading;
   theme?: OfficeCardGridBlock["theme"];
   seam?: OfficeCardGridBlock["seam"];
 }): OfficeCardGridBlock {
   const cards: OfficeCardGridBlock["cards"] = {};
   for (const office of input.offices) {
-    const href = input.routes[office._id];
+    const href = input.routes[office._id] ?? input.fallbackHref ?? "#contact";
     cards[office._id] = {
-      ...(href
-        ? { cta: { label: officeCardLabels.deskLink(office.city), href, style: "arrow" } satisfies Cta }
-        : {}),
+      cta: { label: officeCardLabels.deskLink(office.city), href, style: "arrow" } satisfies Cta,
       ...(office.headquarters ? { badge: officeCardLabels.headquartersBadge } : {}),
     };
   }
