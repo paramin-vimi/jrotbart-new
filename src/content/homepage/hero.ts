@@ -1,4 +1,5 @@
 import type { HeroBlock } from "@content/types";
+import { metalHref } from "@lib/products";
 
 /**
  * Homepage hero — Figma node 9813:5485 (1366 × 700).
@@ -53,10 +54,14 @@ export const hero: HeroBlock = {
     {
       label: "Buy Gold",
       sublabel: "LBMA-Certified",
-      // TODO(client): the live site links these tiles to /gold-bars-coins/ and
-      // /silver-bars-coins/, but the main menu points at /buy-gold/ and
-      // /buy-silver/. Two URLs for one destination — pick one before launch.
-      href: "/gold-bars-coins/",
+      /* RESOLVED: the live site links these tiles to /gold-bars-coins/ and
+         /silver-bars-coins/ while the main menu points at /buy-gold/ and
+         /buy-silver/ — two URLs for one destination. The client picked the
+         listing routes, which are the ones this site actually builds
+         (src/pages/buy-[metal]/), so the tiles no longer 404 here.
+         Built through `metalHref` rather than typed out, so a tile cannot
+         drift from the route it points at. */
+      href: metalHref("gold"),
       icon: {
         /* Figma "image 129" — a gold medallion stamped GOLD. Drawn 24 x 24,
            exported at 96 px so it survives a 4x screen. */
@@ -74,7 +79,7 @@ export const hero: HeroBlock = {
       // TODO(client): confirm this is intentional; if not, it becomes "Buy Silver".
       label: "Buy silver",
       sublabel: "LBMA-Certified",
-      href: "/silver-bars-coins/",
+      href: metalHref("silver"),
       icon: {
         /* Figma "image 130" — the same medallion in silver. */
         src: "/figma/image-130--10085-17902.webp",
