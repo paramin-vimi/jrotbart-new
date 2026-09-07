@@ -78,27 +78,51 @@ import { products as catalogue } from "@content/products";
 /** URL path of this page. The route builds the canonical from `SITE`. */
 export const path = "/buying-precious-metals/";
 
+/**
+ * Title, description and share-card copy are the SEO review's, verbatim
+ * ("SEO checklist — /buying-precious-metals/", Meta title and description +
+ * Open Graph tags). Two deliberate consequences of taking it verbatim:
+ *
+ * • The brand name is DROPPED from the <title> so "precious metals investment"
+ *   fits — the review's own note. It still appears in `ogTitle` below and in
+ *   the sitewide header, footer and Organization schema, so nothing about the
+ *   brand's presence on the page changes.
+ * • At 79 characters the title is past the ~62 Google renders, so the tail
+ *   ("Stored in Your Name") is cut off in a desktop result. That is the
+ *   review's call to make, not ours; flagged rather than silently shortened.
+ *   (The wording here avoids the word Tailwind would read as a utility class:
+ *   its scanner reads comments too, and a bare token adds a rule to the
+ *   production stylesheet — see the @source lines in styles/global.css.)
+ */
 export const seo: Seo = {
-  // TODO(client): the live Yoast title is "J. Rotbart & Co. | Precious Metals
-  // Broker" and the live H1 "Buying Precious Metals"; the frame's H1 is "Buy
-  // Gold and Precious Metals". Confirm which phrase the title should carry.
-  title: "Buy Gold and Precious Metals | J. Rotbart & Co.",
-  // First sentence of the intro (10726:9176).
+  title: "Buy Gold & Precious Metals Investment | Allocated, Insured, Stored in Your Name",
   description:
-    "Take possession at one of our global offices, arrange secure delivery, or store your metals fully allocated, segregated, and recorded in your name across 16 vault locations in leading financial centres and free zones.",
+    "Buy LBMA and LPPM certified gold, silver, platinum, and palladium, held allocated in your name across 16 global vaults, fully insured.",
+  // The share card keeps the brand and drops the attribute list: it is seen
+  // beside the brand's own post, not in a list of ten competing results.
+  ogTitle: "Buy Gold & Precious Metals Investment | J. Rotbart & Co.",
+  ogDescription:
+    "Buy LBMA and LPPM certified metals, held allocated in your name across 16 global vaults and fully insured.",
+  // TODO(assets): the review specifies the hero band visual (allocated bullion
+  // in a vault drawer) as og:image. No such asset exists — the hero photo is
+  // 530 x 353 silver bars, wrong subject and far under the 1200 x 630 a card
+  // needs — so this falls back to /og-default.jpg until the artwork is supplied.
 };
 
 /** Breadcrumb trail for the BreadcrumbList node; `path` is site-relative. */
 export const breadcrumb: { name: string; path: string }[] = [
   { name: "Home", path: "/" },
   { name: "Services", path: "/services/" },
-  { name: "Buying Precious Metals", path },
+  // The review's crumb label, which is the page's own name in the trail.
+  { name: "Buy Precious Metals", path },
 ];
 
 /** The schema.org Service this page describes. */
 export const service = {
   name: "Buying Precious Metals",
-  serviceType: "Precious metals dealer",
+  // The review's serviceType. `provider` is the Organization node built in
+  // lib/schema.ts, which already names "J. Rotbart & Co.".
+  serviceType: "Precious metals purchase and storage",
   // The four staffed offices (src/content/offices.ts); Bangkok is pending.
   areaServed: ["Hong Kong", "Singapore", "Philippines", "Israel"],
 };
@@ -792,9 +816,11 @@ export const faq: FaqAccordionBlock = {
 // ---------------------------------------------------------------------------
 
 /**
- * `articles` is empty here: the route fills it at build time with the three
- * most recent posts (amendment 13 — the latest three, NOT the homepage-pin
- * selection). The frame's three cards are lorem (11009:15447/15456/15465).
+ * `articles` is empty here: the route fills it at build time (amendment 13 —
+ * NOT the homepage-pin selection). Per the SEO review the feed is filtered to
+ * posts tagged Buying / Purchasing, topped up with the most recent posts; the
+ * selection lives in the route because it is a query, not content. The frame's
+ * three cards are lorem (11009:15447/15456/15465).
  */
 export const news: NewsGridBlock = {
   _key: "buy-news",
@@ -845,7 +871,11 @@ export const relatedServices: FeatureGridBlock = {
   frame: "boxed",
   header: {
     overline: "Related Services",
-    heading: "Services That Work Alongside.",
+    // The review's H2, which differs from the frame's "Services That Work
+    // Alongside." (10726:9457). Taken from the review because the heading
+    // outline is the artefact under review; the design divergence is real and
+    // is one line to put back if the designer disagrees.
+    heading: "Services That Complete Your Purchase",
     body: "Buying is the first step. Most of our clients opt for a package that includes shipping and storage straight away, because those are the services required to deliver and protect your bullion. Both run through the same team, with the same care and the same accountability.",
   },
   // Titles and blurbs are the frame's (10734:13982/14004, 13975/14002); the

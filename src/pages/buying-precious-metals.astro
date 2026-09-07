@@ -76,10 +76,26 @@ import {
 const url = `${SITE}${path}`;
 const seo = { ...pageSeo, canonical: url };
 
-/* Latest three posts, NOT getHomepagePosts: that helper honours the "feature on
-   the homepage" pin, which is a homepage editorial decision and would make this
-   page show a pinned older piece ahead of newer ones. */
-const latestPosts = (await getAllPosts()).slice(0, news.limit ?? 3);
+/* NOT getHomepagePosts: that helper honours the "feature on the homepage" pin,
+   which is a homepage editorial decision and would make this page show a pinned
+   older piece ahead of newer ones.
+
+   The SEO review specifies this band as the blog feed filtered to posts tagged
+   Buying / Purchasing. Tagged posts come first, most recent first; the rest of
+   the latest posts top the band up to its limit so it can never render short
+   while the tag is unused. No seed post carries either tag today, so right now
+   the top-up supplies all three and the output is what it was before.
+   TODO(client): tag the buying-related posts in Sanity — until then this
+   section is "latest three" wearing the review's label. */
+const buyingTags = new Set(["buying", "purchasing"]);
+const allPosts = await getAllPosts();
+const tagged = allPosts.filter((post) =>
+  (post.tags ?? []).some((tag) => buyingTags.has(tag.toLowerCase())),
+);
+const latestPosts = [...tagged, ...allPosts.filter((post) => !tagged.includes(post))].slice(
+  0,
+  news.limit ?? 3,
+);
 const newsWithPosts = { ...news, articles: latestPosts.map(toArticle) };
 
 const schema = buildGraph([

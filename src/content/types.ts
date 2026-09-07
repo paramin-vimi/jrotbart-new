@@ -819,6 +819,15 @@ export interface SiteFooter {
 export interface Seo {
   title: string;
   description: string;
+  /**
+   * Social-card title, when it must differ from the <title>. A search result
+   * and a share card are read in different places: the title tag is competing
+   * for a click in a list of ten and gets the keyword, the card is seen next to
+   * the brand's own post and gets the brand. Falls back to `title`.
+   */
+  ogTitle?: string;
+  /** Social-card description; falls back to `description`. Same reasoning. */
+  ogDescription?: string;
   canonical?: string;
   ogImage?: ImageRef;
   noindex?: boolean;
