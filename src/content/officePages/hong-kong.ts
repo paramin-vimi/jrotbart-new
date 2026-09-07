@@ -586,22 +586,32 @@ const faq: FaqAccordionBlock = {
 /* ------------------------------------------------------------------------ */
 
 export const hongKongPage: OfficePageContent = {
+  // Title and description are the SEO specification's, verbatim: 54 and 146
+  // characters against its 60 / 155 limits. The title trades the previous
+  // "Buy Gold in Hong Kong | Bullion, Coins, Bars" — which was 67 characters
+  // and truncated — for the dealer phrasing; the description's claims are all
+  // on the page (Category B registration and its number are in `regulation`,
+  // the 2016 founding in the services intro).
+  //
+  // The specification also sets canonical https://jrotbart.com/locations/hong-kong/.
+  // NOT applied: no page is built at that URL, and a canonical pointing at a
+  // 404 asks Google to drop the one page that ranks here. It becomes correct
+  // the moment the /locations/ structure exists — see the note on `breadcrumbs`.
   seo: {
-    // Keeps the commercial phrase the homepage hands to this URL
-    // (src/pages/index.astro, NOTE(seo)). Live: "J. Rotbart & Co. | Buy Gold
-    // Bars, Bullion, Coins in Hong Kong". TODO(client): sign-off — this moves
-    // a primary term between two pages.
-    title: "Buy Gold in Hong Kong | Bullion, Coins, Bars | J. Rotbart & Co.",
-    // The hero paragraph (11043:18248). TODO(client): "for a decade" — see the
-    // hero note; the live description is a different sentence.
-    description: hero.header.body as string,
+    title: "Precious Metals Dealer in Hong Kong | J. Rotbart & Co.",
+    description:
+      "Buy, sell, store and ship precious metals globally. Category B registered dealer, tax-efficient gold investment, professional vaulting since 2016.",
   },
-  // "Offices" is the office listing (/offices/, P4). TODO(client): the
-  // breadcrumb labels are template copy and belong in pages/office.ts
-  // (integrator request).
+  /* "Locations" is the SEO specification's label for the middle rung. The href
+     stays /offices/ — the listing that actually exists — so the trail is a real
+     one; only the word Google displays changes. The site's nav still says
+     "Offices", and the two should agree once the /locations/ question is
+     settled either way.
+     TODO(client): the breadcrumb labels are template copy and belong in
+     pages/office.ts (integrator request). */
   breadcrumbs: [
     { label: "Home", href: "/" },
-    { label: "Offices", href: "/offices/" },
+    { label: "Locations", href: "/offices/" },
     { label: office.city, href: `/${office.slug}/` },
   ],
   // No menu item points at an office page today; "about" is where the office

@@ -17,6 +17,7 @@ import {
   breadcrumbNode,
   buildGraph,
   faqPageNode,
+  personNodes,
   siteGraph,
   webPageNode,
 } from "@lib/schema";
@@ -119,6 +120,10 @@ const schema = buildGraph([
   webPageNode(seo, url, { about: { "@id": `${SITE}/#office-${office._id}` } }),
   breadcrumbNode(page.breadcrumbs.map((crumb) => ({ name: crumb.label, url: absoluteUrl(crumb.href) }))),
   page.faq ? faqPageNode(page.faq.faqs) : null,
+  /* The roster as Person nodes — the office is where the firm's people are
+     named, so this is the page that can support them. `featured` is the first
+     card, not a separate kind of person. */
+  ...(page.team ? personNodes([page.team.featured, ...page.team.members].filter((m) => m !== undefined), url) : []),
 ]);
 
 /* Defaults to one row open in an exclusive group, matching the homepage.

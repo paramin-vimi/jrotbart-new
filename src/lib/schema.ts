@@ -1,5 +1,5 @@
 import { offices, primaryEmail } from "@content/offices";
-import type { Faq, Office, ProductDetail, Seo, VideoRef } from "@content/types";
+import type { Faq, Office, ProductDetail, Seo, TeamMember, VideoRef } from "@content/types";
 import { paragraphText } from "./paragraph";
 
 // Derived from `site` + `base` in astro.config.mjs rather than duplicating the
@@ -139,6 +139,29 @@ export function videoNodes(videos: VideoRef[]) {
     thumbnailUrl: absoluteUrl(v.poster.src),
     embedUrl: `https://www.youtube.com/embed/${v.youtubeId}`,
     uploadDate: undefined, // TODO(client): publication dates per video
+  }));
+}
+
+/**
+ * The people shown on a page, as Person nodes tied to the Organization.
+ *
+ * Deliberately no `sameAs`, `email` or `telephone`. The team cards render
+ * FIRM-level contact points as a stand-in until per-person data exists (see the
+ * note in src/content/team.ts) — rendering the company LinkedIn behind a
+ * person's name is a visible placeholder a reader can interpret, but asserting
+ * it in structured data would state as fact that the company page IS that
+ * person's profile. Same for the shared office email. Those fields go in when
+ * real per-person data does.
+ */
+export function personNodes(members: TeamMember[], pageUrl: string) {
+  return members.map((member) => ({
+    "@type": "Person",
+    "@id": `${pageUrl}#person-${member._id}`,
+    name: member.name,
+    jobTitle: member.role,
+    worksFor: { "@id": ORG_ID },
+    ...(member.bio ? { description: member.bio } : {}),
+    ...(member.photo ? { image: absoluteUrl(member.photo.src) } : {}),
   }));
 }
 
