@@ -458,10 +458,17 @@ export const goldBritannia: ProductDetail = {
     ),
   ],
   related: ["heraeus-gold", "argor-heraeus-gold", "royal-canadian-mint-gold"],
-  seo: productSeo(
-    "1 oz Gold Britannia Coin 999.9",
-    "Britain's flagship gold coin: one troy ounce of 999.9 pure, LBMA certified gold, with legal tender status guaranteed by HM Treasury.",
-  ),
+  // Written out rather than built by `productSeo`, which appends the brand
+  // suffix: the SEO sheet for this product spends the 60 characters on the two
+  // buying markets instead. 55 and 141 characters, inside its own limits.
+  // TODO(assets): the sheet specifies og:image gold-britannia-1oz-front.jpg,
+  // marked "asset to be shot". Until it exists the page falls back to
+  // /og-default.jpg — a card pointing at a missing file renders no card at all.
+  seo: {
+    title: "1 oz Gold Britannia Coin | Buy in Singapore & Hong Kong",
+    description:
+      "Buy the 1 oz Gold Britannia, 999.9 pure and LBMA certified, GBP 100 legal tender. GST-exempt in Singapore, with insured delivery or vaulting.",
+  },
 };
 
 /** Bar template 11083:19595 — copy verbatim from the frame. */

@@ -105,8 +105,13 @@ export interface ProductPage {
   quote: CalloutBandBlock;
 }
 
-/** Breadcrumb labels — "Home" is site-wide; the metal and product names come from the documents. */
-export const productBreadcrumbLabels = { home: "Home" };
+/**
+ * Breadcrumb labels — "Home" and the products hub are site-wide; the metal and
+ * product names come from the documents. The hub level matches the trail the
+ * metal listing already emits (Home > Products > Gold), so a product now sits
+ * one level below its own parent instead of skipping a rung.
+ */
+export const productBreadcrumbLabels = { home: "Home", products: "Products" };
 
 /** The drawn media box of both MediaWithText blocks (11083:19982 / 19984): 555 x 416. */
 const PRODUCT_MEDIA_RATIO = "555/416";

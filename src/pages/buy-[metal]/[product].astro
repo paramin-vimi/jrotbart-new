@@ -14,6 +14,7 @@ import ContactSection from "@sections/ContactSection.astro";
 import type { ProductDetail } from "@content/types";
 import { listedMetals, products } from "@content/products";
 import { productPage, productBreadcrumbLabels, productPath, relatedProductPaths } from "@content/pages/product-page";
+import { productsHubHref } from "@content/pages/metal-listing-page";
 import { metalListingHref } from "@content/pages/product";
 import { contact, mintStrip } from "@content/contact";
 import { isProductDetail } from "@lib/products";
@@ -70,8 +71,14 @@ const seo = { ...page.seo, canonical: url };
 const schema = buildGraph([
   ...siteGraph(),
   webPageNode(seo, url, { type: "ItemPage", about: { "@id": `${url}#product` } }),
+  /* Home > Products > <Metal> > <Product>. The hub rung is the one the metal
+     listing already emits; without it a product page claimed the listing was
+     its own parent's parent.
+     TODO(client): the hub itself is not rebuilt yet — `productsHubHref` is the
+     live site's URL, the same one the nav's "Products" item points at. */
   breadcrumbNode([
     { name: productBreadcrumbLabels.home, url: `${SITE}/` },
+    { name: productBreadcrumbLabels.products, url: `${SITE}${productsHubHref}` },
     { name: page.metalLabel, url: `${SITE}${metalListingHref(product.metal)}` },
     { name: product.shortName, url },
   ]),
