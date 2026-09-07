@@ -211,7 +211,11 @@ export const logoStrip: LogoStripSection = {
  */
 export const productCardLabels: ProductCardLabels = {
   badgeLabel: "Best seller",
-  ctaLabel: "Learn more",
+  // "Learn More", capital M — the card component's default text is "Explore"
+  // and every frame that draws a product card overrides it identically: the
+  // homepage grid (9813:5533), Buy PM best sellers (10726:13040) and both
+  // metal listings (10359:4178 / 10979:24560).
+  ctaLabel: "Learn More",
   specLabels: { mint: "Mint:", purity: "Purity:", variants: "Variants:" },
   metalLabels: {
     gold: "Gold",

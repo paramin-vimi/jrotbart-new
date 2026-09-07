@@ -37,6 +37,19 @@ export const listingCopy = {
   metalHeading: "%s Bars & Coins.",
   /** I10359:4317 */
   loadMoreLabel: "Load More",
+  /* The sort control, drawn on both listing frames as a single text run
+     "Sort by : A–Z" — a label and its current value. The frame shows only the
+     A–Z state, so the second option is ours: a select with one option is not a
+     control. Default state is the drawn one, and the cards ship pre-sorted A–Z
+     so the control agrees with the markup before any script runs.
+     TODO(client): confirm Z–A is wanted, or the control comes back out. */
+  sort: {
+    label: "Sort by :",
+    options: [
+      { value: "az", label: "A–Z" },
+      { value: "za", label: "Z–A" },
+    ],
+  } as const,
   /** Nine cards drawn before the button (3 x 3 at lg). */
   pageSize: 9,
 };
@@ -106,6 +119,7 @@ export function productListingBlock(options: {
       body: listingCopy.body,
     },
     tabs,
+    sort: { label: listingCopy.sort.label, options: [...listingCopy.sort.options] },
     metalHeading: fill(listingCopy.metalHeading, label),
     products: order === "az" ? sortAz(options.products) : options.products,
     pageSize: listingCopy.pageSize,
