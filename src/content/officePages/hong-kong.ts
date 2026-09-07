@@ -243,32 +243,36 @@ const steps: ProcessStepsBlock = {
   },
   // Numbers are rendered ("01"…"05"), so the frame's duplicated "04"
   // (11039:18713) cannot recur.
+  //
+  // The frame ends each step title with a full stop; the five below drop it on
+  // the client's instruction. They are labels, not sentences — the bodies under
+  // them keep their punctuation.
   steps: [
     {
       // 11039:18668 / 18669
-      title: "A conversation, not a checkout page.",
+      title: "A conversation, not a checkout page",
       body: ["Tell us what you want to achieve and over what horizon. There is no commitment at this stage."],
     },
     {
       // 11039:18676 / 18677
-      title: "A written quote.",
+      title: "A written quote",
       body: ["You receive the live price and the premium as separate lines, in writing."],
     },
     {
       // 11039:18684 / 18685
-      title: "Simple onboarding.",
+      title: "Simple onboarding",
       body: [
         "Identity checks proportionate to the transaction, as a serious market requires. Non-residents are welcome.",
       ],
     },
     {
       // 11039:18692 / 18693
-      title: "Settlement.",
+      title: "Settlement",
       body: ["The price locks on agreement and funds move by wire."],
     },
     {
       // 11039:18714 / 18715
-      title: "Delivery or vaulting.",
+      title: "Delivery or vaulting",
       body: [
         "Your bars are verified and then delivered in Hong Kong, vaulted here in your name, or placed in any of our other jurisdictions. You receive the invoice, the serial-numbered bar list, and, if vaulted, the storage manifest.",
       ],
