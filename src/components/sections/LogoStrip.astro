@@ -230,6 +230,19 @@ const { block, class: className = "" } = Astro.props;
        `w-full justify-between` needs a definite width to spread across. Only a
        row that actually overflows becomes max-content and animates. */
     width: 100%;
+
+    /* THE GAP AT THE SEAM. The row's own `gap-x-*` utility spaces the tiles
+       INSIDE each <ul>; it does nothing between the original and the clone, so
+       without this the last logo sits flush against the first one — no space at
+       all, twice per loop. The value is measured off the row by the script
+       rather than restated here, because the row's gap is responsive
+       (`gap-x-10 xl:gap-x-xl`) and a second copy of those numbers would drift.
+
+       It also makes the loop correct, not just the spacing. The script shifts
+       by `row + gap` on the stated assumption that the inner box is two rows
+       and one gap wide. It was two rows and NO gap, so every cycle overshot by
+       one gap and the seam jumped. */
+    column-gap: var(--logo-gap, 0px);
   }
 
   .logo-row {
@@ -332,6 +345,11 @@ const { block, class: className = "" } = Astro.props;
 
     const gap = Number.parseFloat(getComputedStyle(row).columnGap) || 0;
     const shift = content + gap;
+    /* Inherited by .logo-marquee-inner, which spends it between the two rows —
+       see the note on `column-gap` there. Set from the same reading that feeds
+       `shift`, so the distance travelled and the distance drawn cannot
+       disagree. */
+    marquee.style.setProperty("--logo-gap", `${gap}px`);
     marquee.style.setProperty("--logo-shift", `${shift}px`);
     marquee.style.setProperty("--logo-duration", `${shift / PIXELS_PER_SECOND}s`);
   };
