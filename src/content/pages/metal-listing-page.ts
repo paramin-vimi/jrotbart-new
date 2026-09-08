@@ -1,5 +1,6 @@
 import type { Metal, ProductListingBlock, Seo, TestimonialBandBlock } from "@content/types";
-import { byMetal, countsByMetal, listedMetals } from "@content/products";
+import { listedMetals } from "@content/products";
+import { figmaListingCards, figmaTabCounts } from "@content/products/figma-listing-cards";
 import { listingSeo, productListingBlock } from "@content/pages/buy-metal";
 import { productCardLabels } from "@content/homepage/products";
 import { albertCheng } from "@content/testimonials";
@@ -70,10 +71,30 @@ export const listedMetalPages = (): Metal[] => listedMetals;
 export function metalListingPage(metal: Metal): MetalListingPage {
   const metalLabel = productCardLabels.metalLabels[metal];
 
+  /*
+   * THE GRID IS THE FIGMA FRAME, NOT THE CATALOGUE — on the client's
+   * instruction to reproduce the design exactly, lorem included. The nine
+   * drawn cards, the four drawn tabs with their invented counts, the drawn
+   * order (not A-Z) and the Load More button that sits under exactly nine
+   * cards all come from src/content/products/figma-listing-cards.ts, which
+   * carries the full register of what is placeholder.
+   *
+   * To put the real 16 gold / 12 silver products back, this call becomes:
+   *   products: byMetal(metal), counts: countsByMetal(),
+   * with the three options below dropped, and `byMetal`/`countsByMetal`
+   * re-imported from @content/products.
+   */
   const listing = productListingBlock({
     metal,
-    products: byMetal(metal),
-    counts: countsByMetal(),
+    products: figmaListingCards[metal] ?? [],
+    counts: figmaTabCounts,
+    // The frames draw all four metals; only two have a page (see the tab
+    // fallback in buy-metal.ts).
+    tabMetals: ["gold", "silver", "platinum", "palladium"],
+    // Drawn order, which is not alphabetical.
+    order: "catalogue",
+    // Nine cards above a visible button, as drawn.
+    showLoadMore: "always",
     key: `${metal}-listing`,
   });
 

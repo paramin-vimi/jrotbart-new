@@ -4,7 +4,7 @@ import ProductListing from "@sections/ProductListing.astro";
 import TestimonialBand from "@sections/TestimonialBand.astro";
 
 import type { Metal } from "@content/types";
-import { listedMetals, byMetal } from "@content/products";
+import { listedMetals } from "@content/products";
 import {
   metalListingPage,
   listingBreadcrumbLabels,
@@ -48,9 +48,17 @@ const page = metalListingPage(metal);
 const url = `${SITE}${listingPath(metal)}`;
 const seo = { ...page.seo, canonical: url };
 
-// Only products with a page of their own are listed in the ItemList — a URL
-// that resolves to the contact anchor is not an item.
-const listedProducts = byMetal(metal)
+/* The ItemList describes THE CARDS THIS PAGE RENDERS, so it is built from the
+   listing block rather than from the catalogue — otherwise the markup would
+   name products a reader cannot see. Only a product with a page of its own is
+   an item: a card whose CTA resolves to the contact anchor is not one.
+
+   With the Figma frame's placeholder grid in place (see the note in
+   metal-listing-page.ts) none of the nine drawn cards has a page, so the list
+   is empty and the node is dropped — an ItemList of nothing is worse than no
+   ItemList. Restoring the real catalogue brings the node back with no edit
+   here. */
+const listedProducts = page.listing.products
   .filter(isProductDetail)
   .map((product) => ({ name: product.name, url: `${SITE}${productHref(product)}` }));
 
@@ -62,7 +70,7 @@ const schema = buildGraph([
     { name: listingBreadcrumbLabels.products, url: `${SITE}${productsHubHref}` },
     { name: page.metalLabel, url },
   ]),
-  itemListNode(url, listedProducts),
+  listedProducts.length > 0 ? itemListNode(url, listedProducts) : null,
 ]);
 ---
 

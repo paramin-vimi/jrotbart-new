@@ -60,6 +60,7 @@ const {
   metalHeading,
   products,
   pageSize,
+  showLoadMore = "auto",
   loadMoreLabel,
   badgeLabel,
   ctaLabel,
@@ -178,7 +179,11 @@ const sortId = `${block._key}-sort`;
 
       {/* Wrapped because Button's props are closed: the script toggles the
           wrapper's `hidden` and listens on the button inside. */}
-      <div data-load-more hidden>
+      {/* "always" renders it visible: with exactly `pageSize` cards the script's
+          `paged` test is false, so it never touches the button and the drawn
+          state survives. The button then has no listener and does nothing —
+          which is what a static frame draws. */}
+      <div data-load-more hidden={showLoadMore === "always" ? undefined : true}>
         <Button type="button" variant="dark">{loadMoreLabel}</Button>
       </div>
     </div>
