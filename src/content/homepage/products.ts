@@ -110,10 +110,22 @@ export interface ProductGridSection extends ProductGridBlock, ProductCardLabels 
  * automatic movement is wanted back; it needs a pause control and a
  * reduced-motion path.
  *
- * TODO(assets): the four new bitmaps are the live site's own 180x60 WordPress
- * exports with their transparent padding trimmed off. Forbes ends up 117x32
- * for a 110x30 tile — roughly 1x, so it is soft on a retina screen. Vector or
- * 2x sources would fix all four, as they would the existing set.
+ * SIZING. A tile is a LAYOUT box; `object-contain` fits the bitmap inside it,
+ * so what a reader compares is the ink the bitmap paints, not the tile. The
+ * four Figma tiles land their marks at 14-17px of ink height (WSJ 16.0,
+ * MSNBC 17.2, Inquirer 13.8). The four added here were first sized to fill the
+ * 30px tile height, which rendered Forbes and CNBC at 30px of ink — nearly
+ * twice the cap height of the Wall Street Journal mark beside them, and
+ * visibly wrong. Their widths now come from the target ink height instead:
+ * width = 16 x (bitmap width / bitmap height), so each renders at ~16px like
+ * the drawn set. Do not "round up" a width here without recomputing what it
+ * does to the ink.
+ *
+ * The endorsement tiles (100/96/80) are the design's own and are left alone.
+ *
+ * A side effect worth keeping: the smaller boxes make these bitmaps 2-3.7x
+ * their rendered size, so unlike the existing set they are sharp on a retina
+ * screen.
  *
  * TODO(client): no logo links to anything in the design. `href` is supported per
  * logo — supply the article/partner URLs if these should be outbound links.
@@ -147,7 +159,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/forbes.png",
             alt: "Forbes",
-            width: 110,
+            width: 59,
             height: 30,
           },
         },
@@ -156,7 +168,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/cnbc.png",
             alt: "CNBC",
-            width: 112,
+            width: 60,
             height: 30,
           },
         },
@@ -165,7 +177,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/financial-times.png",
             alt: "Financial Times",
-            width: 88,
+            width: 47,
             height: 30,
           },
         },
@@ -197,15 +209,17 @@ export const logoStrip: LogoStripSection = {
           },
         },
         {
-          // A stacked lockup, so 30px of tile height buys only 40px of width —
-          // the same proportion the live site gives it, at half the size.
-          // TODO(client): a horizontal MONEY FM lockup would sit far better in
-          // a 30px row than the stacked one does.
+          /* The one stacked lockup in the row, so it cannot be matched on cap
+             height the way the others are — normalised to 16px it would be 21px
+             wide and unreadable. 24px of ink spreads over its two lines, which
+             carries about the weight of a 16px single-line mark beside it.
+             TODO(client): a horizontal MONEY FM lockup would sit far better in
+             a 30px row than the stacked one does. */
           name: "MONEY FM 89.3",
           image: {
             src: "/logos/money-fm.png",
             alt: "MONEY FM 89.3",
-            width: 40,
+            width: 32,
             height: 30,
           },
         },
