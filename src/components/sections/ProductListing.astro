@@ -4,7 +4,8 @@
  * and 10977:23578 on the Silver listing (identical geometry).
  *
  * Four parts, 64px apart at lg (the frame's VERTICAL gap), 48 below:
- *   1. header column (534 wide: overline → 24 → H1 40/52 → 24 → body) → 32 →
+ *   1. header column (534 gold / 555 silver: overline → 24 → H1 40/52 → 24 →
+ *      body) → 32 →
  *      the tab row (1174 wide, 1px rule underneath; each tab 200x72: 18px
  *      metal chip → 12 → label 600 16/24 → 12 → "/ N" 16/24 tertiary; the
  *      current tab is brand-red with a 2px red underline sitting ON the rule).
@@ -56,6 +57,7 @@ interface Props {
 const { block, class: className = "" } = Astro.props;
 const {
   header,
+  metal,
   tabs,
   metalHeading,
   products,
@@ -74,6 +76,24 @@ const SURFACE = {
   tinted: "bg-bg-primary",
   dark: "bg-always-black",
 } as const;
+
+/* The header column's drawn width, which is NOT the same on the two frames:
+   gold's container is 534 (9922:2997), silver's 555 (10977:23580). Both frames
+   set their H1 on ONE line — each heading node is exactly one 52px line box —
+   and "Buy Silver and Precious Metals" does not fit a 534 column, so the single
+   hardcoded 534 that used to be here wrapped the silver heading onto two lines.
+   The width is the body paragraph's measure too, as it is in both frames.
+
+   Written out per metal because Tailwind cannot generate a class from a runtime
+   value: an interpolated `lg:max-w-[${n}px]` emits no CSS at all. Platinum and
+   palladium have no frame and take the wider column, the one that fits a longer
+   metal name. */
+const HEADER_WIDTH: Record<Metal, string> = {
+  gold: "lg:max-w-[534px]",
+  silver: "lg:max-w-[555px]",
+  platinum: "lg:max-w-[555px]",
+  palladium: "lg:max-w-[555px]",
+};
 
 /* Static so Tailwind sees every class; a template literal would not generate them. */
 const METAL_CHIP: Record<Metal, string> = {
@@ -97,7 +117,7 @@ const METAL_CHIP: Record<Metal, string> = {
   <Container class="flex flex-col gap-lg lg:gap-xl">
     {/* ---- 1. Header column + tab row ---- */}
     <div class="flex flex-col gap-md">
-      <SectionHeader header={header} as="h1" class="lg:max-w-[534px]" />
+      <SectionHeader header={header} as="h1" class={HEADER_WIDTH[metal]} />
 
       <div class="flex items-center justify-between gap-md border-b border-border-primary">
         <nav aria-label={header.overline ?? metalHeading} class="min-w-0 max-lg:overflow-x-auto">
