@@ -3,20 +3,36 @@
  * Press / endorsement logo strip — Figma `Featured` 10563:13076 (1366x167).
  *
  * A credibility bar that sits directly under the hero: two labelled groups of
- * third-party logos separated by a vertical rule. The design draws it STATIC —
- * the live site's auto-scrolling Owl carousel is gone, and with it the reduced-
- * motion and pause-control problems it created. That decision still stands below
- * 768, where each row becomes a swipeable track: it moves only when the visitor
- * moves it, so WCAG 2.2.2 never binds and there is nothing to pause.
+ * third-party logos separated by a vertical rule.
+ *
+ * AUTO-SCROLL. The Figma frame draws the strip static with four press logos.
+ * The client asked for the live site's set — eight — and for the live site's
+ * behaviour, so a row that does not fit its column scrolls itself, continuously
+ * and in one direction, and there are no arrow buttons. A row that DOES fit
+ * (the three endorsements) does not move at all: animating a row with nothing
+ * to reveal is motion for its own sake.
+ *
+ * How the loop is seamless: the row is rendered twice inside a `max-content`
+ * flex box and translated by exactly one row-plus-gap, so the moment the copy
+ * reaches the original's start position the animation restarts on an identical
+ * frame. The clone is `aria-hidden` and carries no alt text, so assistive tech
+ * reads eight logos, not sixteen. The shift and the duration are set from the
+ * measured row width by the script — a percentage cannot express it, because
+ * 50% of (2 x row + gap) is half a gap short of the seam.
  *
  * Drawn geometry (1366 frame)
  * ---------------------------
  *   section  1366x167 · padding 48px block / 96px inline · flex, items-start, gap 32
- *   group 1  742 wide (hug) · padding-right 32 · border-right 1px border-primary
+ *   group 1  742 wide · padding-right 32 · border-right 1px border-primary
  *            → divider lands at x=838
- *            label → 32 → row of 4 tiles, gap 64: 160+102+128+128 = 518 (+192) = 710
- *   group 2  400 wide (flex:1) · label → 32 → row, space-between, items-start
+ *            label → 32 → row of tiles, gap 64
+ *   group 2  400 wide · label → 32 → row, space-between, items-start
  *            tiles 100 + 96 + 80 = 276
+ *
+ * Group 1 takes the REMAINING width rather than hugging its logos: with eight
+ * tiles (1316px) hugging would size the column past the viewport. Group 2 holds
+ * the drawn 400, so 1174 − 400 − 32 leaves group 1 the drawn 742 and the divider
+ * still lands on x=838.
  *
  * Structure notes
  * ---------------
@@ -26,40 +42,39 @@
  * • Each logo sits in a FIXED TILE BOX (`.logo-tile`, sized from the per-logo
  *   width/height in the content module) with the bitmap letterboxed inside via
  *   object-contain. That is exactly how Figma composes them — e.g. a 160x16 WSJ
- *   bitmap vertically centred in a 160x30 frame — and it is what makes the row
- *   measure the drawn 710px and the divider land on the drawn x=838. Sizing the
- *   image alone (h-30 w-auto) does NOT do this: the browser uses the bitmap's
- *   own aspect ratio, and the interim WordPress assets are all 180x60, which
- *   collapsed every press tile to 90px wide and pulled the divider ~160px left.
+ *   bitmap vertically centred in a 160x30 frame. Sizing the image alone
+ *   (h-30 w-auto) does NOT do this: the browser uses the bitmap's own aspect
+ *   ratio, and the interim WordPress assets are all 180x60, which collapsed
+ *   every press tile to 90px wide and pulled the divider ~160px left.
+ *
+ * MOTION AND ACCESSIBILITY — read before changing the animation
+ * -------------------------------------------------------------
+ * • `prefers-reduced-motion: reduce` gets NO animation and no clipping: the row
+ *   wraps instead, so every logo is on screen at once. That is the branch that
+ *   makes the auto-scroll safe for vestibular disorders, and it is also the only
+ *   branch where the strip is taller than one row.
+ * • The animation pauses on hover and on `:focus-within`, so it stops for a
+ *   pointer user reading a mark and for a keyboard user who tabs into the strip
+ *   once the logos get their hrefs (TODO(client) in products.ts).
+ * • KNOWN GAP, deliberate and the client's call: WCAG 2.2.2 (Pause, Stop, Hide)
+ *   wants a mechanism to stop motion that runs longer than five seconds. Hover
+ *   and focus are mechanisms, but neither is available to a visitor on a touch
+ *   screen who is not motion-sensitive enough to have set the OS flag. A visible
+ *   pause control would close it; the client asked for no buttons on this strip.
+ *   The live site has the same gap with none of the mitigations.
+ * • Nothing here traps a scroll: the marquee clips (`overflow: hidden`) rather
+ *   than scrolls, so there is no scrollable region needing a tab stop, and no
+ *   WCAG 2.1.1 / `scrollable-region-focusable` obligation. That is why the
+ *   `tabindex` dance an earlier version of this component carried is gone.
  *
  * Responsive (invented — the Figma is desktop-only)
  * -------------------------------------------------
- * • >=1280: the drawn two-column split, 64px press-row gap, vertical rule.
- *   At 1366 it reproduces the frame exactly (742 / 32 / 400, divider at x=838).
- * • <1280: the two groups STACK, and the vertical rule becomes a horizontal rule
- *   above the second group (24px clear each side = the drawn 48px gap). This is
- *   arithmetic, not taste: the split needs 518 (press tiles) + 192 (3x64 gap) +
- *   32 (padding) + 32 (column gap) + 276 (endorsement tiles) = 1050px of
- *   container, and `container-site` only yields 1078px from 1174px viewport up —
- *   below that the endorsement row wraps. NOTE the spec's own responsive
- *   proposal ("1024-1199: keep the two-column split, press gap 64 -> 40") does
- *   not fit either: it still needs 1093px against 928px available at 1024.
- *   Stacking keeps every tile at its drawn size instead of faking the layout.
- * • <768: tiles drop to 80% (WSJ 128x24, per the spec's own scale-down) and each
- *   row becomes a horizontal TRACK — one row that scrolls, not a row that wraps.
- *   Arithmetic again: at a 390 viewport `container-site` yields 342px, while the
- *   press row needs 414.4px of tiles (128 + 81.6 + 102.4 + 102.4) plus 3x40px of
- *   gap = 534.4px. Short by 192px, it wrapped, at every width from 320 to 582.
- *   (The row SHAPE it wrapped into varied with the width — do not rely on the
- *   "two rows of two" this comment used to claim.) Shrinking the tiles instead
- *   would need
- *   them at 0.43 scale (0.61 even at a cramped 8px gap) against the drawn 0.8 —
- *   and the endorsement row ALREADY fits at 390, so a shrink-to-fit rule would
- *   scale only the row that overflows and render the press logos at roughly half
- *   the size of the endorsements directly beneath them, inverting the
- *   credibility hierarchy on a trust bar. The tiles keep their drawn size and
- *   the row scrolls. See the <style> block for why there is no autoplay, no
- *   arrows and no scroll-snap. Section padding-block drops 48 -> 32.
+ * • >=1280: the drawn two-column split with the vertical rule.
+ * • <1280: the groups STACK and the rule becomes horizontal above the second
+ *   group (24px clear each side = the drawn 48px gap). Arithmetic, not taste:
+ *   the split needs more container than `container-site` yields below 1280.
+ * • <768: tiles drop to 80% (WSJ 160x30 -> 128x24, the spec's own scale-down)
+ *   and the section's padding-block drops 48 -> 32.
  *
  * Known delta from the frame: the section measures 180px tall, not 167px. Figma
  * cap-trims the eyebrow to a 9px box; a real 14/20 line box is 20px, so each
@@ -69,7 +84,6 @@
  */
 import Container from "@primitives/Container.astro";
 import Overline from "@primitives/Overline.astro";
-import ArrowGo from "@primitives/ArrowGo.astro";
 import type { LogoStripBlock } from "@content/types";
 
 interface Props {
@@ -92,136 +106,89 @@ const { block, class: className = "" } = Astro.props;
   <Container class="py-md md:py-lg">
     <div class="flex flex-col xl:flex-row xl:items-start xl:gap-md">
       {
-        block.groups.map((group, groupIndex) => (
-          <div
-            data-logo-group
-            class:list={[
-              "flex flex-col gap-md",
-              groupIndex === 0
-                ? /* Group 1 TAKES the remaining width and owns the divider. It
-                     used to hug its logos (`xl:shrink-0`), which worked while
-                     the row was the drawn four tiles; with eight it would size
-                     the column to ~1300px and push the page into horizontal
-                     scroll. `min-w-0` is what lets a flex item shrink below its
-                     content — without it the track never overflows and never
-                     scrolls, it just blows the layout out. */
-                  "xl:min-w-0 xl:flex-1 xl:border-r xl:border-border-primary xl:pr-md"
-                : /* Later groups: horizontal rule when stacked. At xl this holds
-                     the frame's drawn 400px column so `justify-between` keeps
-                     spreading the three marks across it. 1174 container − 400 −
-                     32 gap = 742 for group 1, and its divider lands on the drawn
-                     x=838, exactly as before. */
-                  "mt-sm border-t border-border-primary pt-sm xl:mt-0 xl:w-[400px] xl:shrink-0 xl:border-t-0 xl:pt-0",
-            ]}
-          >
-            {/* The label row carries the carousel controls. They are hidden
-                until the script confirms the track actually overflows, and
-                never shown below 768: a 24px logo row has no space for two
-                44px targets, and a touch visitor already has the swipe. A
-                mouse visitor does not, which is the whole reason these exist. */}
-            <div class="flex items-center justify-between gap-sm">
-              <Overline>{group.label}</Overline>
+        block.groups.map((group, groupIndex) => {
+          /* Drawn: group 1 centres its tiles on a 64 gap; group 2 spreads three
+             marks across the 400 column, which puts ~62px between them — so its
+             gap value is only a floor, not a drawn number. */
+          const rowClass =
+            groupIndex === 0
+              ? "items-center gap-x-10 xl:gap-x-xl"
+              : "w-full items-start justify-between gap-x-2xs";
 
-              <div
-                data-logo-controls
-                class="hidden shrink-0 items-center gap-2xs text-text-primary"
-              >
-                <button
-                  type="button"
-                  data-logo-scroll="back"
-                  aria-controls={`${block._key}-track-${groupIndex}`}
-                  aria-label={`Scroll ${group.label.replace(/:$/, "")} logos backward`}
-                  class="grid h-11 w-11 place-items-center disabled:opacity-30"
-                >
-                  <ArrowGo direction="back" />
-                </button>
-                <button
-                  type="button"
-                  data-logo-scroll="forward"
-                  aria-controls={`${block._key}-track-${groupIndex}`}
-                  aria-label={`Scroll ${group.label.replace(/:$/, "")} logos forward`}
-                  class="grid h-11 w-11 place-items-center disabled:opacity-30"
-                >
-                  <ArrowGo direction="forward" />
-                </button>
-              </div>
-            </div>
+          const tiles = group.logos.map((logo) => {
+            const decorative = logo.image.decorative === true;
+            const tile = `--tile-w:${logo.image.width}px;--tile-h:${logo.image.height}px`;
+            const img = (
+              <img
+                src={logo.image.src}
+                alt={decorative ? "" : logo.image.alt}
+                aria-hidden={decorative ? "true" : undefined}
+                width={logo.image.width}
+                height={logo.image.height}
+                loading="lazy"
+                decoding="async"
+                class="h-full w-full object-contain"
+              />
+            );
+            return (
+              <li class="flex items-center">
+                {logo.href ? (
+                  <a
+                    href={logo.href}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                    class="logo-tile opacity-100 transition-opacity duration-150 hover:opacity-70 motion-reduce:transition-none"
+                    style={tile}
+                  >
+                    {img}
+                  </a>
+                ) : (
+                  <span class="logo-tile" style={tile}>
+                    {img}
+                  </span>
+                )}
+              </li>
+            );
+          });
 
-            {/*
-              Below 768 each row becomes a horizontal TRACK (see the <style>
-              block). `tabindex="0"` ships here rather than being added by the
-              script because the fail-safe direction matters: no logo has an
-              href yet (TODO(client) in products.ts), so this strip contains
-              ZERO focusable elements, and a scrolling row with nothing
-              focusable inside it puts press logos 3 and 4 out of keyboard
-              reach entirely — WCAG 2.1.1 Level A, and axe's
-              `scrollable-region-focusable`. With JS off the correct state is
-              "reachable, with a spare tab stop", not "unreachable". The script
-              below removes it wherever it is not needed, so no dead tab stop
-              ever reaches the >=768 page.
-              It sits on the <ul>, not a wrapper: the <ul> already carries
-              role="list" + aria-label, so this needs no new element and no
-              duplicated announcement (a wrapper with the same aria-label
-              announces the name twice — group "Featured on:" containing list
-              "Featured on:").
-            */}
-            <ul
-              id={`${block._key}-track-${groupIndex}`}
-              aria-label={group.label}
-              role="list"
-              data-logo-track
-              tabindex="0"
+          return (
+            <div
+              data-logo-group
               class:list={[
-                "logo-track flex flex-wrap gap-y-sm",
+                "flex flex-col gap-md",
                 groupIndex === 0
-                  ? /* Drawn: align-items:center, gap 64. */
-                    "items-center gap-x-10 xl:gap-x-xl"
-                  : /* Drawn: align-items:flex-start, space-between across 400px —
-                       which puts ~62px between tiles, so the gap here is only a
-                       wrap floor, not a drawn value. Kept small so the row stays
-                       on one line in the 1280-1365 band, where the column is
-                       303px rather than the drawn 400px. */
-                    "w-full items-start justify-between gap-x-2xs",
+                  ? /* Takes the remaining width and owns the divider. `min-w-0`
+                       is what lets a flex item shrink below its content — without
+                       it the row never clips, it blows the layout out. */
+                    "xl:min-w-0 xl:flex-1 xl:border-r xl:border-border-primary xl:pr-md"
+                  : /* Horizontal rule when stacked; the drawn 400px column at xl,
+                       which is what keeps `justify-between` meaningful. */
+                    "mt-sm border-t border-border-primary pt-sm xl:mt-0 xl:w-[400px] xl:shrink-0 xl:border-t-0 xl:pt-0",
               ]}
             >
-              {group.logos.map((logo) => {
-                const decorative = logo.image.decorative === true;
-                const tile = `--tile-w:${logo.image.width}px;--tile-h:${logo.image.height}px`;
-                const img = (
-                  <img
-                    src={logo.image.src}
-                    alt={decorative ? "" : logo.image.alt}
-                    aria-hidden={decorative ? "true" : undefined}
-                    width={logo.image.width}
-                    height={logo.image.height}
-                    loading="lazy"
-                    decoding="async"
-                    class="h-full w-full object-contain"
-                  />
-                );
-                return (
-                  <li class="flex items-center">
-                    {logo.href ? (
-                      <a
-                        href={logo.href}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                        class="logo-tile opacity-100 transition-opacity duration-150 hover:opacity-70 motion-reduce:transition-none"
-                        style={tile}
-                      >
-                        {img}
-                      </a>
-                    ) : (
-                      <span class="logo-tile" style={tile}>
-                        {img}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))
+              <Overline>{group.label}</Overline>
+
+              <div class="logo-marquee" data-logo-marquee>
+                <div class="logo-marquee-inner">
+                  <ul aria-label={group.label} role="list" data-logo-row class:list={["logo-row", rowClass]}>
+                    {tiles}
+                  </ul>
+
+                  {/*
+                    The seamless half of the loop. `aria-hidden` and inert to the
+                    accessibility tree, so the strip still announces eight logos;
+                    it is only ever painted, never read. Rendered always but
+                    displayed only once the script confirms the row overflows —
+                    a row that fits must not silently double its logos.
+                  */}
+                  <ul aria-hidden="true" data-logo-clone class:list={["logo-row", rowClass]}>
+                    {tiles}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          );
+        })
       }
     </div>
   </Container>
@@ -231,8 +198,8 @@ const { block, class: className = "" } = Astro.props;
   /*
     The Figma tile box, per logo. Width/height come from the content module as
     custom properties so the tiles stay data-driven (they are NOT uniform:
-    160/102/128/128 and 100/96/80). Below 768 every tile scales to 80% — the
-    scale-down the spec itself proposes (WSJ 160x30 -> 128x24).
+    160/110/112/88/128/128/102/40 and 100/96/80). Below 768 every tile scales to
+    80% — the scale-down the spec itself proposes (WSJ 160x30 -> 128x24).
   */
   .logo-tile {
     display: block;
@@ -249,267 +216,141 @@ const { block, class: className = "" } = Astro.props;
   }
 
   /*
-    MOBILE (<768): each row is a horizontal TRACK, not a wrapping row.
-
-    WHY A TRACK AND NOT SMALLER TILES — measured, not assumed. Fitting group 1
-    on one row at 390 needs the tiles at s = (342 - 3*gap)/518: 0.43 at the
-    current 40px gap, and still only 0.61 even at a cramped 8px gap, against
-    today's 0.80. The decisive part is that group 2 ALREADY FITS at 390, so a
-    shrink-to-fit rule would scale only the row that overflows and render the
-    press logos at roughly half the size of the endorsements directly beneath
-    them — inverting the credibility hierarchy on a trust bar. (It also drops
-    INQUIRER.NET, the flattest mark, below the 9px cap height of its own
-    "FEATURED ON:" label.) The tiles stay at the drawn 0.8 and the row scrolls.
-
-    THIS IS NOT THE LIVE SITE'S OWL CAROUSEL. Nothing moves on its own, so
-    WCAG 2.2.2 never binds, there is no pause control to ship, and there is no
-    JS scroll animation to gate — the static decision recorded at the top of
-    this file still stands. There are deliberately no arrows and no dots: four
-    controls for seven logos is exactly the chrome NewsGrid, ContactSection and
-    SocialFeed each refused in writing, and 44px targets would dominate a 24px
-    row. The partially clipped tile at the container gutter is the affordance.
-
-    KNOWN LIMIT of that affordance, measured across 320-767: the press row
-    shows 74-92px of the next tile on the common device widths (412/414/428/
-    430), but under 8px of it in two bands — 320-345 and 440-487 — where the
-    clip lands almost exactly on a tile boundary and the row reads as static
-    even though it scrolls. Swipe still works; the cue is what is missing. The
-    <360 gap rule at the end of this block widens the first band. The second
-    is unfixed: the only lever is the gap, and moving it drags the peek on the
-    412-430 widths that matter far more. Worth revisiting if arrows are ever
-    added for another reason.
-
-    NO SCROLL-SNAP, deliberately. Each tile is a fixed letterbox with the
-    bitmap centred inside via object-contain, so a tile boundary is not a
-    visible edge — snapping would align to nothing the eye can see, and with
-    seven irregular widths there is no card unit to snap to. It would also
-    fight the browser's own focus-scroll once the href TODO(client) lands.
-
-    Gated on 768, the same seam the .logo-tile scale-down above uses, so this
-    component has one mobile breakpoint.
-
-    From 583 up it is a no-op FOR GROUP 1 ONLY — that row already fits, so
-    nothing about it moves. It is NOT a no-op for group 2 in the 583-767 band:
-    group 2 loses `justify-between` and becomes a left-aligned 40px row like
-    the one above it. That is a deliberate, visible change, not a side effect.
-    `justify-between` was stranding three logos across up to 719px there,
-    nothing like the ~62px the design draws at the width it was drawn for.
-    An earlier version of this comment claimed the whole block was
-    pixel-identical from 583 up; it is not, and that claim was wrong.
+    The viewport the row moves behind. It CLIPS rather than scrolls: a scrolling
+    container would need a tab stop of its own (WCAG 2.1.1) and would fight the
+    animation every time the visitor touched it.
   */
-  /*
-    THE TRACK, AT EVERY WIDTH. It used to be gated on <768; the press row now
-    carries the live site's eight logos and no longer fits any column at any
-    width, so the row scrolls instead of wrapping everywhere. The endorsement
-    row still fits at >=768 and these rules are a no-op on it there — a
-    container that does not overflow does not scroll.
-  */
-  .logo-track {
-    /* Overrides Tailwind's `flex-wrap` utility on the same element. Astro's
-       scoped <style> is UNLAYERED while Tailwind's utilities live in
-       `@layer utilities`, so this wins on layer order regardless of
-       specificity. Verified — do NOT "fix" it with !important, and do not
-       delete the utility from the markup. */
-    flex-wrap: nowrap;
-
-    overflow-x: auto;
-    /* Stop a swipe at scrollLeft 0 from chaining into browser
-       back-navigation. x only, so a vertical wheel over the strip still
-       scrolls the page normally. */
-    overscroll-behavior-x: contain;
-
-    /* overflow-x:auto forces overflow-y to compute to `auto`, which would clip
-       a focused tile's 2px ring at its 2px offset inside a 30px-tall box. 4px
-       of padding gives the ring room; the equal negative margin cancels it, so
-       the section height is unchanged. */
-    padding-block: 4px;
-    margin-block: -4px;
-
-    /* Same idiom as PriceTicker.astro:35. A classic scrollbar under a 30px
-       logo row would out-shout the logos. The routes to the content are the
-       arrow buttons, swipe, trackpad/horizontal wheel, and arrow keys on the
-       focused track — which is what the tabindex is for. */
-    scrollbar-width: none;
+  .logo-marquee {
+    overflow: hidden;
   }
 
-  .logo-track::-webkit-scrollbar {
+  .logo-marquee-inner {
+    display: flex;
+    /* Default 100% so a row that fits keeps the drawn layout — group 2's
+       `w-full justify-between` needs a definite width to spread across. Only a
+       row that actually overflows becomes max-content and animates. */
+    width: 100%;
+  }
+
+  .logo-row {
+    /* Overrides nothing: the rows are authored without a wrap utility so the
+       clipped, pre-script state is a clipped single row rather than a wrapped
+       double one — no layout shift when the animation starts. */
+    display: flex;
+    flex-wrap: nowrap;
+  }
+
+  /* A row that fits shows its logos once. */
+  [data-logo-clone] {
     display: none;
   }
 
-  /* A scroll container clips at its padding box, so once the href
-     TODO(client) lands and the tiles become links, draw the focus ring
-     inside — the same fix, for the same reason, as FaqAccordion.astro:166. */
-  .logo-track a.logo-tile:focus-visible {
-    outline-offset: -2px;
+  [data-overflowing="true"] .logo-marquee-inner {
+    width: max-content;
+    /* --logo-shift and --logo-duration are measured and set by the script. The
+       fallbacks only matter for the frames before it runs, and a 0px shift is
+       a still row rather than a wrong one. */
+    animation: logo-marquee var(--logo-duration, 30s) linear infinite;
   }
 
-  /* Revealed only on a track that actually overflows (the script sets the
-     flag) and only from 768 up. The floor is this media query rather than a
-     `max-md:!hidden` utility: the reveal rule is unlayered and would outrank
-     the utility, so holding the floor in the markup would need !important —
-     which the note in the <768 block below explains why to avoid. */
-  @media (width >= 768px) {
-    [data-overflowing="true"] [data-logo-controls] {
-      display: flex;
-    }
+  [data-overflowing="true"] [data-logo-clone] {
+    display: flex;
   }
 
-  @media (width < 768px) {
-    .logo-track {
-      /* These three OVERRIDE Tailwind utilities on the same element
-         (flex-wrap, and w-full + justify-between on group 2). Astro's scoped
-         <style> is UNLAYERED while Tailwind's utilities live in
-         `@layer utilities`, so this block wins on layer order regardless of
-         specificity. Verified — do NOT "fix" it with !important, and do not
-         delete the utilities from the markup: they are what restores the
-         drawn layout at >=768. */
-      /* Group 2 carries `w-full`. A definite width defeats the cross-axis
-         stretch and leaves its track a different width from group 1's, so the
-         two rows clip at different edges. */
-      width: auto;
-      justify-content: flex-start;
+  /* Stop for anyone reading a mark, and for a keyboard visitor once the logos
+     become links. */
+  [data-overflowing="true"] .logo-marquee:hover .logo-marquee-inner,
+  [data-overflowing="true"] .logo-marquee:focus-within .logo-marquee-inner {
+    animation-play-state: paused;
+  }
 
-      /* Both groups must read as one component. Group 2 is `justify-between`
-         on a full-width row; inside a scroll container that pins its first and
-         last tile to the content-box edges and leaves its 8px gap doing
-         nothing. Below 768 both rows therefore use group 1's 40px gap and
-         start alignment. 40px is matched to group 1's existing `gap-x-10` —
-         if that changes, change this with it. Matched AT THE DEFAULT ROOT FONT
-         SIZE only: `gap-x-10` resolves to 2.5rem, so a visitor who has raised
-         their browser text size gets a wider gap on group 1 than the fixed
-         40px gives group 2. Both rows still scroll, so nothing breaks; if they
-         ever need to agree exactly, this is the line, and 2.5rem is the value.
-         It is deliberately NOT reduced
-         to a token value: 24px and 32px were measured and both destroy the
-         peek at the common 412/414/428/430 device widths, where 40px keeps
-         74-92px of the next tile visible. */
-      column-gap: 40px;
+  @keyframes logo-marquee {
+    to {
+      transform: translateX(calc(-1 * var(--logo-shift, 0px)));
     }
   }
 
   /*
-    The one band where the uniform 40px gap costs something. The endorsement
-    row is 220.8px of tiles; at a 320 viewport `container-site` yields 272px,
-    which leaves only ~25px between three logos. At 40px the third one clips —
-    and it did NOT clip before this change, because `justify-between` with an
-    8px floor fitted all three. A trust bar that stops showing an endorsement
-    it used to show is a regression, however narrow the band.
-
-    24px is the largest gap that still fits (220.8 + 2x24 = 268.8 <= 272). It
-    is scoped below 360 precisely so it cannot touch the 40px value above,
-    which is what preserves the 74-92px peek on the common 412/414/428/430
-    device widths — the measurement that rejected a global 24px in the first
-    place. It also widens the press row's peek in the 320-345 band, where the
-    next tile is otherwise clipped to under 8px and the row reads as static.
+    REDUCED MOTION: no animation, and nothing hidden behind one. The row wraps
+    so every logo is on screen at once — the only state in which this strip is
+    more than one row tall, and the reason the auto-scroll is safe to ship.
+    Ordered after the rules above so it wins at equal specificity without
+    !important.
   */
-  @media (width < 360px) {
-    .logo-track {
-      column-gap: 24px;
+  @media (prefers-reduced-motion: reduce) {
+    .logo-marquee {
+      overflow: visible;
+    }
+
+    .logo-marquee-inner,
+    [data-overflowing="true"] .logo-marquee-inner {
+      width: 100%;
+      animation: none;
+    }
+
+    .logo-row {
+      flex-wrap: wrap;
+      row-gap: 1.5rem;
+    }
+
+    [data-overflowing="true"] [data-logo-clone] {
+      display: none;
     }
   }
 </style>
 
 <script>
   /*
-    A scroll container that actually overflows must be reachable by keyboard
-    (WCAG 2.1.1 / axe `scrollable-region-focusable`). The tabindex ships in the
-    markup and is removed here, not the other way round: without JS the correct
-    state is "reachable with a spare tab stop", not "logos 3 and 4 unreachable".
+    Measure, then let CSS animate.
 
-    It is removed in two cases — the row fits (so the static rows at >=768 never
-    become dead tab stops, and neither does the 583-767 band), or the track
-    already contains something focusable (once the logos get their hrefs the
-    <a>s carry keyboard access and the container should stop being a tab stop
-    of its own).
+    The shift MUST be one row plus one gap, not a percentage: the inner box is
+    two rows and one gap wide, so translating -50% lands half a gap short of the
+    seam and the loop visibly stutters once per cycle.
 
-    NOTE the limit of that: it is true only WITH JavaScript. With JS off the
-    tabindex stays in the served markup, so a desktop page keeps two focusable
-    non-interactive lists. That is the deliberate trade — a spare tab stop is a
-    far smaller failure than logos 3 and 4 being unreachable — but it is a
-    trade, not a guarantee, and an earlier version of this comment claimed
-    "no dead tab stop ever reaches the >=768 page", which overstated it.
+    Duration is derived from that distance at a fixed speed, so a row of eight
+    logos and a row of three move at the same pace rather than the same tempo.
   */
-  const tracks = document.querySelectorAll<HTMLElement>("[data-logo-track]");
+  const PIXELS_PER_SECOND = 45;
 
-  if (tracks.length) {
-    const sync = (el: HTMLElement) => {
-      /* +1 absorbs sub-pixel rounding: at 582 the row is 534.375px of content
-         in a 534px box, which is not real overflow. */
-      const scrollable = el.scrollWidth > el.clientWidth + 1;
-      const focusable = el.querySelector(
-        "a[href], button, [tabindex]:not([tabindex='-1'])",
-      );
-      if (scrollable && !focusable) el.setAttribute("tabindex", "0");
-      else drop(el);
+  const groups = document.querySelectorAll<HTMLElement>("[data-logo-group]");
 
-      /* The arrow buttons live on the GROUP, outside the track, so the flag
-         goes on the group. CSS reveals them from 768 up; below that the markup
-         keeps them hidden regardless. A row that fits shows no controls at all
-         rather than two dead ones. */
-      const group = el.closest<HTMLElement>("[data-logo-group]");
-      if (group) group.dataset.overflowing = String(scrollable);
-      syncEnds(el);
-    };
+  const measure = (group: HTMLElement) => {
+    const marquee = group.querySelector<HTMLElement>("[data-logo-marquee]");
+    const row = group.querySelector<HTMLElement>("[data-logo-row]");
+    if (!marquee || !row) return;
 
-    /* Disable whichever arrow points at nothing, so neither is a dead control.
-       1px of tolerance for sub-pixel scroll positions. */
-    const syncEnds = (el: HTMLElement) => {
-      const group = el.closest<HTMLElement>("[data-logo-group]");
-      const back = group?.querySelector<HTMLButtonElement>('[data-logo-scroll="back"]');
-      const forward = group?.querySelector<HTMLButtonElement>('[data-logo-scroll="forward"]');
-      if (back) back.disabled = el.scrollLeft <= 1;
-      if (forward) forward.disabled = el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
-    };
+    /* Compare the row's own content width against the space it has. Read from
+       the ROW, not the clipping box: the box is what constrains it. */
+    const available = marquee.clientWidth;
+    const content = row.scrollWidth;
+    /* +1 absorbs sub-pixel rounding, which otherwise reports a row that fits
+       exactly as overflowing and animates it by a fraction of a pixel. */
+    const overflowing = content > available + 1;
 
-    /* Removing `tabindex` from the element that currently HAS focus blurs it
-       and drops the caret to <body> — the user loses their place mid-page with
-       no warning. Measured: focus the "Featured on:" track at 390, widen past
-       768, and document.activeElement became BODY. So when the track being
-       retired is the focused one, wait for it to lose focus on its own. It
-       keeps a tab stop it no longer needs until then, which is the harmless
-       direction of the two. */
-    const drop = (el: HTMLElement) => {
-      if (document.activeElement !== el) {
-        el.removeAttribute("tabindex");
-        return;
-      }
-      el.addEventListener("blur", () => el.removeAttribute("tabindex"), {
-        once: true,
-      });
-    };
+    group.dataset.overflowing = String(overflowing);
+    if (!overflowing) return;
 
+    const gap = Number.parseFloat(getComputedStyle(row).columnGap) || 0;
+    const shift = content + gap;
+    marquee.style.setProperty("--logo-shift", `${shift}px`);
+    marquee.style.setProperty("--logo-duration", `${shift / PIXELS_PER_SECOND}s`);
+  };
+
+  if (groups.length) {
     /* ResizeObserver rather than a resize listener: it fires on the element's
-       own box, which covers viewport resize, orientation change AND the 768
-       seam where both the container padding and the tile scale change at once.
-       Mutating tabindex has no layout effect, so it cannot loop. */
+       own box, which covers viewport resize, orientation change and the 768
+       seam where the tile scale changes. Re-measuring only writes custom
+       properties and a data attribute, so it cannot feed back into layout. */
     const observer = new ResizeObserver((entries) => {
-      entries.forEach((entry) => sync(entry.target as HTMLElement));
+      entries.forEach((entry) => measure(entry.target as HTMLElement));
     });
 
-    tracks.forEach((el) => {
-      sync(el);
-      observer.observe(el);
-
-      /* Keep the end states honest however the row was moved — arrow button,
-         swipe, trackpad, or arrow keys on the focused track. */
-      el.addEventListener("scroll", () => syncEnds(el), { passive: true });
-
-      const group = el.closest<HTMLElement>("[data-logo-group]");
-      group?.querySelectorAll<HTMLButtonElement>("[data-logo-scroll]").forEach((button) => {
-        button.addEventListener("click", () => {
-          /* 80% of a viewport rather than 100%: a whole-width jump can land a
-             tile exactly on the clip edge and leave nothing recognisable in
-             view, and the overlap is what tells the eye it moved. */
-          const step = el.clientWidth * 0.8;
-          const back = button.dataset.logoScroll === "back";
-          el.scrollBy({
-            left: back ? -step : step,
-            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-              ? "auto"
-              : "smooth",
-          });
-        });
-      });
+    groups.forEach((group) => {
+      measure(group);
+      observer.observe(group);
     });
+
+    /* Fonts change tile widths, and the row is measured in pixels. */
+    document.fonts?.ready.then(() => groups.forEach(measure));
   }
 </script>
