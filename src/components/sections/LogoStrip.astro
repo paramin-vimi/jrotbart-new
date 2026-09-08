@@ -69,6 +69,7 @@
  */
 import Container from "@primitives/Container.astro";
 import Overline from "@primitives/Overline.astro";
+import ArrowGo from "@primitives/ArrowGo.astro";
 import type { LogoStripBlock } from "@content/types";
 
 interface Props {
@@ -93,16 +94,58 @@ const { block, class: className = "" } = Astro.props;
       {
         block.groups.map((group, groupIndex) => (
           <div
+            data-logo-group
             class:list={[
               "flex flex-col gap-md",
               groupIndex === 0
-                ? /* Group 1 hugs its logos and owns the divider on wide screens. */
-                  "xl:shrink-0 xl:border-r xl:border-border-primary xl:pr-md"
-                : /* Later groups: horizontal rule when stacked, flexible when side by side. */
-                  "mt-sm border-t border-border-primary pt-sm xl:mt-0 xl:flex-1 xl:border-t-0 xl:pt-0",
+                ? /* Group 1 TAKES the remaining width and owns the divider. It
+                     used to hug its logos (`xl:shrink-0`), which worked while
+                     the row was the drawn four tiles; with eight it would size
+                     the column to ~1300px and push the page into horizontal
+                     scroll. `min-w-0` is what lets a flex item shrink below its
+                     content — without it the track never overflows and never
+                     scrolls, it just blows the layout out. */
+                  "xl:min-w-0 xl:flex-1 xl:border-r xl:border-border-primary xl:pr-md"
+                : /* Later groups: horizontal rule when stacked. At xl this holds
+                     the frame's drawn 400px column so `justify-between` keeps
+                     spreading the three marks across it. 1174 container − 400 −
+                     32 gap = 742 for group 1, and its divider lands on the drawn
+                     x=838, exactly as before. */
+                  "mt-sm border-t border-border-primary pt-sm xl:mt-0 xl:w-[400px] xl:shrink-0 xl:border-t-0 xl:pt-0",
             ]}
           >
-            <Overline>{group.label}</Overline>
+            {/* The label row carries the carousel controls. They are hidden
+                until the script confirms the track actually overflows, and
+                never shown below 768: a 24px logo row has no space for two
+                44px targets, and a touch visitor already has the swipe. A
+                mouse visitor does not, which is the whole reason these exist. */}
+            <div class="flex items-center justify-between gap-sm">
+              <Overline>{group.label}</Overline>
+
+              <div
+                data-logo-controls
+                class="hidden shrink-0 items-center gap-2xs text-text-primary"
+              >
+                <button
+                  type="button"
+                  data-logo-scroll="back"
+                  aria-controls={`${block._key}-track-${groupIndex}`}
+                  aria-label={`Scroll ${group.label.replace(/:$/, "")} logos backward`}
+                  class="grid h-11 w-11 place-items-center disabled:opacity-30"
+                >
+                  <ArrowGo direction="back" />
+                </button>
+                <button
+                  type="button"
+                  data-logo-scroll="forward"
+                  aria-controls={`${block._key}-track-${groupIndex}`}
+                  aria-label={`Scroll ${group.label.replace(/:$/, "")} logos forward`}
+                  class="grid h-11 w-11 place-items-center disabled:opacity-30"
+                >
+                  <ArrowGo direction="forward" />
+                </button>
+              </div>
+            </div>
 
             {/*
               Below 768 each row becomes a horizontal TRACK (see the <style>
@@ -123,6 +166,7 @@ const { block, class: className = "" } = Astro.props;
               "Featured on:").
             */}
             <ul
+              id={`${block._key}-track-${groupIndex}`}
               aria-label={group.label}
               role="list"
               data-logo-track
@@ -253,6 +297,63 @@ const { block, class: className = "" } = Astro.props;
     An earlier version of this comment claimed the whole block was
     pixel-identical from 583 up; it is not, and that claim was wrong.
   */
+  /*
+    THE TRACK, AT EVERY WIDTH. It used to be gated on <768; the press row now
+    carries the live site's eight logos and no longer fits any column at any
+    width, so the row scrolls instead of wrapping everywhere. The endorsement
+    row still fits at >=768 and these rules are a no-op on it there — a
+    container that does not overflow does not scroll.
+  */
+  .logo-track {
+    /* Overrides Tailwind's `flex-wrap` utility on the same element. Astro's
+       scoped <style> is UNLAYERED while Tailwind's utilities live in
+       `@layer utilities`, so this wins on layer order regardless of
+       specificity. Verified — do NOT "fix" it with !important, and do not
+       delete the utility from the markup. */
+    flex-wrap: nowrap;
+
+    overflow-x: auto;
+    /* Stop a swipe at scrollLeft 0 from chaining into browser
+       back-navigation. x only, so a vertical wheel over the strip still
+       scrolls the page normally. */
+    overscroll-behavior-x: contain;
+
+    /* overflow-x:auto forces overflow-y to compute to `auto`, which would clip
+       a focused tile's 2px ring at its 2px offset inside a 30px-tall box. 4px
+       of padding gives the ring room; the equal negative margin cancels it, so
+       the section height is unchanged. */
+    padding-block: 4px;
+    margin-block: -4px;
+
+    /* Same idiom as PriceTicker.astro:35. A classic scrollbar under a 30px
+       logo row would out-shout the logos. The routes to the content are the
+       arrow buttons, swipe, trackpad/horizontal wheel, and arrow keys on the
+       focused track — which is what the tabindex is for. */
+    scrollbar-width: none;
+  }
+
+  .logo-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* A scroll container clips at its padding box, so once the href
+     TODO(client) lands and the tiles become links, draw the focus ring
+     inside — the same fix, for the same reason, as FaqAccordion.astro:166. */
+  .logo-track a.logo-tile:focus-visible {
+    outline-offset: -2px;
+  }
+
+  /* Revealed only on a track that actually overflows (the script sets the
+     flag) and only from 768 up. The floor is this media query rather than a
+     `max-md:!hidden` utility: the reveal rule is unlayered and would outrank
+     the utility, so holding the floor in the markup would need !important —
+     which the note in the <768 block below explains why to avoid. */
+  @media (width >= 768px) {
+    [data-overflowing="true"] [data-logo-controls] {
+      display: flex;
+    }
+  }
+
   @media (width < 768px) {
     .logo-track {
       /* These three OVERRIDE Tailwind utilities on the same element
@@ -262,18 +363,11 @@ const { block, class: className = "" } = Astro.props;
          specificity. Verified — do NOT "fix" it with !important, and do not
          delete the utilities from the markup: they are what restores the
          drawn layout at >=768. */
-      flex-wrap: nowrap;
       /* Group 2 carries `w-full`. A definite width defeats the cross-axis
          stretch and leaves its track a different width from group 1's, so the
          two rows clip at different edges. */
       width: auto;
       justify-content: flex-start;
-
-      overflow-x: auto;
-      /* Stop a swipe at scrollLeft 0 from chaining into browser
-         back-navigation. x only, so a vertical wheel over the strip still
-         scrolls the page normally. */
-      overscroll-behavior-x: contain;
 
       /* Both groups must read as one component. Group 2 is `justify-between`
          on a full-width row; inside a scroll container that pins its first and
@@ -290,31 +384,6 @@ const { block, class: className = "" } = Astro.props;
          peek at the common 412/414/428/430 device widths, where 40px keeps
          74-92px of the next tile visible. */
       column-gap: 40px;
-
-      /* overflow-x:auto forces overflow-y to compute to `auto`, which would
-         clip a focused tile's 2px ring at its 2px offset inside a 24px-tall
-         box. 4px of padding gives the ring room; the equal negative margin
-         cancels it, so the section height is unchanged (measured 267/311/180,
-         identical to baseline). */
-      padding-block: 4px;
-      margin-block: -4px;
-
-      /* Same idiom as PriceTicker.astro:35. A classic scrollbar under a 24px
-         logo row would out-shout the logos. The remaining routes to the
-         content are swipe, trackpad/horizontal wheel, and arrow keys on the
-         focused track — which is what the tabindex above is for. */
-      scrollbar-width: none;
-    }
-
-    .logo-track::-webkit-scrollbar {
-      display: none;
-    }
-
-    /* A scroll container clips at its padding box, so once the href
-       TODO(client) lands and the tiles become links, draw the focus ring
-       inside — the same fix, for the same reason, as FaqAccordion.astro:166. */
-    .logo-track a.logo-tile:focus-visible {
-      outline-offset: -2px;
     }
   }
 
@@ -372,6 +441,24 @@ const { block, class: className = "" } = Astro.props;
       );
       if (scrollable && !focusable) el.setAttribute("tabindex", "0");
       else drop(el);
+
+      /* The arrow buttons live on the GROUP, outside the track, so the flag
+         goes on the group. CSS reveals them from 768 up; below that the markup
+         keeps them hidden regardless. A row that fits shows no controls at all
+         rather than two dead ones. */
+      const group = el.closest<HTMLElement>("[data-logo-group]");
+      if (group) group.dataset.overflowing = String(scrollable);
+      syncEnds(el);
+    };
+
+    /* Disable whichever arrow points at nothing, so neither is a dead control.
+       1px of tolerance for sub-pixel scroll positions. */
+    const syncEnds = (el: HTMLElement) => {
+      const group = el.closest<HTMLElement>("[data-logo-group]");
+      const back = group?.querySelector<HTMLButtonElement>('[data-logo-scroll="back"]');
+      const forward = group?.querySelector<HTMLButtonElement>('[data-logo-scroll="forward"]');
+      if (back) back.disabled = el.scrollLeft <= 1;
+      if (forward) forward.disabled = el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
     };
 
     /* Removing `tabindex` from the element that currently HAS focus blurs it
@@ -402,6 +489,27 @@ const { block, class: className = "" } = Astro.props;
     tracks.forEach((el) => {
       sync(el);
       observer.observe(el);
+
+      /* Keep the end states honest however the row was moved — arrow button,
+         swipe, trackpad, or arrow keys on the focused track. */
+      el.addEventListener("scroll", () => syncEnds(el), { passive: true });
+
+      const group = el.closest<HTMLElement>("[data-logo-group]");
+      group?.querySelectorAll<HTMLButtonElement>("[data-logo-scroll]").forEach((button) => {
+        button.addEventListener("click", () => {
+          /* 80% of a viewport rather than 100%: a whole-width jump can land a
+             tile exactly on the clip edge and leave nothing recognisable in
+             view, and the overlap is what tells the eye it moved. */
+          const step = el.clientWidth * 0.8;
+          const back = button.dataset.logoScroll === "back";
+          el.scrollBy({
+            left: back ? -step : step,
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? "auto"
+              : "smooth",
+          });
+        });
+      });
     });
   }
 </script>

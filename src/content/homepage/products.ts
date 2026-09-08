@@ -93,20 +93,27 @@ export interface ProductGridSection extends ProductGridBlock, ProductCardLabels 
 // ---------------------------------------------------------------------------
 
 /*
- * TODO(client): the Figma frame draws FOUR press logos (WSJ, MSNBC, Inquirer,
- * finews). The current live site carries EIGHT — it also has Forbes, CNBC,
- * Financial Times and MONEY FM 89.3. We have shipped the four the design draws.
- * Confirm whether the other four should be dropped or whether the row should
- * carry all eight. NOTE this is no longer free: below 768 the row is a
- * horizontal track, so eight logos lengthen the scroll rather than wrapping,
- * and at >=1280 group 1 is `xl:shrink-0` sized to hug four tiles — eight would
- * overrun the drawn 742px column and push the divider off its x=838. Adding
- * four more is a layout change at both ends, not just more data.
+ * RESOLVED: the Figma frame draws FOUR press logos (WSJ, MSNBC, Inquirer,
+ * finews); the live site carries EIGHT. The client asked for the live set, so
+ * all eight ship, in the live site's own order — WSJ, Forbes, CNBC, Financial
+ * Times, finews, Inquirer, MSNBC, MONEY FM 89.3.
  *
- * TODO(client): the live site auto-scrolls these logos in a carousel. The new
- * design draws a static row and shows no carousel affordance, so this is built
- * static — below 768 the rows scroll horizontally on swipe, but nothing moves
- * on its own. Confirm that the auto-scroll is intentionally gone.
+ * That is a layout change, not just more data: eight tiles overrun the drawn
+ * 742px column, so the press row is now a horizontal track at EVERY width
+ * rather than only below 768, and the divider no longer lands on the frame's
+ * x=838. See the responsive note in LogoStrip.astro. The endorsement row still
+ * fits and is unchanged on desktop.
+ *
+ * TODO(client): the live site AUTO-scrolls its carousel. This one does not —
+ * it moves only when the visitor moves it, so there is no motion to pause
+ * (WCAG 2.2.2) and nothing competing with the hero directly above. Say if the
+ * automatic movement is wanted back; it needs a pause control and a
+ * reduced-motion path.
+ *
+ * TODO(assets): the four new bitmaps are the live site's own 180x60 WordPress
+ * exports with their transparent padding trimmed off. Forbes ends up 117x32
+ * for a 110x30 tile — roughly 1x, so it is soft on a retina screen. Vector or
+ * 2x sources would fix all four, as they would the existing set.
  *
  * TODO(client): no logo links to anything in the design. `href` is supported per
  * logo — supply the article/partner URLs if these should be outbound links.
@@ -136,11 +143,38 @@ export const logoStrip: LogoStripSection = {
           },
         },
         {
-          name: "MSNBC",
+          name: "Forbes",
           image: {
-            src: "/logos/msnbc.png",
-            alt: "MSNBC",
-            width: 102,
+            src: "/logos/forbes.png",
+            alt: "Forbes",
+            width: 110,
+            height: 30,
+          },
+        },
+        {
+          name: "CNBC",
+          image: {
+            src: "/logos/cnbc.png",
+            alt: "CNBC",
+            width: 112,
+            height: 30,
+          },
+        },
+        {
+          name: "Financial Times",
+          image: {
+            src: "/logos/financial-times.png",
+            alt: "Financial Times",
+            width: 88,
+            height: 30,
+          },
+        },
+        {
+          name: "finews.asia",
+          image: {
+            src: "/logos/finews.png",
+            alt: "finews.asia",
+            width: 128,
             height: 30,
           },
         },
@@ -154,11 +188,24 @@ export const logoStrip: LogoStripSection = {
           },
         },
         {
-          name: "finews.asia",
+          name: "MSNBC",
           image: {
-            src: "/logos/finews.png",
-            alt: "finews.asia",
-            width: 128,
+            src: "/logos/msnbc.png",
+            alt: "MSNBC",
+            width: 102,
+            height: 30,
+          },
+        },
+        {
+          // A stacked lockup, so 30px of tile height buys only 40px of width —
+          // the same proportion the live site gives it, at half the size.
+          // TODO(client): a horizontal MONEY FM lockup would sit far better in
+          // a 30px row than the stacked one does.
+          name: "MONEY FM 89.3",
+          image: {
+            src: "/logos/money-fm.png",
+            alt: "MONEY FM 89.3",
+            width: 40,
             height: 30,
           },
         },
