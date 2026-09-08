@@ -48,6 +48,7 @@ import Overline from "@primitives/Overline.astro";
 import Button from "@primitives/Button.astro";
 import ArrowGo from "@primitives/ArrowGo.astro";
 import ProductCard from "./partials/ProductCard.astro";
+import { bestSellersFirst } from "@lib/products";
 import type { ProductGridSection } from "@content/homepage/products";
 
 interface Props {
@@ -56,7 +57,12 @@ interface Props {
 }
 
 const { block, class: className = "" } = Astro.props;
-const { header, promo, products, badgeLabel, ctaLabel, specLabels, metalLabels } = block;
+const { header, promo, products: authored, badgeLabel, ctaLabel, specLabels, metalLabels } = block;
+
+/* Best sellers lead, in every product grid on the site — see `bestSellersFirst`.
+   Applied here rather than in each content module so a new page cannot ship
+   without it. Stable, so the authored order survives within each group. */
+const products = bestSellersFirst(authored);
 
 /* `header.body` may be one paragraph or several (SectionHeading widening). */
 const bodyParagraphs =

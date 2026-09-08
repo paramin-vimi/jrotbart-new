@@ -1,7 +1,7 @@
 import type { Metal, MetalTab, Product, ProductListingBlock, Seo } from "@content/types";
 import { productCardLabels } from "@content/homepage/products";
 import { listedMetals } from "@content/products";
-import { metalHref } from "@lib/products";
+import { bestSellersFirst, metalHref } from "@lib/products";
 
 /**
  * Metal listing template copy — /buy-gold/ and /buy-silver/.
@@ -65,20 +65,6 @@ const fill = (template: string, value: string): string => template.replace("%s",
 /** Cards ordered A–Z by name. */
 export const sortAz = (products: Product[]): Product[] =>
   [...products].sort((a, b) => a.name.localeCompare(b.name, "en"));
-
-/**
- * Best sellers first, then everything else — each group keeping the order it
- * arrived in, so this composes with A-Z or the catalogue's own order rather
- * than replacing it. Applied to every listing on the client's instruction.
- *
- * Partitioned rather than sorted by a boolean: `.sort()` on `a.bestSeller`
- * would need a comparator over `boolean | undefined`, and this reads as what
- * it is.
- */
-export const bestSellersFirst = (products: Product[]): Product[] => [
-  ...products.filter((product) => product.bestSeller),
-  ...products.filter((product) => !product.bestSeller),
-];
 
 /**
  * Build the listing block for one metal. `counts` is products-per-metal

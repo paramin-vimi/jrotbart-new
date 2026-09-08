@@ -18,6 +18,29 @@ export function isProductDetail(product: Product): product is ProductDetail {
 export const metalHref = (metal: Metal): string => `/buy-${metal}/`;
 
 /**
+ * Best sellers first, then everything else, each group keeping the order it
+ * arrived in. Composes with whatever order the content supplied — A-Z, the
+ * catalogue's own, a hand-picked six — rather than replacing it.
+ *
+ * It lives here, not in a page module, because it is applied by the two
+ * components that render product cards (ProductGrid and ProductListing). That
+ * is deliberate: the client asked for the rule on EVERY page, and enforcing it
+ * at the two render points is the only version of that which a new page cannot
+ * forget to opt into.
+ *
+ * Stable and idempotent, so a content module that has already sorted (the
+ * metal listing does, to keep its ItemList schema in the rendered order) is
+ * unaffected by the second pass.
+ *
+ * Partitioned rather than sorted by a boolean: `.sort()` would need a
+ * comparator over `boolean | undefined`, and this reads as what it is.
+ */
+export const bestSellersFirst = <T extends { bestSeller?: boolean }>(items: readonly T[]): T[] => [
+  ...items.filter((item) => item.bestSeller),
+  ...items.filter((item) => !item.bestSeller),
+];
+
+/**
  * Where a product card links. `/buy-<metal>/<slug>/` when a detail document
  * exists, else the `fallback` — the contact anchor, matching the live site,
  * where a client can ask about a product that has no page of its own yet.

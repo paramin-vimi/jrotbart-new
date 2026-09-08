@@ -47,6 +47,7 @@ import Container from "@primitives/Container.astro";
 import SectionHeader from "@primitives/SectionHeader.astro";
 import Button from "@primitives/Button.astro";
 import ProductCard from "./partials/ProductCard.astro";
+import { bestSellersFirst } from "@lib/products";
 import type { Metal, ProductListingBlock } from "@content/types";
 
 interface Props {
@@ -60,7 +61,7 @@ const {
   metal,
   tabs,
   metalHeading,
-  products,
+  products: authored,
   pageSize,
   loadMoreLabel,
   badgeLabel,
@@ -68,6 +69,11 @@ const {
   specLabels,
   metalLabels,
 } = block;
+
+/* Same rule as ProductGrid: best sellers lead. The listing content module
+   already sorts, so its ItemList schema matches what renders; this pass is
+   idempotent and covers any caller that does not. */
+const products = bestSellersFirst(authored);
 
 const theme = block.theme ?? "light";
 const SURFACE = {
