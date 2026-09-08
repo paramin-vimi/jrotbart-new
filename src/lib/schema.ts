@@ -64,7 +64,7 @@ const DAY_NAMES: Record<string, string> = {
 const DAY_ORDER = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
 /**
- * "Mo-Fr 09:30-17:30" → an OpeningHoursSpecification. The schema.org
+ * "Mo-Fr 09:00-18:00" → an OpeningHoursSpecification. The schema.org
  * `openingHours` shorthand is itself valid, but the expanded form is what the
  * rich-result tooling reads reliably, and the parse is trivial. Returns null
  * for a string it cannot read, so a typo cannot emit half a specification.

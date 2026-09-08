@@ -25,8 +25,11 @@ import type { ImageRef, Office } from "./types";
  *   5. `photo` is the office-listing card picture — stock city photography in
  *      the design. TODO(client): licence and originals at ≥2×; alt text drafted
  *      from the pictures and needs approval.
- *   6. `openingHours.display` is the live site's wording; the HK page frame
- *      draws "09.00 - 18.00" (11120:15939). TODO(client): which is right. The
+ *   6. `openingHours` is 09:00-18:00 at every office, on the client's
+ *      instruction. That RESOLVES the disagreement recorded here: the live
+ *      site said 9:30-17:30 and the HK page frame drew "09.00 - 18.00"
+ *      (11120:15939) — the frame was right. Only the hours changed; the
+ *      working WEEK is still per office (Sunday to Thursday in Israel). The
  *      `schema` form feeds openingHoursSpecification in the JSON-LD.
  */
 const cardPhoto = (file: string, alt: string, width: number, height: number): ImageRef => ({
@@ -54,7 +57,7 @@ export const offices: Office[] = [
       "Strategic Transactions Limited T/A J. Rotbart & Co. (Hong Kong)",
       "Category B Registrant Licence B-B-23-11-02937",
     ],
-    openingHours: { display: "Monday to Friday, 9:30am – 5:30pm HKT", schema: "Mo-Fr 09:30-17:30" },
+    openingHours: { display: "Monday to Friday, 9:00am – 6:00pm HKT", schema: "Mo-Fr 09:00-18:00" },
     // Drawn 770×368 in the featured card (10980:12678).
     photo: cardPhoto(
       "office-card-hong-kong--10980-12678.webp",
@@ -81,7 +84,7 @@ export const offices: Office[] = [
       "Strategic Transactions (Singapore) Pte. Ltd.",
       "PSPM Dealer Licence PS20210002149",
     ],
-    openingHours: { display: "Monday to Friday, 9:30am – 5:30pm SGT", schema: "Mo-Fr 09:30-17:30" },
+    openingHours: { display: "Monday to Friday, 9:00am – 6:00pm SGT", schema: "Mo-Fr 09:00-18:00" },
     photo: cardPhoto(
       "office-card-singapore--10980-12692.webp",
       "The Merlion, Singapore, at sunset with Marina Bay behind it",
@@ -108,7 +111,7 @@ export const offices: Office[] = [
     phone: "+63 966 957 5118",
     phoneHref: "+639669575118",
     email: "info@jrotbart.com",
-    openingHours: { display: "Monday to Friday, 9:30am – 5:30pm PHT", schema: "Mo-Fr 09:30-17:30" },
+    openingHours: { display: "Monday to Friday, 9:00am – 6:00pm PHT", schema: "Mo-Fr 09:00-18:00" },
     photo: cardPhoto(
       "office-card-philippines--10980-12815.webp",
       "Aerial view of the Manila Bay shoreline and yacht marina, Philippines",
@@ -126,7 +129,7 @@ export const offices: Office[] = [
     phone: "+972 54 636 3228",
     phoneHref: "+972546363228",
     email: "info@jrotbart.com",
-    openingHours: { display: "Sunday to Thursday, 9:30am – 5:30pm IST", schema: "Su-Th 09:30-17:30" },
+    openingHours: { display: "Sunday to Thursday, 9:00am – 6:00pm IST", schema: "Su-Th 09:00-18:00" },
     photo: cardPhoto(
       "office-card-israel--10980-12775.webp",
       "The Tel Aviv seafront promenade at sunset, with the city's towers behind",

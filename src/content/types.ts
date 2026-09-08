@@ -127,7 +127,7 @@ export interface Office {
   geo?: { lat: number; lng: number };
   /**
    * `display` is what the page prints; `schema` is the schema.org form
-   * ("Mo-Fr 09:30-17:30") for openingHoursSpecification.
+   * ("Mo-Fr 09:00-18:00") for openingHoursSpecification.
    */
   openingHours?: { display: string; schema: string };
   /** Card photo for the office listing. */

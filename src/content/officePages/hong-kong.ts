@@ -41,8 +41,9 @@ import { officePageLabels, officeVisitBlock, teamGridBlock } from "@content/page
  * PLACEHOLDER REGISTER (plan §6, "Office HK") — each item is a TODO(client)
  * or TODO(assets) beside the field it affects:
  *   - 11039:18713 duplicate "04" → step numbers are rendered, never authored.
- *   - 11120:15939 hours "09.00 - 18.00" vs live 9:30–17:30 → the Office
- *     document's live value wins (Amendment 5); the frame value is not shipped.
+ *   - 11120:15939 hours "09.00 - 18.00" vs live 9:30–17:30 → RESOLVED, the
+ *     frame was right: the client set every office to 09:00-18:00, so the
+ *     Office document now carries the frame's value and this page draws it.
  *   - 11120:15943 map panel is a drawing of Singapore → not shipped; the
  *     "Visit us" panel renders without artwork until a Hong Kong map exists.
  *   - I11041:15557 guide href, "Sell Precious Metals" / "Safe Deposit Boxes"
@@ -492,9 +493,8 @@ const visit = officeVisitBlock({
     width: 431,
     height: 574,
   },
-  // Hours are the Office document's live value ("Monday to Friday, 9:30am –
-  // 5:30pm HKT"), not the frame's "09.00 - 18.00" (11120:15939) — Amendment
-  // 5. TODO(client): which is right (offices.ts note 6).
+  // Hours come from the Office document, which now reads "Monday to Friday,
+  // 9:00am – 6:00pm HKT" — the frame's own value (11120:15939).
 });
 
 /* ------------------------------------------------------------------------ */
