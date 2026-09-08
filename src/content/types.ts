@@ -634,8 +634,6 @@ export interface ProductListingBlock extends BlockBase {
   /** Rendered as the <h1>. */
   header: SectionHeading;
   tabs: MetalTab[];
-  /** Omit to hide the control. */
-  sort?: { label: string; options: { value: "az" | "za"; label: string }[] };
   /** "Gold Bars & Coins." */
   metalHeading: string;
   /** Every product for this metal, pre-sorted, all in the HTML. */

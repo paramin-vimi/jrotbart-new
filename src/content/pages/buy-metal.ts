@@ -21,8 +21,8 @@ import { metalHref } from "@lib/products";
  *   Counts are computed from the catalogue (16 / 12 today) and only metals
  *   with a listing page get a tab — platinum and palladium have none, so a
  *   tab would link to nothing.
- * • TODO(client): the frame draws a "Sort by : A–Z" control with one option.
- *   Not shipped (`sort` unset); the cards are ordered A–Z by name.
+ * • The frame draws a "Sort by : A–Z" control. REMOVED on the client's
+ *   instruction — the cards ship in one fixed order with no control.
  * • TODO(client): the frame's nine cards are lorem; the catalogue is the live
  *   site's. Every "Best seller" ribbon follows the live site.
  * • TODO(client): the live silver page title and both descriptions.
@@ -38,19 +38,6 @@ export const listingCopy = {
   metalHeading: "%s Bars & Coins.",
   /** I10359:4317 */
   loadMoreLabel: "Load More",
-  /* The sort control, drawn on both listing frames as a single text run
-     "Sort by : A–Z" — a label and its current value. The frame shows only the
-     A–Z state, so the second option is ours: a select with one option is not a
-     control. Default state is the drawn one, and the cards ship pre-sorted A–Z
-     so the control agrees with the markup before any script runs.
-     TODO(client): confirm Z–A is wanted, or the control comes back out. */
-  sort: {
-    label: "Sort by :",
-    options: [
-      { value: "az", label: "A–Z" },
-      { value: "za", label: "Z–A" },
-    ],
-  } as const,
   /** Nine cards drawn before the button (3 x 3 at lg). */
   pageSize: 9,
 };
@@ -83,9 +70,23 @@ const metalTabFallbackHref = (metal: Metal): string => {
   return products?.children?.find((child) => child.label === label)?.href ?? "#contact";
 };
 
-/** Cards ordered A–Z by name, the drawn control's default state. */
+/** Cards ordered A–Z by name. */
 export const sortAz = (products: Product[]): Product[] =>
   [...products].sort((a, b) => a.name.localeCompare(b.name, "en"));
+
+/**
+ * Best sellers first, then everything else — each group keeping the order it
+ * arrived in, so this composes with A-Z or the catalogue's own order rather
+ * than replacing it. Applied to every listing on the client's instruction.
+ *
+ * Partitioned rather than sorted by a boolean: `.sort()` on `a.bestSeller`
+ * would need a comparator over `boolean | undefined`, and this reads as what
+ * it is.
+ */
+export const bestSellersFirst = (products: Product[]): Product[] => [
+  ...products.filter((product) => product.bestSeller),
+  ...products.filter((product) => !product.bestSeller),
+];
 
 /**
  * Build the listing block for one metal. `counts` is products-per-metal
@@ -134,9 +135,9 @@ export function productListingBlock(options: {
       body: listingCopy.body,
     },
     tabs,
-    sort: { label: listingCopy.sort.label, options: [...listingCopy.sort.options] },
     metalHeading: fill(listingCopy.metalHeading, label),
-    products: order === "az" ? sortAz(options.products) : options.products,
+    // Best sellers lead whichever base order the page asked for.
+    products: bestSellersFirst(order === "az" ? sortAz(options.products) : options.products),
     pageSize: listingCopy.pageSize,
     ...(options.showLoadMore ? { showLoadMore: options.showLoadMore } : {}),
     loadMoreLabel: listingCopy.loadMoreLabel,
