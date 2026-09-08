@@ -1,6 +1,5 @@
 import type { Metal, ProductListingBlock, Seo, TestimonialBandBlock } from "@content/types";
-import { listedMetals } from "@content/products";
-import { figmaListingCards, figmaTabCounts } from "@content/products/figma-listing-cards";
+import { byMetal, countsByMetal, listedMetals } from "@content/products";
 import { listingSeo, productListingBlock } from "@content/pages/buy-metal";
 import { productCardLabels } from "@content/homepage/products";
 import { albertCheng } from "@content/testimonials";
@@ -72,29 +71,19 @@ export function metalListingPage(metal: Metal): MetalListingPage {
   const metalLabel = productCardLabels.metalLabels[metal];
 
   /*
-   * THE GRID IS THE FIGMA FRAME, NOT THE CATALOGUE — on the client's
-   * instruction to reproduce the design exactly, lorem included. The nine
-   * drawn cards, the four drawn tabs with their invented counts, the drawn
-   * order (not A-Z) and the Load More button that sits under exactly nine
-   * cards all come from src/content/products/figma-listing-cards.ts, which
-   * carries the full register of what is placeholder.
+   * The real catalogue: 16 gold and 12 silver products, best sellers first
+   * then A-Z (see `bestSellersFirst` in buy-metal.ts).
    *
-   * To put the real 16 gold / 12 silver products back, this call becomes:
-   *   products: byMetal(metal), counts: countsByMetal(),
-   * with the three options below dropped, and `byMetal`/`countsByMetal`
-   * re-imported from @content/products.
+   * A previous build reproduced the Figma frames' placeholder grids here
+   * instead — nine lorem cards per metal, "Mint: Lorem", "999.9 fine gold" on
+   * the silver page, and the frames' invented tab counts. The client asked for
+   * the real products back. Commit 7bd184a has that reproduction in full,
+   * bitmaps included, if the frame is ever wanted on screen again.
    */
   const listing = productListingBlock({
     metal,
-    products: figmaListingCards[metal] ?? [],
-    counts: figmaTabCounts,
-    // The frames draw all four metals; only two have a page (see the tab
-    // fallback in buy-metal.ts).
-    tabMetals: ["gold", "silver", "platinum", "palladium"],
-    // Drawn order, which is not alphabetical.
-    order: "catalogue",
-    // Nine cards above a visible button, as drawn.
-    showLoadMore: "always",
+    products: byMetal(metal),
+    counts: countsByMetal(),
     key: `${metal}-listing`,
   });
 

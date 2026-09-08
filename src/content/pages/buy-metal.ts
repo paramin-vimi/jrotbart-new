@@ -1,7 +1,6 @@
 import type { Metal, MetalTab, Product, ProductListingBlock, Seo } from "@content/types";
 import { productCardLabels } from "@content/homepage/products";
 import { listedMetals } from "@content/products";
-import { navigation } from "@content/navigation";
 import { metalHref } from "@lib/products";
 
 /**
@@ -63,13 +62,6 @@ export const listingSeo: Record<Metal, Seo> = {
 
 const fill = (template: string, value: string): string => template.replace("%s", value);
 
-/** Where a tab for a metal WITHOUT a listing page points: the nav's own item for it. */
-const metalTabFallbackHref = (metal: Metal): string => {
-  const products = navigation.menu.find((item) => item.label === "Products");
-  const label = productCardLabels.metalLabels[metal];
-  return products?.children?.find((child) => child.label === label)?.href ?? "#contact";
-};
-
 /** Cards ordered A–Z by name. */
 export const sortAz = (products: Product[]): Product[] =>
   [...products].sort((a, b) => a.name.localeCompare(b.name, "en"));
@@ -98,24 +90,17 @@ export function productListingBlock(options: {
   counts: Record<Metal, number>;
   /** "az" (default) or the catalogue's own order. */
   order?: "az" | "catalogue";
-  /** Which metals get a tab. Default: only those with a listing page. */
-  tabMetals?: readonly Metal[];
-  /** Force the Load More button visible — see `showLoadMore` in types.ts. */
-  showLoadMore?: "auto" | "always";
   key?: string;
 }): ProductListingBlock {
-  const { metal, counts, order = "az", tabMetals = listedMetals } = options;
+  const { metal, counts, order = "az" } = options;
   const { metalLabels } = productCardLabels;
   const label = metalLabels[metal];
 
-  const tabs: MetalTab[] = tabMetals.map((m) => ({
+  const tabs: MetalTab[] = listedMetals.map((m) => ({
     metal: m,
     label: metalLabels[m],
     count: counts[m],
-    // A metal with a listing page links to it. Platinum and palladium have
-    // none, so they take the destination the main nav already uses for them:
-    // the anchor on the products hub. TODO(client): their own listings.
-    href: listedMetals.includes(m) ? metalHref(m) : metalTabFallbackHref(m),
+    href: metalHref(m),
     current: m === metal,
   }));
 
@@ -139,7 +124,6 @@ export function productListingBlock(options: {
     // Best sellers lead whichever base order the page asked for.
     products: bestSellersFirst(order === "az" ? sortAz(options.products) : options.products),
     pageSize: listingCopy.pageSize,
-    ...(options.showLoadMore ? { showLoadMore: options.showLoadMore } : {}),
     loadMoreLabel: listingCopy.loadMoreLabel,
     ...productCardLabels,
   };

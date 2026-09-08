@@ -640,13 +640,6 @@ export interface ProductListingBlock extends BlockBase {
   products: Product[];
   /** Load More reveals the next N client-side; button omitted when products fit. */
   pageSize?: number;
-  /**
-   * "auto" (default): the button appears only when there are more products
-   * than `pageSize`. "always": it is rendered visible regardless — what the
-   * Figma listing frames draw, where exactly `pageSize` cards sit above a
-   * Load More button because the grid is a mock of the first page.
-   */
-  showLoadMore?: "auto" | "always";
   loadMoreLabel: string;
   badgeLabel: string;
   ctaLabel: string;
