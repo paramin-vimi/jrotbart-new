@@ -110,22 +110,34 @@ export interface ProductGridSection extends ProductGridBlock, ProductCardLabels 
  * automatic movement is wanted back; it needs a pause control and a
  * reduced-motion path.
  *
- * SIZING. A tile is a LAYOUT box; `object-contain` fits the bitmap inside it,
- * so what a reader compares is the ink the bitmap paints, not the tile. The
- * four Figma tiles land their marks at 14-17px of ink height (WSJ 16.0,
- * MSNBC 17.2, Inquirer 13.8). The four added here were first sized to fill the
- * 30px tile height, which rendered Forbes and CNBC at 30px of ink — nearly
- * twice the cap height of the Wall Street Journal mark beside them, and
- * visibly wrong. Their widths now come from the target ink height instead:
- * width = 16 x (bitmap width / bitmap height), so each renders at ~16px like
- * the drawn set. Do not "round up" a width here without recomputing what it
- * does to the ink.
+ * SIZING — every press tile is derived, none is hand-picked.
  *
- * The endorsement tiles (100/96/80) are the design's own and are left alone.
+ * A tile is a LAYOUT box; `object-contain` fits the bitmap inside it, so what
+ * a reader compares is the INK the logo paints, not the tile. Matching ink
+ * HEIGHT does not work across marks of different construction: it renders a
+ * plain wordmark and a stacked lockup at wildly different weights, which is
+ * how "FINANCIAL TIMES" and "MONEY FM" ended up illegible next to a Forbes
+ * that filled its box.
  *
- * A side effect worth keeping: the smaller boxes make these bitmaps 2-3.7x
- * their rendered size, so unlike the existing set they are sharp on a retina
- * screen.
+ * So the widths equalise ink AREA — the count of non-transparent pixels at the
+ * rendered scale — at a target of ~750, clamped so nothing exceeds the 30px
+ * row. That target is not invented: it is the band the DESIGN's own
+ * endorsement tiles already sit in (Carret 712, eastwest 765, Nomad 572), so
+ * the two rows now read as one strip.
+ *
+ * This does move the four tiles the Figma frame draws (WSJ 160 -> 113,
+ * finews 128 -> 112, Inquirer 128 -> 125, MSNBC 102 -> 84). The frame drew
+ * FOUR logos and this row now carries eight, and the frame's own press tiles
+ * were roughly twice the weight of its endorsement tiles — WSJ alone was 1491
+ * against Carret's 712. Rebalancing the row is what the client asked for after
+ * seeing it.
+ *
+ * MONEY FM is the one that cannot reach the target: it is a two-line stacked
+ * lockup, so 30px of row height caps it at 467. It is at its maximum.
+ *
+ * To change a logo here, recompute the width from its bitmap rather than
+ * nudging the number — a width that "looks about right" in the source is what
+ * produced the two bugs above.
  *
  * TODO(client): no logo links to anything in the design. `href` is supported per
  * logo — supply the article/partner URLs if these should be outbound links.
@@ -150,7 +162,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/wsj.png",
             alt: "The Wall Street Journal",
-            width: 160,
+            width: 113,
             height: 30,
           },
         },
@@ -159,7 +171,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/forbes.png",
             alt: "Forbes",
-            width: 59,
+            width: 73,
             height: 30,
           },
         },
@@ -168,7 +180,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/cnbc.png",
             alt: "CNBC",
-            width: 60,
+            width: 77,
             height: 30,
           },
         },
@@ -177,7 +189,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/financial-times.png",
             alt: "Financial Times",
-            width: 47,
+            width: 70,
             height: 30,
           },
         },
@@ -186,7 +198,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/finews.png",
             alt: "finews.asia",
-            width: 128,
+            width: 112,
             height: 30,
           },
         },
@@ -195,7 +207,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/inquirer.png",
             alt: "Inquirer.net",
-            width: 128,
+            width: 125,
             height: 30,
           },
         },
@@ -204,7 +216,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/msnbc.png",
             alt: "MSNBC",
-            width: 102,
+            width: 84,
             height: 30,
           },
         },
@@ -219,7 +231,7 @@ export const logoStrip: LogoStripSection = {
           image: {
             src: "/logos/money-fm.png",
             alt: "MONEY FM 89.3",
-            width: 32,
+            width: 40,
             height: 30,
           },
         },
